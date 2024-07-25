@@ -1,0 +1,289 @@
+4 Common Machine Learning Data Transforms for Time Series Forecasting
+https://machinelearningmastery.com/machine-learning-data-transforms-for-time-series-forecasting/
+2018-08-21
+Time series data often requires some preparation prior to being modeled with machine learning algorithms.
+For example, differencing operations can be used to remove trend and seasonal structure from the sequence in order to simplify the prediction problem. Some algorithms, such as neural networks, prefer data to be standardized and/or normalized prior to modeling.
+Any transform operations applied to the series also require a similar inverse transform to be applied on the predictions. This is required so that the resulting calculated performance measures are in the same scale as the output variable and can be compared to classical forecasting methods.
+In this post, you will discover how to perform and invert four common data transforms for time series data in machine learning.
+After reading this post, you will know:
+- How to transform and inverse the transform for four methods in Python.
+- Important considerations when using transforms on training and test datasets.
+- The suggested order for transforms when multiple operations are required on a dataset.
+Kick-start your project with my new book Deep Learning for Time Series Forecasting, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+4 Common Machine Learning Data Transforms for Time Series ForecastingPhoto by Wolfgang Staudt, some rights reserved.
+# Overview
+This tutorial is divided into three parts; they are:
+- Transforms for Time Series Data
+- Considerations for Model Evaluation
+- Order of Data Transforms
+# Transforms for Time Series Data
+Given a univariate time series dataset, there are four transforms that are popular when using machine learning methods to model and make predictions.
+They are:
+- Power Transform
+- Difference Transform
+- Standardization
+- Normalization
+Let’s take a quick look at each in turn and how to perform these transforms in Python.
+We will also review how to reverse the transform operation as this is required when we want to evaluate the predictions in their original scale so that performance measures can be compared directly.
+Are there other transforms you like to use on your time series data for modeling with machine learning methods?
+Let me know in the comments below.
+
+
+
+
+A power transform removes a shift from a data distribution to make the distribution more-normal (Gaussian).
+On a time series dataset, this can have the effect of removing a change in variance over time.
+Popular examples are the log transform (positive values) or generalized versions such as the Box-Cox transform (positive values) or the Yeo-Johnson transform (positive and negative values).
+For example, we can implement the Box-Cox transform in Python using the boxcox() function from the SciPy library.
+By default, the method will numerically optimize the lambda value for the transform and return the optimal value.
+The transform can be inverted but requires a custom function listed below named invert_boxcox() that takes a transformed value and the lambda value that was used to perform the transform.
+A complete example of applying the power transform to a dataset and reversing the transform is listed below.
+Running the example prints the original dataset, the results of the power transform, and the original values (or close to it) after the transform is inverted.
+
+A difference transform is a simple way for removing a systematic structure from the time series.
+For example, a trend can be removed by subtracting the previous value from each value in the series. This is called first order differencing. The process can be repeated (e.g. difference the differenced series) to remove second order trends, and so on.
+A seasonal structure can be removed in a similar way by subtracting the observation from the prior season, e.g. 12 time steps ago for monthly data with a yearly seasonal structure.
+A single differenced value in a series can be calculated with a custom function named difference() listed below. The function takes the time series and the interval for the difference calculation, e.g. 1 for a trend difference or 12 for a seasonal difference.
+Again, this operation can be inverted with a custom function that adds the original value back to the differenced value named invert_difference() that takes the original series and the interval.
+We can demonstrate this function below.
+Running the example prints the original dataset, the results of the difference transform, and the original values after the transform is inverted.
+Note, the first “interval” values will be lost from the sequence after the transform. This is because they do not have a value at “interval” prior time steps, therefore cannot be differenced.
+
+Standardization is a transform for data with a Gaussian distribution.
+It subtracts the mean and divides the result by the standard deviation of the data sample. This has the effect of transforming the data to have mean of zero, or centered, with a standard deviation of 1. This resulting distribution is called a standard Gaussian distribution, or a standard normal, hence the name of the transform.
+We can perform standardization using the StandardScaler object in Python from the scikit-learn library.
+This class allows the transform to be fit on a training dataset by calling fit(), applied to one or more datasets (e.g. train and test) by calling transform() and also provides a function to reverse the transform by calling inverse_transform().
+A complete example is applied below.
+Running the example prints the original dataset, the results of the standardize transform, and the original values after the transform is inverted.
+Note the expectation that data is provided as a column with multiple rows.
+
+Normalization is a rescaling of data from the original range to a new range between 0 and 1.
+As with standardization, this can be implemented using a transform object from the scikit-learn library, specifically the MinMaxScaler class. In addition to normalization, this class can be used to rescale data to any range you wish by specifying the preferred range in the constructor of the object.
+It can be used in the same way to fit, transform, and inverse the transform.
+A complete example is listed below.
+Running the example prints the original dataset, the results of the normalize transform, and the original values after the transform is inverted.
+
+# Considerations for Model Evaluation
+We have mentioned the importance of being able to invert a transform on the predictions of a model in order to calculate a model performance statistic that is directly comparable to other methods.
+Additionally, another concern is the problem of data leakage.
+Three of the above data transforms estimate coefficients from a provided dataset that are then used to transform the data. Specifically:
+- Power Transform: lambda parameter.
+- Standardization: mean and standard deviation statistics.
+- Normalization: min and max values.
+These coefficients must be estimated on the training dataset only.
+Once estimated, the transform can be applied using the coefficients to the training and the test dataset before evaluating your model.
+If the coefficients are estimated using the entire dataset prior to splitting into train and test sets, then there is a small leakage of information from the test set to the training dataset. This can result in estimates of model skill that are optimistically biased.
+As such, you may want to enhance the estimates of the coefficients with domain knowledge, such as expected min/max values for all time in the future.
+Generally, differencing does not suffer the same problems. In most cases, such as one-step forecasting, the lag observations are available to perform the difference calculation. If not, the lag predictions can be used wherever needed as a proxy for the true observations in difference calculations.
+# Order of Data Transforms
+You may want to experiment with applying multiple data transforms to a time series prior to modeling.
+This is quite common, e.g. to apply a power transform to remove an increasing variance, to apply seasonal differencing to remove seasonality, and to apply one-step differencing to remove a trend.
+The order that the transform operations are applied is important.
+Intuitively, we can think through how the transforms may interact.
+- Power transforms should probably be performed prior to differencing.
+- Seasonal differencing should be performed prior to one-step differencing.
+- Standardization is linear and should be performed on the sample after any nonlinear transforms and differencing.
+- Normalization is a linear operation but it should be the final transform performed to maintain the preferred scale.
+As such, a suggested ordering for data transforms is as follows:
+- Power Transform.
+- Seasonal Difference.
+- Trend Difference.
+- Standardization.
+- Normalization.
+Obviously, you would only use the transforms required for your specific dataset.
+Importantly, when the transform operations are inverted, the order of the inverse transform operations must be reversed. Specifically, the inverse operations must be performed in the following order:
+- Normalization.
+- Standardization.
+- Trend Difference.
+- Seasonal Difference.
+- Power Transform.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- How to Use Power Transforms for Time Series Forecast Data with Python
+- How to Remove Trends and Seasonality with a Difference Transform in Python
+- How to Difference a Time Series Dataset with Python
+- How to Normalize and Standardize Time Series Data in Python
+- scipy.stats.boxcox API
+- sklearn.preprocessing.MinMaxScaler API
+- sklearn.preprocessing.StandardScaler API
+- Power transform on Wikipedia
+# Summary
+In this post, you discovered how to perform and invert four common data transforms for time series data in machine learning.
+Specifically, you learned:
+- How to transform and inverse the transform for four methods in Python.
+- Important considerations when using transforms on training and test datasets.
+- The suggested order for transforms when multiple operations are required on a dataset.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop Deep Learning models for Time Series Today!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Deep Learning for Time Series Forecasting
+It provides self-study tutorials on topics like: 
+CNNs, LSTMs,
+Multivariate Forecasting, Multi-Step Forecasting and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+from scipy.stats import boxcox
+# define data
+data = ...
+# box-cox transform
+result, lmbda = boxcox(data)
+from math import log
+from math import exp
+# invert a boxcox transform for one value
+def invert_boxcox(value, lam):
+	# log case
+	if lam == 0:
+		return exp(value)
+	# all other cases
+	return exp(log(lam * value + 1) / lam)
+# example of power transform and inversion
+from math import log
+from math import exp
+from scipy.stats import boxcox
+
+# invert a boxcox transform for one value
+def invert_boxcox(value, lam):
+	# log case
+	if lam == 0:
+		return exp(value)
+	# all other cases
+	return exp(log(lam * value + 1) / lam)
+
+
+# define dataset
+data = [x for x in range(1, 10)]
+print(data)
+# power transform
+transformed, lmbda = boxcox(data)
+print(transformed, lmbda)
+# invert transform
+inverted = [invert_boxcox(x, lmbda) for x in transformed]
+print(inverted)
+[1, 2, 3, 4, 5, 6, 7, 8, 9]
+[0.         0.89887536 1.67448353 2.37952145 3.03633818 3.65711928
+ 4.2494518  4.81847233 5.36786648] 0.7200338588580095
+[1.0, 2.0, 2.9999999999999996, 3.999999999999999, 5.000000000000001, 6.000000000000001, 6.999999999999999, 7.999999999999998, 8.999999999999998]
+# difference dataset
+def difference(data, interval):
+	return [data[i] - data[i - interval] for i in range(interval, len(data))]
+# invert difference
+def invert_difference(orig_data, diff_data, interval):
+	return [diff_data[i-interval] + orig_data[i-interval] for i in range(interval, len(orig_data))]
+# example of a difference transform
+
+# difference dataset
+def difference(data, interval):
+	return [data[i] - data[i - interval] for i in range(interval, len(data))]
+
+# invert difference
+def invert_difference(orig_data, diff_data, interval):
+	return [diff_data[i-interval] + orig_data[i-interval] for i in range(interval, len(orig_data))]
+
+# define dataset
+data = [x for x in range(1, 10)]
+print(data)
+# difference transform
+transformed = difference(data, 1)
+print(transformed)
+# invert difference
+inverted = invert_difference(data, transformed, 1)
+print(inverted)
+[1, 2, 3, 4, 5, 6, 7, 8, 9]
+[1, 1, 1, 1, 1, 1, 1, 1]
+[2, 3, 4, 5, 6, 7, 8, 9]
+# example of standardization
+from sklearn.preprocessing import StandardScaler
+from numpy import array
+# define dataset
+data = [x for x in range(1, 10)]
+data = array(data).reshape(len(data), 1)
+print(data)
+# fit transform
+transformer = StandardScaler()
+transformer.fit(data)
+# difference transform
+transformed = transformer.transform(data)
+print(transformed)
+# invert difference
+inverted = transformer.inverse_transform(transformed)
+print(inverted)
+[[1]
+ [2]
+ [3]
+ [4]
+ [5]
+ [6]
+ [7]
+ [8]
+ [9]]
+
+[[-1.54919334]
+ [-1.161895  
+ [-0.77459667]
+ [-0.38729833]
+ [ 0.        
+ [ 0.38729833]
+ [ 0.77459667]
+ [ 1.161895  
+ [ 1.54919334]]
+
+[[1.]
+ [2.]
+ [3.]
+ [4.]
+ [5.]
+ [6.]
+ [7.]
+ [8.]
+ [9.]]
+# example of normalization
+from sklearn.preprocessing import MinMaxScaler
+from numpy import array
+# define dataset
+data = [x for x in range(1, 10)]
+data = array(data).reshape(len(data), 1)
+print(data)
+# fit transform
+transformer = MinMaxScaler()
+transformer.fit(data)
+# difference transform
+transformed = transformer.transform(data)
+print(transformed)
+# invert difference
+inverted = transformer.inverse_transform(transformed)
+print(inverted)
+[[1]
+ [2]
+ [3]
+ [4]
+ [5]
+ [6]
+ [7]
+ [8]
+ [9]]
+
+[[0.   
+ [0.125]
+ [0.25 ]
+ [0.375]
+ [0.5  
+ [0.625]
+ [0.75 ]
+ [0.875]
+ [1.   ]
+
+[[1.]
+ [2.]
+ [3.]
+ [4.]
+ [5.]
+ [6.]
+ [7.]
+ [8.]
+ [9.]]
+'''

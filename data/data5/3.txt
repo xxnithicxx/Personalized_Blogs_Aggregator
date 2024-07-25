@@ -1,0 +1,186 @@
+How to Fix k-Fold Cross-Validation for Imbalanced Classification
+https://machinelearningmastery.com/cross-validation-for-imbalanced-classification/
+2020-01-12
+Model evaluation involves using the available dataset to fit a model and estimate its performance when making predictions on unseen examples.
+It is a challenging problem as both the training dataset used to fit the model and the test set used to evaluate it must be sufficiently large and representative of the underlying problem so that the resulting estimate of model performance is not too optimistic or pessimistic.
+The two most common approaches used for model evaluation are the train/test split and the k-fold cross-validation procedure. Both approaches can be very effective in general, although they can result in misleading results and potentially fail when used on classification problems with a severe class imbalance. Instead, the techniques must be modified to stratify the sampling by the class label, called stratified train-test split or stratified k-fold cross-validation.
+In this tutorial, you will discover how to evaluate classifier models on imbalanced datasets.
+After completing this tutorial, you will know:
+- The challenge of evaluating classifiers on datasets using train/test splits and cross-validation.
+- How a naive application of k-fold cross-validation and train-test splits will fail when evaluating classifiers on imbalanced datasets.
+- How modified k-fold cross-validation and train-test splits can be used to preserve the class distribution in the dataset.
+Kick-start your project with my new book Imbalanced Classification with Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Use k-Fold Cross-Validation for Imbalanced ClassificationPhoto by Bonnie Moreland, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Challenge of Evaluating Classifiers
+- Failure of k-Fold Cross-Validation
+- Fix Cross-Validation for Imbalanced Classification
+# Challenge of Evaluating Classifiers
+Evaluating a classification model is challenging because we won’t know how good a model is until it is used.
+Instead, we must estimate the performance of a model using available data where we already have the target or outcome.
+Model evaluation involves more than just evaluating a model; it includes testing different data preparation schemes, different learning algorithms, and different hyperparameters for well-performing learning algorithms.
+- Model = Data Preparation + Learning Algorithm + Hyperparameters
+Ideally, the model construction procedure (data preparation, learning algorithm, and hyperparameters) with the best score (with your chosen metric) can be selected and used.
+The simplest model evaluation procedure is to split a dataset into two parts and use one part for training a model and the second part for testing the model. As such, the parts of the dataset are named for their function, train set and test set respectively.
+This is effective if your collected dataset is very large and representative of the problem. The number of examples required will differ from problem to problem, but may be thousands, hundreds of thousands, or millions of examples to be sufficient.
+A split of 50/50 for train and test would be ideal, although more skewed splits are common, such as 67/33 or 80/20 for train and test sets.
+We rarely have enough data to get an unbiased estimate of performance using a train/test split evaluation of a model. Instead, we often have a much smaller dataset than would be preferred, and resampling strategies must be used on this dataset.
+The most used model evaluation scheme for classifiers is the 10-fold cross-validation procedure.
+The k-fold cross-validation procedure involves splitting the training dataset into k folds. The first k-1 folds are used to train a model, and the holdout kth fold is used as the test set. This process is repeated and each of the folds is given an opportunity to be used as the holdout test set. A total of k models are fit and evaluated, and the performance of the model is calculated as the mean of these runs.
+The procedure has been shown to give a less optimistic estimate of model performance on small training datasets than a single train/test split. A value of k=10 has been shown to be effective across a wide range of dataset sizes and model types.
+
+
+
+
+# Failure of k-Fold Cross-Validation
+Sadly, the k-fold cross-validation is not appropriate for evaluating imbalanced classifiers.
+A 10-fold cross-validation, in particular, the most commonly used error-estimation method in machine learning, can easily break down in the case of class imbalances, even if the skew is less extreme than the one previously considered.
+— Page 188, Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+The reason is that the data is split into k-folds with a uniform probability distribution.
+This might work fine for data with a balanced class distribution, but when the distribution is severely skewed, it is likely that one or more folds will have few or no examples from the minority class. This means that some or perhaps many of the model evaluations will be misleading, as the model need only predict the majority class correctly.
+We can make this concrete with an example.
+First, we can define a dataset with a 1:100 minority to majority class distribution.
+This can be achieved using the make_classification() function for creating a synthetic dataset, specifying the number of examples (1,000), the number of classes (2), and the weighting of each class (99% and 1%).
+The example below generates the synthetic binary classification dataset and summarizes the class distribution.
+Running the example creates the dataset and summarizes the number of examples in each class.
+By setting the random_state argument, it ensures that we get the same randomly generated examples each time the code is run.
+A total of 10 examples in the minority class is not many. If we used 10-folds, we would get one example in each fold in the ideal case, which is not enough to train a model. For demonstration purposes, we will use 5-folds.
+In the ideal case, we would have 10/5 or two examples in each fold, meaning 4*2 (8) folds worth of examples in a training dataset and 1*2 folds (2) in a given test dataset.
+First, we will use the KFold class to randomly split the dataset into 5-folds and check the composition of each train and test set. The complete example is listed below.
+Running the example creates the same dataset and enumerates each split of the data, showing the class distribution for both the train and test sets.
+We can see that in this case, there are some splits that have the expected 8/2 split for train and test sets, and others that are much worse, such as 6/4 (optimistic) and 10/0 (pessimistic).
+Evaluating a model on these splits of the data would not give a reliable estimate of performance.
+We can demonstrate a similar issue exists if we use a simple train/test split of the dataset, although the issue is less severe.
+We can use the train_test_split() function to create a 50/50 split of the dataset and, on average, we would expect five examples from the minority class to appear in each dataset if we performed this split many times.
+The complete example is listed below.
+Running the example creates the same dataset as before and splits it into a random train and test split.
+In this case, we can see only three examples of the minority class are present in the training set, with seven in the test set.
+Evaluating models on this split would not give them enough examples to learn from, too many to be evaluated on, and likely give poor performance. You can imagine how the situation could be worse with an even more severe random spit.
+
+# Fix Cross-Validation for Imbalanced Classification
+The solution is to not split the data randomly when using k-fold cross-validation or a train-test split.
+Specifically, we can split a dataset randomly, although in such a way that maintains the same class distribution in each subset. This is called stratification or stratified sampling and the target variable (y), the class, is used to control the sampling process.
+For example, we can use a version of k-fold cross-validation that preserves the imbalanced class distribution in each fold. It is called stratified k-fold cross-validation and will enforce the class distribution in each split of the data to match the distribution in the complete training dataset.
+… it is common, in the case of class imbalances in particular, to use stratified 10-fold cross-validation, which ensures that the proportion of positive to negative examples found in the original distribution is respected in all the folds.
+— Page 205, Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+We can make this concrete with an example.
+We can stratify the splits using the StratifiedKFold class that supports stratified k-fold cross-validation as its name suggests.
+Below is the same dataset and the same example with the stratified version of cross-validation.
+Running the example generates the dataset as before and summarizes the class distribution for the train and test sets for each split.
+In this case, we can see that each split matches what we expected in the ideal case.
+Each of the examples in the minority class is given one opportunity to be used in a test set, and each train and test set for each split of the data has the same class distribution.
+This example highlights the need to first select a value of k for k-fold cross-validation to ensure that there are a sufficient number of examples in the train and test sets to fit and evaluate a model (two examples from the minority class in the test set is probably too few for a test set).
+It also highlights the requirement to use stratified k-fold cross-validation with imbalanced datasets to preserve the class distribution in the train and test sets for each evaluation of a given model.
+We can also use a stratified version of a train/test split.
+This can be achieved by setting the “stratify” argument on the call to train_test_split() and setting it to the “y” variable containing the target variable from the dataset. From this, the function will determine the desired class distribution and ensure that the train and test sets both have this distribution.
+We can demonstrate this with a worked example, listed below.
+Running the example creates a random split of the dataset into training and test sets, ensuring that the class distribution is preserved, in this case leaving five examples in each dataset.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- A Gentle Introduction to k-fold Cross-Validation
+- Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+- sklearn.model_selection.KFold API.
+- sklearn.model_selection.StratifiedKFold API.
+- sklearn.model_selection.train_test_split API.
+# Summary
+In this tutorial, you discovered how to evaluate classifier models on imbalanced datasets.
+Specifically, you learned:
+- The challenge of evaluating classifiers on datasets using train/test splits and cross-validation.
+- How a naive application of k-fold cross-validation and train-test splits will fail when evaluating classifiers on imbalanced datasets.
+- How modified k-fold cross-validation and train-test splits can be used to preserve the class distribution in the dataset.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Imbalanced Classification!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Imbalanced Classification with Python
+It provides self-study tutorials and end-to-end projects on:
+Performance Metrics, Undersampling Methods, SMOTE, Threshold Moving, Probability Calibration, Cost-Sensitive Algorithms
+and much more...
+See What's Inside
+
+'''
+# generate 2 class dataset
+X, y = make_classification(n_samples=1000, n_classes=2, weights=[0.99, 0.01], flip_y=0, random_state=1)
+# create a binary classification dataset
+from numpy import unique
+from sklearn.datasets import make_classification
+# generate 2 class dataset
+X, y = make_classification(n_samples=1000, n_classes=2, weights=[0.99, 0.01], flip_y=0, random_state=1)
+# summarize dataset
+classes = unique(y)
+total = len(y)
+for c in classes:
+	n_examples = len(y[y==c])
+	percent = n_examples / total * 100
+	print('> Class=%d : %d/%d (%.1f%%)' % (c, n_examples, total, percent))
+> Class=0 : 990/1000 (99.0%)
+> Class=1 : 10/1000 (1.0%)
+# example of k-fold cross-validation with an imbalanced dataset
+from sklearn.datasets import make_classification
+from sklearn.model_selection import KFold
+# generate 2 class dataset
+X, y = make_classification(n_samples=1000, n_classes=2, weights=[0.99, 0.01], flip_y=0, random_state=1)
+kfold = KFold(n_splits=5, shuffle=True, random_state=1)
+# enumerate the splits and summarize the distributions
+for train_ix, test_ix in kfold.split(X):
+	# select rows
+	train_X, test_X = X[train_ix], X[test_ix]
+	train_y, test_y = y[train_ix], y[test_ix]
+	# summarize train and test composition
+	train_0, train_1 = len(train_y[train_y==0]), len(train_y[train_y==1])
+	test_0, test_1 = len(test_y[test_y==0]), len(test_y[test_y==1])
+	print('>Train: 0=%d, 1=%d, Test: 0=%d, 1=%d' % (train_0, train_1, test_0, test_1))
+>Train: 0=791, 1=9, Test: 0=199, 1=1
+>Train: 0=793, 1=7, Test: 0=197, 1=3
+>Train: 0=794, 1=6, Test: 0=196, 1=4
+>Train: 0=790, 1=10, Test: 0=200, 1=0
+>Train: 0=792, 1=8, Test: 0=198, 1=2
+# example of train/test split with an imbalanced dataset
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+# generate 2 class dataset
+X, y = make_classification(n_samples=1000, n_classes=2, weights=[0.99, 0.01], flip_y=0, random_state=1)
+# split into train/test sets with same class ratio
+trainX, testX, trainy, testy = train_test_split(X, y, test_size=0.5, random_state=2)
+# summarize
+train_0, train_1 = len(trainy[trainy==0]), len(trainy[trainy==1])
+test_0, test_1 = len(testy[testy==0]), len(testy[testy==1])
+print('>Train: 0=%d, 1=%d, Test: 0=%d, 1=%d' % (train_0, train_1, test_0, test_1))
+>Train: 0=497, 1=3, Test: 0=493, 1=7
+# example of stratified k-fold cross-validation with an imbalanced dataset
+from sklearn.datasets import make_classification
+from sklearn.model_selection import StratifiedKFold
+# generate 2 class dataset
+X, y = make_classification(n_samples=1000, n_classes=2, weights=[0.99, 0.01], flip_y=0, random_state=1)
+kfold = StratifiedKFold(n_splits=5, shuffle=True, random_state=1)
+# enumerate the splits and summarize the distributions
+for train_ix, test_ix in kfold.split(X, y):
+	# select rows
+	train_X, test_X = X[train_ix], X[test_ix]
+	train_y, test_y = y[train_ix], y[test_ix]
+	# summarize train and test composition
+	train_0, train_1 = len(train_y[train_y==0]), len(train_y[train_y==1])
+	test_0, test_1 = len(test_y[test_y==0]), len(test_y[test_y==1])
+	print('>Train: 0=%d, 1=%d, Test: 0=%d, 1=%d' % (train_0, train_1, test_0, test_1))
+>Train: 0=792, 1=8, Test: 0=198, 1=2
+>Train: 0=792, 1=8, Test: 0=198, 1=2
+>Train: 0=792, 1=8, Test: 0=198, 1=2
+>Train: 0=792, 1=8, Test: 0=198, 1=2
+>Train: 0=792, 1=8, Test: 0=198, 1=2
+# example of stratified train/test split with an imbalanced dataset
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+# generate 2 class dataset
+X, y = make_classification(n_samples=1000, n_classes=2, weights=[0.99, 0.01], flip_y=0, random_state=1)
+# split into train/test sets with same class ratio
+trainX, testX, trainy, testy = train_test_split(X, y, test_size=0.5, random_state=2, stratify=y)
+# summarize
+train_0, train_1 = len(trainy[trainy==0]), len(trainy[trainy==1])
+test_0, test_1 = len(testy[testy==0]), len(testy[testy==1])
+print('>Train: 0=%d, 1=%d, Test: 0=%d, 1=%d' % (train_0, train_1, test_0, test_1))
+>Train: 0=495, 1=5, Test: 0=495, 1=5
+'''

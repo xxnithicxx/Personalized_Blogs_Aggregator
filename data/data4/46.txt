@@ -1,0 +1,54 @@
+Assessing and Comparing Classifier Performance with ROC Curves
+https://machinelearningmastery.com/assessing-comparing-classifier-performance-roc-curves-2/
+2014-11-25
+The most commonly reported measure of classifier performance is accuracy: the percent of correct classifications obtained.
+This metric has the advantage of being easy to understand and makes comparison of the performance of different classifiers trivial, but it ignores many of the factors which should be taken into account when honestly assessing the performance of a classifier.
+# What Is Meant By Classifier Performance?
+Classifier performance is more than just a count of correct classifications.
+Consider, for interest, the problem of screening for a relatively rare condition such as cervical cancer, which has a prevalence of about 10% (actual stats). If a lazy Pap smear screener was to classify every slide they see as “normal”, they would have a 90% accuracy. Very impressive! But that figure completely ignores the fact that the 10% of women who do have the disease have not been diagnosed at all.
+In a previous blog post we discussed some of the other performance metrics which can be applied to the assessment of a classifier. To review:
+Most classifiers produce a score, which is then thresholded to decide the classification. If a classifier produces a score between 0.0 (definitely negative) and 1.0 (definitely positive), it is common to consider anything over 0.5 as positive.
+However, any threshold applied to a dataset (in which PP is the positive population and NP is the negative population) is going to produce true positives (TP), false positives (FP), true negatives (TN) and false negatives (FN) (Figure 1). We need a method which will take into account all of these numbers.
+Figure 1. Overlapping datasets will always generate false positives and negatives as well as true positives and negatives
+Once you have numbers for all of these measures, some useful metrics can be calculated.
+- Accuracy = (1 – Error) = (TP + TN)/(PP + NP) = Pr(C), the probability of a correct classification.
+- Sensitivity = TP/(TP + FN) = TP/PP = the ability of the test to detect disease in a population of diseased individuals.
+- Specificity = TN/(TN + FP) = TN / NP = the ability of the test to correctly rule out the disease in a disease-free population.
+Let’s calculate these metrics for some reasonable real-world numbers. If we have 100,000 patients, of which 200 (20%) actually have cancer, we might see the following test results (Table 1):
+Table 1. Illustration of diagnostic test performance for “reasonable” values for Pap smear screening
+For this data:
+- Sensitivity = TP/(TP + FN) = 160 / (160 + 40) = 80.0%
+Specificity = TN/(TN + FP) = 69,860 / (69,860 + 29,940) = 70.0%
+In other words, our test will correctly identify 80% of people with the disease, but 30% of healthy people will incorrectly test positive. By only considering the sensitivity (or accuracy) of the test, potentially important information is lost.
+By considering our wrong results as well as our correct ones we get much greater insight into the performance of the classifier.
+One way to overcome the problem of having to choose a cutoff is to start with a threshold of 0.0, so that every case is considered as positive. We correctly classify all of the positive cases, and incorrectly classify all of the negative cases. We then move the threshold over every value between 0.0 and 1.0, progressively decreasing the number of false positives and increasing the number of true positives.
+TP (sensitivity) can then be plotted against FP (1 – specificity) for each threshold used. The resulting graph is called a Receiver Operating Characteristic (ROC) curve (Figure 2). ROC curves were developed for use in signal detection in radar returns in the 1950’s, and have since been applied to a wide range of problems.
+Figure 2. Examples of ROC curves
+For a perfect classifier the ROC curve will go straight up the Y axis and then along the X axis. A classifier with no power will sit on the diagonal, whilst most classifiers fall somewhere in between.
+ROC analysis provides tools to select possibly optimal models and to discard suboptimal ones independently from (and prior to specifying) the cost context or the class distribution
+— Wikipedia article on Receiver Operating Characteristic
+# Using ROC Curves
+It is immediately apparent that a ROC curve can be used to select a threshold for a classifier which maximises the true positives, while minimising the false positives.
+However, different types of problems have different optimal classifier thresholds. For a cancer screening test, for example, we may be prepared to put up with a relatively high false positive rate in order to get a high true positive,  it is most important to identify possible cancer sufferers.
+For a follow-up test after treatment, however, a different threshold might be more desirable, since we want to minimise false negatives, we don’t want to tell a patient they’re clear if this is not actually the case.
+ROC curves also give us the ability to assess the performance of the classifier over its entire operating range. The most widely-used measure is the area under the curve (AUC). As you can see from Figure 2, the AUC for a classifier with no power, essentially random guessing, is 0.5, because the curve follows the diagonal. The AUC for that mythical being, the perfect classifier, is 1.0. Most classifiers have AUCs that fall somewhere between these two values.
+An AUC of less than 0.5 might indicate that something interesting is happening. A very low AUC might indicate that the problem has been set up wrongly, the classifier is finding a relationship in the data which is, essentially, the opposite of that expected. In such a case, inspection of the entire ROC curve might give some clues as to what is going on: have the positives and negatives been mislabelled?
+The AUC can be used to compare the performance of two or more classifiers. A single threshold can be selected and the classifiers’ performance at that point compared, or the overall performance can be compared by considering the AUC.
+Most published reports compare AUCs in absolute terms: “Classifier 1 has an AUC of 0.85, and classifier 2 has an AUC of 0.79, so classifier 1 is clearly better“. It is, however, possible to calculate whether differences in AUC are statistically significant. For full details, see the Hanley & McNeil (1982) paper listed below.
+# ROC Curve Analysis Tutorials
+- A tutorial on producing ROC curves using the SigmaPlot software (PDF)
+- A YouTube tutorial for SPSS from TheRMUoHP Biostatistics Resource Channel
+- Documentation for the pROC package inR (PDF)
+
+# When To Use ROC Curve Analysis
+In this post I have used a biomedical example, and ROC curves are widely used in the biomedical sciences. The technique is, however, applicable to any classifier producing a score for each case, rather than a binary decision.
+Neural networks and many statistical algorithms are examples of appropriate classifiers, while approaches such as decision trees are less suited. Algorithms which have only two possible outcomes (such as the cancer / no cancer example used here) are most suited to this approach.
+Any sort of data which can be fed into appropriate classifiers can be subjected to ROC curve analysis.
+# Further Reading
+- A classic paper on using ROC curves, old, but still very relevant: Hanley, J. A. and B. J. McNeil (1982). “The meaning and use of the area under a receiver operating characteristic (ROC) curve.” Radiology 143(1): 29-36.
+- And a nice, more recent, review article with a focus on medical diagnostics: Hajian-Tilaki K.  “Receiver Operating Characteristic (ROC) Curve Analysis for Medical Diagnostic Test Evaluation“. Caspian Journal of Internal Medicine 2013;4(2):627-635.
+- Just to demonstrate the use of ROC curves in financial applications: Petro Lisowsky (2010) “Seeking Shelter: Empirically Modeling Tax Shelters Using Financial Statement Information“. The Accounting Review: September 2010, Vol. 85, No. 5, pp. 1693-1720.
+
+'''
+
+'''

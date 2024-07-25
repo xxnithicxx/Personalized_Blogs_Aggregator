@@ -1,0 +1,210 @@
+5 Examples of Simple Sequence Prediction Problems for LSTMs
+https://machinelearningmastery.com/sequence-prediction-problems-learning-lstm-recurrent-neural-networks/
+2017-07-18
+Sequence prediction is different from traditional classification and regression problems.
+It requires that you take the order of observations into account and that you use models like Long Short-Term Memory (LSTM) recurrent neural networks that have memory and that can learn any temporal dependence between observations.
+It is critical to apply LSTMs to learn how to use them on sequence prediction problems, and for that, you need a suite of well-defined problems that allow you to focus on different problem types and framings. It is critical so that you can build up your intuition for how sequence prediction problems are different and how sophisticated models like LSTMs can be used to address them.
+In this tutorial, you will discover a suite of 5 narrowly defined and scalable sequence prediction problems that you can use to apply and learn more about LSTM recurrent neural networks.
+After completing this tutorial, you will know:
+- Simple memorization tasks to test the learned memory capability of LSTMs.
+- Simple echo tasks to test the learned temporal dependence capability of LSTMs.
+- Simple arithmetic tasks to test the interpretation capability of LSTMs.
+Kick-start your project with my new book Long Short-Term Memory Networks With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+5 Examples of Simple Sequence Prediction Problems for Learning LSTM Recurrent Neural NetworksPhoto by Geraint Otis Warlow, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into 5 sections; they are:
+- Sequence Learning Problem
+- Value Memorization
+- Echo Random Integer
+- Echo Random Subsequences
+- Sequence Classification
+# Properties of Problems
+The sequence problems were designed with a few properties in mind:
+- Narrow. To focus on one aspect of the sequence prediction, such as memory or function approximation.
+- Scalable. To be made more or less difficult along the chosen narrow focus.
+- Reframed. Two or more framings of the each problem are presented to support the exploration of different algorithm learning capabilities.
+I tried to provide a mixture of narrow focuses, problem difficulties, and required network architectures.
+If you have ideas for further extensions or similarly carefully designed problems, please let me know in the comments below.
+# 1. Sequence Learning Problem
+In this problem, a sequence of contiguous real values between 0.0 and 1.0 are generated. Given one or more time steps of past values, the model must predict the next item in the sequence.
+We can generate this sequence directly, as follows:
+Running this example prints the generated sequence:
+This could be framed as a memorization challenge where given the observation at the previous time step, the model must predict the next value:
+The network could memorize the input-output pairs, which is quite boring, but would demonstrate the function approximation capability of the network.
+The problem could be framed as randomly chosen contiguous subsequences as input time steps and the next value in the sequence as output.
+This would require the network to learn either to add a fixed value to the last seen observation or to memorize all possible subsequences of the generated problem.
+This framing of the problem would be modeled as a many-to-one sequence prediction problem.
+This is an easy problem that tests primitive features of sequence learning. This problem could be solved by a multilayer Perceptron network.
+# 2. Value Memorization
+The problem is to remember the first value in the sequence and to repeat it at the end of the sequence.
+This problem is based on “Experiment 2” used to demonstrate LSTMs in the 1997 paper Long Short Term Memory.
+This can be framed as a one-step prediction problem.
+Given one value in the sequence, the model must predict the next value in the sequence. For example, given a value of “0” as an input, the model must predict the value “1”.
+Consider the following two sequences of 5 integers:
+The Python code will generate two sequences of arbitrary length. You could generalize it further if you wish.
+Running the example generates and prints the above two sequences.
+The integers could be normalized, or more preferably one hot encoded.
+The patterns introduce a wrinkle in that there is conflicting information between the two sequences and that the model must know the context of each one-step prediction (e.g. the sequence it is currently predicting) in order to correctly predict each full sequence.
+We can see that the first value of the sequence is repeated as the last value of the sequence. This is the indicator that provides context to the model as to which sequence it is working on.
+The conflict is the transition from the second to last items in each sequence. In sequence one, a “2” is given as an input and a “3” must be predicted, whereas in sequence two, a “2” is given as input and a “4” must be predicted.
+This wrinkle is important to prevent the model from memorizing each single-step input-output pair of values in each sequence, as a sequence unaware model may be inclined to do.
+This framing would be modeled as a one-to-one sequence prediction problem.
+This is a problem that a multilayer Perceptron and other non-recurrent neural networks cannot learn. The first value in the sequence must be remembered across multiple samples.
+This problem could be framed as providing the entire sequence except the last value as input time steps and predicting the final value.
+Each time step is still shown to the network one at a time, but the network must remember the value at the first time step. The difference is, the network can better learn the difference between the sequence, and between long sequences via backpropagation through time.
+This framing of the problem would be modeled as a many-to-one sequence prediction problem.
+Again, this problem could not be learned by a multilayer Perceptron.
+# 3. Echo Random Integer
+In this problem, random sequences of integers are generated. The model must remember an integer at a specific lag time and echo it at the end of the sequence.
+For example, a random sequence of 10 integers may be:
+The problem may be framed as echoing the value at the 5th time step, in this case 9.
+The code below will generate random sequences of integers.
+Running the example will generate and print a random sequence, such as:
+The integers can be normalized, but more preferably a one hot encoding can be used.
+A simple framing of this problem is to echo the current input value.
+For example:
+This trivial problem can easily be solved by a multilayer Perceptron and could be used for calibration or diagnostics of a test harness.
+A more challenging framing of the problem is to echo the value at the previous time step.
+For example:
+This is a problem that cannot be solved by a multilayer Perceptron.
+The index to echo can be pushed further back in time, putting more demand on the LSTMs memory.
+Unlike the “Value Memorization” problem above, a new sequence would be generated each training epoch. This would require that the model learn a generalization echo solution rather than memorize a specific sequence or sequences of random numbers.
+In both cases, the problem would be modeled as a many-to-one sequence prediction problem.
+# 4. Echo Random Subsequences
+This problem also involves the generation of random sequences of integers.
+Instead of echoing a single previous time step as in the previous problem, this problem requires the model to remember and output a partial sub-sequence of the input sequence.
+The simplest framing would be the echo problem from the previous section. Instead, we will focus on a sequence output where the simplest framing is for the model to remember and output the whole input sequence.
+For example:
+This could be modeled as a many-to-one sequence prediction problem where the output sequence is output directly at the end of the last value in the input sequence.
+This can also be modeled as the network outputting one value for each input time step, e.g. a one-to-one model.
+A more challenging framing is to output a partial contiguous subsequence of the input sequence.
+For example:
+This is more challenging because the number of inputs does not match the number of outputs. A many-to-many model of this problem would require a more advanced architecture such as the encoder-decoder LSTM.
+Again, a one hot encoding would be preferred, although the problem could be modeled as normalized integer values.
+# 5. Sequence Classification
+The problem is defined as a sequence of random values between 0 and 1. This sequence is taken as input for the problem with each number provided one per timestep.
+A binary label (0 or 1) is associated with each input. The output values are all 0. Once the cumulative sum of the input values in the sequence exceeds a threshold, then the output value flips from 0 to 1.
+A threshold of 1/4 the sequence length is used.
+For example, below is a sequence of 10 input timesteps (X):
+The corresponding classification output (y) would be:
+We can implement this in Python.
+Running the example generates a random input sequence and calculates the corresponding output sequence of binary values.
+This is a sequence classification problem that can be modeled as one-to-one. State is required to interpret past time steps to correctly predict when the output sequence flips from 0 to 1.
+# Further Reading
+This section provides more resources on the topic if you are looking go deeper.
+- Long Short-Term Memory, 1997
+- How to use Different Batch Sizes for Training and Predicting in Python with Keras
+- Demonstration of Memory with a Long Short-Term Memory Network in Python
+- How to Learn to Echo Random Integers with Long Short-Term Memory Recurrent Neural Networks
+- How to use an Encoder-Decoder LSTM to Echo Sequences of Random Integers
+- How to Develop a Bidirectional LSTM For Sequence Classification in Python with Keras
+# Summary
+In this tutorial, you discovered a suite of carefully designed contrived sequence prediction problems that you can use to explore the learning and memory capabilities of LSTM recurrent neural networks.
+Specifically, you learned:
+- Simple memorization tasks to test the learned memory capability of LSTMs.
+- Simple echo tasks to test learned temporal dependence capability of LSTMs.
+- Simple arithmetic tasks to test the interpretation capability of LSTMs.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop LSTMs for Sequence Prediction Today!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Long Short-Term Memory Networks with Python
+It provides self-study tutorials on topics like:
+CNN LSTMs, Encoder-Decoder LSTMs, generative models, data preparation, making predictions and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+from numpy import array
+
+# generate a sequence of real values between 0 and 1.
+def generate_sequence(length=10):
+	return array([i/float(length) for i in range(length)])
+
+print(generate_sequence())
+[ 0. 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9]
+X (samples),	y
+0.0,			0.1
+0.1,			0.2
+0.2,			0.3
+...
+X (timesteps),		y
+0.4, 0.5, 0.6,		0.7
+0.0, 0.2, 0.3,		0.4
+0.3, 0.4, 0.5,		0.6
+...
+3, 0, 1, 2, 3
+4, 0, 1, 2, 4
+def generate_sequence(length=5):
+	return [i for i in range(length)]
+
+# sequence 1
+seq1 = generate_sequence()
+seq1[0] = seq1[-1] = seq1[-2]
+print(seq1)
+# sequence 2
+seq1 = generate_sequence()
+seq1[0] = seq1[-1]
+print(seq1)
+[3, 1, 2, 3, 3]
+[4, 1, 2, 3, 4]
+Sequence 1:
+
+X (samples),	y
+...
+1,				2
+2,				3
+
+Sequence 2:
+
+X (samples),	y
+...
+1,				2
+2,				4
+X (timesteps),		y
+3, 0, 1, 2, 		3
+4, 0, 1, 2, 		4
+5, 3, 2, 1, 9, 9, 2, 7, 1, 6
+from random import randint
+
+# generate a sequence of random numbers in [0, 99]
+def generate_sequence(length=10):
+	return [randint(0, 99) for _ in range(length)]
+
+print(generate_sequence())
+[47, 69, 76, 9, 71, 87, 8, 16, 32, 81]
+yhat(t) = f(X(t))
+X (timesteps),		y
+5, 3, 2, 1, 9,		9
+yhat(t) = f(X(t-1))
+X (timesteps),		y
+5, 3, 2, 1, 9,		1
+X (timesteps),		y
+5, 3, 2, 4, 1,		5, 3, 2, 4, 1
+X (timesteps),		y
+5, 3, 2, 4, 1,		5, 3, 2
+0.63144003 0.29414551 0.91587952 0.95189228 0.32195638 0.60742236 0.83895793 0.18023048 0.84762691 0.29165514
+0 0 0 1 1 1 1 1 1 1
+from random import random
+from numpy import array
+from numpy import cumsum
+
+# create a sequence classification instance
+def get_sequence(n_timesteps):
+	# create a sequence of random numbers in [0,1]
+	X = array([random() for _ in range(n_timesteps)])
+	# calculate cut-off value to change class values
+	limit = n_timesteps/4.0
+	# determine the class outcome for each item in cumulative sequence
+	y = array([0 if x < limit else 1 for x in cumsum(X)])
+	return X, y
+
+X, y = get_sequence(10)
+print(X)
+print(y)
+[ 0.31102339  0.66591885  0.7211718   0.78159441  0.50496384  0.56941485
+  0.60775583  0.36833139  0.180908    0.80614878]
+[0 0 0 0 1 1 1 1 1 1]
+'''

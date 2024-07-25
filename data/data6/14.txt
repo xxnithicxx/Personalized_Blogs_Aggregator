@@ -1,0 +1,287 @@
+How to Train to the Test Set in Machine Learning
+https://machinelearningmastery.com/train-to-the-test-set-in-machine-learning/
+2020-09-22
+Training to the test set is a type of overfitting where a model is prepared that intentionally achieves good performance on a given test set at the expense of increased generalization error.
+It is a type of overfitting that is common in machine learning competitions where a complete training dataset is provided and where only the input portion of a test set is provided. One approach to training to the test set involves constructing a training set that most resembles the test set and then using it as the basis for training a model. The model is expected to have better performance on the test set, but most likely worse performance on the training dataset and on any new data in the future.
+Although overfitting the test set is not desirable, it can be interesting to explore as a thought experiment and provide more insight into both machine learning competitions and avoiding overfitting generally.
+In this tutorial, you will discover how to intentionally train to the test set for classification and regression problems.
+After completing this tutorial, you will know:
+- Training to the test set is a type of data leakage that may occur in machine learning competitions.
+- One approach to training to the test set involves creating a training dataset that is most similar to a provided test set.
+- How to use a KNN model to construct a training dataset and train to the test set with a real dataset.
+Kick-start your project with my new book Data Preparation for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Train to the Test Set in Machine LearningPhoto by ND Strupler, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Train to the Test Set
+- Train to Test Set for Classification
+- Train to Test Set for Regression
+# Train to the Test Set
+In applied machine learning, we seek a model that learns the relationship between the input and output variables using the training dataset.
+The hope and goal is that we learn a relationship that generalizes to new examples beyond the training dataset. This goal motivates why we use resampling techniques like k-fold cross-validation to estimate the performance of the model when making predictions on data not used during training.
+In the case of machine learning competitions, like those on Kaggle, we are given access to the complete training dataset and the inputs of the test dataset and are required to make predictions for the test dataset.
+This leads to a possible situation where we may accidentally or choose to train a model to the test set. That is, tune the model behavior to achieve the best performance on the test dataset rather than develop a model that performs well in general, using a technique like k-fold cross-validation.
+Another, more overt path to information leakage, can sometimes be seen in machine learning competitions where the training and test set data are given at the same time.
+— Page 56, Feature Engineering and Selection: A Practical Approach for Predictive Models, 2019.
+Training to the test set is often a bad idea.
+It is an explicit type of data leakage. Nevertheless, it is an interesting thought experiment.
+One approach to training to the test set is to contrive a training dataset that is most similar to the test set. For example, we could discard all rows in the training set that are too different from the test set and only train on those rows in the training set that are maximally similar to rows in the test set.
+While the test set data often have the outcome data blinded, it is possible to “train to the test” by only using the training set samples that are most similar to the test set data. This may very well improve the model’s performance scores for this particular test set but might ruin the model for predicting on a broader data set.
+— Page 56, Feature Engineering and Selection: A Practical Approach for Predictive Models, 2019.
+We would expect the model to overfit the test set, but this is the whole point of this thought experiment.
+Let’s explore this approach to training to the test set in this tutorial.
+We can use a k-nearest neighbor model to select those instances of the training set that are most similar to the test set. The KNeighborsRegressor and KNeighborsClassifier both provide the kneighbors() function that will return indexes into the training dataset for rows that are most similar to a given data, such as a test set.
+We might want to try removing duplicates from the selected row indexes.
+We can then use those row indexes to construct a custom training dataset and fit a model.
+Given that we are using a KNN model to construct the training set from the test set, we will also use the same type of model to make predictions on the test set. This is not required, but it makes the examples simpler.
+Using this approach, we can now experiment with training to the test set for both classification and regression datasets.
+
+
+
+
+# Train to Test Set for Classification
+We will use the diabetes dataset as the basis for exploring training for the test set for classification problems.
+Each record describes the medical details of a female and the prediction is the onset of diabetes within the next five years.
+- Dataset Details: pima-indians-diabetes.names
+- Dataset: pima-indians-diabetes.csv
+The dataset has eight input variables and 768 rows of data; the input variables are all numeric and the target has two class labels, e.g. it is a binary classification task.
+Below provides a sample of the first five rows of the dataset.
+First, we can load the dataset directly from the URL, split it into input and output elements, then split the dataset into train and test sets, holding thirty percent back for the test set. We can then evaluate a KNN model with default model hyperparameters by training it on the training set and making predictions on the test set.
+The complete example is listed below.
+Running the example first loads the dataset and summarizes the number of rows and columns, matching our expectations. The shape of the train and test sets are then reported, showing we have about 230 rows in the test set.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+Finally, the classification accuracy of the model is reported to be about 77.056 percent.
+Now, let’s see if we can achieve better performance on the test set by preparing a model that is trained directly for it.
+First, we will construct a training dataset using the simpler example in the training set for each row in the test set.
+Next, we will train the model on this new dataset and evaluate it on the test set as we did before.
+The complete example is listed below.
+Running the example, we can see that the reported size of the new training dataset is the same size as the test set, as we expected.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+We can see that we have achieved a lift in performance by training to the test set over training the model on the entire training dataset. In this case, we achieved a classification accuracy of about 79.654 percent compared to 77.056 percent when the entire training dataset is used.
+You might want to try selecting different numbers of neighbors from the training set for each example in the test set to see if you can achieve better performance.
+Also, you might want to try keeping unique row indexes in the training set and see if that makes a difference.
+Finally, it might be interesting to hold back a final validation dataset and compare how different “train-to-the-test-set” techniques affect performance on the holdout dataset. E.g. see how training to the test set impacts generalization error.
+Report your findings in the comments below.
+Now that we know how to train to the test set for classification, let’s look at an example for regression.
+# Train to Test Set for Regression
+We will use the housing dataset as the basis for exploring training for the test set for regression problems.
+The housing dataset involves the prediction of a house price in thousands of dollars given details of the house and its neighborhood.
+- Dataset Details: housing.names
+- Dataset: housing.csv
+It is a regression problem, meaning we are predicting a numerical value. There are 506 observations with 13 input variables and one output variable.
+A sample of the first five rows is listed below.
+First, we can load the dataset, split it, and evaluate a KNN model on it directly using the entire training dataset. We will report performance on this regression class using mean absolute error (MAE).
+The complete example is listed below.
+Running the example first loads the dataset and summarizes the number of rows and columns, matching our expectations. The shape of the train and test sets are then reported, showing we have about 150 rows in the test set.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+Finally, the MAE of the model is reported to be about 4.488.
+Now, let’s see if we can achieve better performance on the test set by preparing a model that is trained to it.
+First, we will construct a training dataset using the simpler example in the training set for each row in the test set.
+Next, we will train the model on this new dataset and evaluate it on the test set as we did before.
+The complete example is listed below.
+Running the example, we can see that the reported size of the new training dataset is the same size as the test set, as we expected.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+We can see that we have achieved a lift in performance by training to the test set over training the model on the entire training dataset. In this case, we achieved a MAE of about 4.433 compared to 4.488 when the entire training dataset is used.
+Again, you might want to explore using a different number of neighbors when constructing the new training set and see if keeping unique rows in the training dataset makes a difference. Report your findings in the comments below.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Feature Engineering and Selection: A Practical Approach for Predictive Models, 2019.
+- sklearn.neighbors.KNeighborsRegressor API.
+- sklearn.neighbors.KNeighborsClassifier API.
+# Summary
+In this tutorial, you discovered how to intentionally train to the test set for classification and regression problems.
+Specifically, you learned:
+- Training to the test set is a type of data leakage that may occur in machine learning competitions.
+- One approach to training to the test set involves creating a training dataset that is most similar to a provided test set.
+- How to use a KNN model to construct a training dataset and train to the test set with a real dataset.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Modern Data Preparation!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Data Preparation for Machine Learning
+It provides self-study tutorials with full working code on:
+Feature Selection, RFE, Data Cleaning, Data Transforms, Scaling, Dimensionality Reduction,
+and much more...
+See What's Inside
+
+'''
+
+# get the most similar neighbor for each point in the test set
+neighbor_ix = knn.kneighbors(X_test, 2, return_distance=False)
+ix = neighbor_ix[:,0]
+
+# remove duplicate rows
+ix = unique(ix)
+
+# create a training dataset from selected instances
+X_train_neigh, y_train_neigh = X_train[ix], y_train[ix]
+6,148,72,35,0,33.6,0.627,50,1
+1,85,66,29,0,26.6,0.351,31,0
+8,183,64,0,0,23.3,0.672,32,1
+1,89,66,23,94,28.1,0.167,21,0
+0,137,40,35,168,43.1,2.288,33,1
+...
+# example of evaluating a knn model on the diabetes classification dataset
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.neighbors import KNeighborsClassifier
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.csv'
+df = read_csv(url, header=None)
+data = df.values
+X, y = data[:, :-1], data[:, -1]
+print(X.shape, y.shape)
+# split dataset
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
+print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+# define model
+model = KNeighborsClassifier()
+# fit model
+model.fit(X_train, y_train)
+# make predictions
+yhat = model.predict(X_test)
+# evaluate predictions
+accuracy = accuracy_score(y_test, yhat)
+print('Accuracy: %.3f' % (accuracy * 100))
+(768, 8) (768,)
+(537, 8) (231, 8) (537,) (231,)
+Accuracy: 77.056
+
+# select examples that are most similar to the test set
+knn = KNeighborsClassifier()
+knn.fit(X_train, y_train)
+# get the most similar neighbor for each point in the test set
+neighbor_ix = knn.kneighbors(X_test, 1, return_distance=False)
+ix = neighbor_ix[:,0]
+# create a training dataset from selected instances
+X_train_neigh, y_train_neigh = X_train[ix], y_train[ix]
+print(X_train_neigh.shape, y_train_neigh.shape)
+
+# define model
+model = KNeighborsClassifier()
+# fit model
+model.fit(X_train_neigh, y_train_neigh)
+# example of training to the test set for the diabetes dataset
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.neighbors import KNeighborsClassifier
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.csv'
+df = read_csv(url, header=None)
+data = df.values
+X, y = data[:, :-1], data[:, -1]
+print(X.shape, y.shape)
+# split dataset
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
+print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+# select examples that are most similar to the test set
+knn = KNeighborsClassifier()
+knn.fit(X_train, y_train)
+# get the most similar neighbor for each point in the test set
+neighbor_ix = knn.kneighbors(X_test, 1, return_distance=False)
+ix = neighbor_ix[:,0]
+# create a training dataset from selected instances
+X_train_neigh, y_train_neigh = X_train[ix], y_train[ix]
+print(X_train_neigh.shape, y_train_neigh.shape)
+# define model
+model = KNeighborsClassifier()
+# fit model
+model.fit(X_train_neigh, y_train_neigh)
+# make predictions
+yhat = model.predict(X_test)
+# evaluate predictions
+accuracy = accuracy_score(y_test, yhat)
+print('Accuracy: %.3f' % (accuracy * 100))
+(768, 8) (768,)
+(537, 8) (231, 8) (537,) (231,)
+(231, 8) (231,)
+Accuracy: 79.654
+0.00632,18.00,2.310,0,0.5380,6.5750,65.20,4.0900,1,296.0,15.30,396.90,4.98,24.00
+0.02731,0.00,7.070,0,0.4690,6.4210,78.90,4.9671,2,242.0,17.80,396.90,9.14,21.60
+0.02729,0.00,7.070,0,0.4690,7.1850,61.10,4.9671,2,242.0,17.80,392.83,4.03,34.70
+0.03237,0.00,2.180,0,0.4580,6.9980,45.80,6.0622,3,222.0,18.70,394.63,2.94,33.40
+0.06905,0.00,2.180,0,0.4580,7.1470,54.20,6.0622,3,222.0,18.70,396.90,5.33,36.20
+...
+# example of evaluating a knn model on the housing regression dataset
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
+from sklearn.neighbors import KNeighborsRegressor
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+df = read_csv(url, header=None)
+data = df.values
+X, y = data[:, :-1], data[:, -1]
+print(X.shape, y.shape)
+# split dataset
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
+print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+# define model
+model = KNeighborsRegressor()
+# fit model
+model.fit(X_train, y_train)
+# make predictions
+yhat = model.predict(X_test)
+# evaluate predictions
+mae = mean_absolute_error(y_test, yhat)
+print('MAE: %.3f' % mae)
+(506, 13) (506,)
+(354, 13) (152, 13) (354,) (152,)
+MAE: 4.488
+
+# select examples that are most similar to the test set
+knn = KNeighborsClassifier()
+knn.fit(X_train, y_train)
+# get the most similar neighbor for each point in the test set
+neighbor_ix = knn.kneighbors(X_test, 1, return_distance=False)
+ix = neighbor_ix[:,0]
+# create a training dataset from selected instances
+X_train_neigh, y_train_neigh = X_train[ix], y_train[ix]
+print(X_train_neigh.shape, y_train_neigh.shape)
+
+# define model
+model = KNeighborsClassifier()
+# fit model
+model.fit(X_train_neigh, y_train_neigh)
+# example of training to the test set for the housing dataset
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
+from sklearn.neighbors import KNeighborsRegressor
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+df = read_csv(url, header=None)
+data = df.values
+X, y = data[:, :-1], data[:, -1]
+print(X.shape, y.shape)
+# split dataset
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=1)
+print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+# select examples that are most similar to the test set
+knn = KNeighborsRegressor()
+knn.fit(X_train, y_train)
+# get the most similar neighbor for each point in the test set
+neighbor_ix = knn.kneighbors(X_test, 1, return_distance=False)
+ix = neighbor_ix[:,0]
+# create a training dataset from selected instances
+X_train_neigh, y_train_neigh = X_train[ix], y_train[ix]
+print(X_train_neigh.shape, y_train_neigh.shape)
+# define model
+model = KNeighborsRegressor()
+# fit model
+model.fit(X_train_neigh, y_train_neigh)
+# make predictions
+yhat = model.predict(X_test)
+# evaluate predictions
+mae = mean_absolute_error(y_test, yhat)
+print('MAE: %.3f' % mae)
+(506, 13) (506,)
+(354, 13) (152, 13) (354,) (152,)
+(152, 13) (152,)
+MAE: 4.433
+'''

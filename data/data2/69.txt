@@ -1,0 +1,362 @@
+How to use Different Batch Sizes when Training and Predicting with LSTMs
+https://machinelearningmastery.com/use-different-batch-sizes-training-predicting-python-keras/
+2017-05-14
+Keras uses fast symbolic mathematical libraries as a backend, such as TensorFlow and Theano.
+A downside of using these libraries is that the shape and size of your data must be defined once up front and held constant regardless of whether you are training your network or making predictions.
+On sequence prediction problems, it may be desirable to use a large batch size when training the network and a batch size of 1 when making predictions in order to predict the next step in the sequence.
+In this tutorial, you will discover how you can address this problem and even use different batch sizes during training and predicting.
+After completing this tutorial, you will know:
+- How to design a simple sequence prediction problem and develop an LSTM to learn it.
+- How to vary an LSTM configuration for online and batch-based learning and predicting.
+- How to vary the batch size used for training from that used for predicting.
+Kick-start your project with my new book Long Short-Term Memory Networks With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to use Different Batch Sizes for Training and Predicting in Python with KerasPhoto by steveandtwyla, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into 6 parts, as follows:
+- On Batch Size
+- Sequence Prediction Problem Description
+- LSTM Model and Varied Batch Size
+- Solution 1: Online Learning (Batch Size = 1)
+- Solution 2: Batch Forecasting (Batch Size = N)
+- Solution 3: Copy Weights
+A Python 2 or 3 environment is assumed to be installed and working.
+This includes SciPy with NumPy and Pandas. Keras version 2.0 or higher must be installed with either the TensorFlow or Keras backend.
+For help setting up your Python environment, see the post:
+- How to Setup a Python Environment for Machine Learning and Deep Learning with Anaconda
+# On Batch Size
+A benefit of using Keras is that it is built on top of symbolic mathematical libraries such as TensorFlow and Theano for fast and efficient computation. This is needed with large neural networks.
+A downside of using these efficient libraries is that you must define the scope of your data upfront and for all time. Specifically, the batch size.
+The batch size limits the number of samples to be shown to the network before a weight update can be performed. This same limitation is then imposed when making predictions with the fit model.
+Specifically, the batch size used when fitting your model controls how many predictions you must make at a time.
+This is often not a problem when you want to make the same number predictions at a time as the batch size used during training.
+This does become a problem when you wish to make fewer predictions than the batch size. For example, you may get the best results with a large batch size, but are required to make predictions for one observation at a time on something like a time series or sequence problem.
+This is why it may be desirable to have a different batch size when fitting the network to training data than when making predictions on test data or new input data.
+In this tutorial, we will explore different ways to solve this problem.
+# Sequence Prediction Problem Description
+We will use a simple sequence prediction problem as the context to demonstrate solutions to varying the batch size between training and prediction.
+A sequence prediction problem makes a good case for a varied batch size as you may want to have a batch size equal to the training dataset size (batch learning) during training and a batch size of 1 when making predictions for one-step outputs.
+The sequence prediction problem involves learning to predict the next step in the following 10-step sequence:
+We can create this sequence in Python as follows:
+Running the example prints our sequence:
+We must convert the sequence to a supervised learning problem. That means when 0.0 is shown as an input pattern, the network must learn to predict the next step as 0.1.
+We can do this in Python using the Pandas shift() function as follows:
+Running the example shows all input and output pairs.
+We will be using a recurrent neural network called a long short-term memory network to learn the sequence. As such, we must transform the input patterns from a 2D array (1 column with 9 rows) to a 3D array comprised of [rows, timesteps, columns] where timesteps is 1 because we only have one timestep per observation on each row.
+We can do this using the NumPy function reshape() as follows:
+Running the example creates X and y arrays ready for use with an LSTM and prints their shape.
+
+# LSTM Model and Varied Batch Size
+In this section, we will design an LSTM network for the problem.
+The training batch size will cover the entire training dataset (batch learning) and predictions will be made one at a time (one-step prediction). We will show that although the model learns the problem, that one-step predictions result in an error.
+We will use an LSTM network fit for 1000 epochs.
+The weights will be updated at the end of each training epoch (batch learning) meaning that the batch size will be equal to the number of training observations (9).
+For these experiments, we will require fine-grained control over when the internal state of the LSTM is updated. Normally LSTM state is cleared at the end of each batch in Keras, but we can control it by making the LSTM stateful and calling model.reset_state() to manage this state manually. This will be needed in later sections.
+The network has one input, a hidden layer with 10 units, and an output layer with 1 unit. The default tanh activation functions are used in the LSTM units and a linear activation function in the output layer.
+A mean squared error optimization function is used for this regression problem with the efficient ADAM optimization algorithm.
+The example below configures and creates the network.
+We will fit the network to all of the examples each epoch and reset the state of the network at the end of each epoch manually.
+Finally, we will forecast each step in the sequence one at a time.
+This requires a batch size of 1, that is different to the batch size of 9 used to fit the network, and will result in an error when the example is run.
+Below is the complete code example.
+Running the example fits the model fine and results in an error when making a prediction.
+The error reported is as follows:
+
+# Solution 1: Online Learning (Batch Size = 1)
+One solution to this problem is to fit the model using online learning.
+This is where the batch size is set to a value of 1 and the network weights are updated after each training example.
+This can have the effect of faster learning, but also adds instability to the learning process as the weights widely vary with each batch.
+Nevertheless, this will allow us to make one-step forecasts on the problem. The only change required is setting n_batch to 1 as follows:
+The complete code listing is provided below.
+Running the example prints the 9 expected outcomes and the correct predictions.
+
+# Solution 2: Batch Forecasting (Batch Size = N)
+Another solution is to make all predictions at once in a batch.
+This would mean that we could be very limited in the way the model is used.
+We would have to use all predictions made at once, or only keep the first prediction and discard the rest.
+We can adapt the example for batch forecasting by predicting with a batch size equal to the training batch size, then enumerating the batch of predictions, as follows:
+The complete example is listed below.
+Running the example prints the expected and correct predicted values.
+
+# Solution 3: Copy Weights
+A better solution is to use different batch sizes for training and predicting.
+The way to do this is to copy the weights from the fit network and to create a new network with the pre-trained weights.
+We can do this easily enough using the get_weights() and set_weights() functions in the Keras API, as follows:
+This creates a new model that is compiled with a batch size of 1. We can then use this new model to make one-step predictions:
+The complete example is listed below.
+Running the example prints the expected, and again correctly predicted, values.
+
+# Summary
+In this tutorial, you discovered how you can work around the need to vary the batch size used for training and prediction with the same network.
+Specifically, you learned:
+- How to design a simple sequence prediction problem and develop an LSTM to learn it.
+- How to vary an LSTM configuration for online and batch-based learning and predicting.
+- How to vary the batch size used for training from that used for predicting.
+Do you have any questions about batch size?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop LSTMs for Sequence Prediction Today!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Long Short-Term Memory Networks with Python
+It provides self-study tutorials on topics like:
+CNN LSTMs, Encoder-Decoder LSTMs, generative models, data preparation, making predictions and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+length = 10
+sequence = [i/float(length) for i in range(length)]
+print(sequence)
+[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+from pandas import concat
+from pandas import DataFrame
+# create sequence
+length = 10
+sequence = [i/float(length) for i in range(length)]
+# create X/y pairs
+df = DataFrame(sequence)
+df = concat([df, df.shift(1)], axis=1)
+df.dropna(inplace=True)
+print(df)
+1  0.1  0.0
+2  0.2  0.1
+3  0.3  0.2
+4  0.4  0.3
+5  0.5  0.4
+6  0.6  0.5
+7  0.7  0.6
+8  0.8  0.7
+9  0.9  0.8
+from pandas import concat
+from pandas import DataFrame
+# create sequence
+length = 10
+sequence = [i/float(length) for i in range(length)]
+# create X/y pairs
+df = DataFrame(sequence)
+df = concat([df, df.shift(1)], axis=1)
+df.dropna(inplace=True)
+# convert to LSTM friendly format
+values = df.values
+X, y = values[:, 0], values[:, 1]
+X = X.reshape(len(X), 1, 1)
+print(X.shape, y.shape)
+(9, 1, 1) (9,)
+# configure network
+n_batch = len(X)
+n_epoch = 1000
+n_neurons = 10
+# design network
+model = Sequential()
+model.add(LSTM(n_neurons, batch_input_shape=(n_batch, X.shape[1], X.shape[2]), stateful=True))
+model.add(Dense(1))
+model.compile(loss='mean_squared_error', optimizer='adam')
+# fit network
+for i in range(n_epoch):
+	model.fit(X, y, epochs=1, batch_size=n_batch, verbose=1, shuffle=False)
+	model.reset_states()
+# online forecast
+for i in range(len(X)):
+	testX, testy = X[i], y[i]
+	testX = testX.reshape(1, 1, 1)
+	yhat = model.predict(testX, batch_size=1)
+	print('>Expected=%.1f, Predicted=%.1f' % (testy, yhat))
+from pandas import DataFrame
+from pandas import concat
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+# create sequence
+length = 10
+sequence = [i/float(length) for i in range(length)]
+# create X/y pairs
+df = DataFrame(sequence)
+df = concat([df, df.shift(1)], axis=1)
+df.dropna(inplace=True)
+# convert to LSTM friendly format
+values = df.values
+X, y = values[:, 0], values[:, 1]
+X = X.reshape(len(X), 1, 1)
+# configure network
+n_batch = len(X)
+n_epoch = 1000
+n_neurons = 10
+# design network
+model = Sequential()
+model.add(LSTM(n_neurons, batch_input_shape=(n_batch, X.shape[1], X.shape[2]), stateful=True))
+model.add(Dense(1))
+model.compile(loss='mean_squared_error', optimizer='adam')
+# fit network
+for i in range(n_epoch):
+	model.fit(X, y, epochs=1, batch_size=n_batch, verbose=1, shuffle=False)
+	model.reset_states()
+# online forecast
+for i in range(len(X)):
+	testX, testy = X[i], y[i]
+	testX = testX.reshape(1, 1, 1)
+	yhat = model.predict(testX, batch_size=1)
+	print('>Expected=%.1f, Predicted=%.1f' % (testy, yhat))
+ValueError: Cannot feed value of shape (1, 1, 1) for Tensor 'lstm_1_input:0', which has shape '(9, 1, 1)'
+n_batch = 1
+from pandas import DataFrame
+from pandas import concat
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+# create sequence
+length = 10
+sequence = [i/float(length) for i in range(length)]
+# create X/y pairs
+df = DataFrame(sequence)
+df = concat([df, df.shift(1)], axis=1)
+df.dropna(inplace=True)
+# convert to LSTM friendly format
+values = df.values
+X, y = values[:, 0], values[:, 1]
+X = X.reshape(len(X), 1, 1)
+# configure network
+n_batch = 1
+n_epoch = 1000
+n_neurons = 10
+# design network
+model = Sequential()
+model.add(LSTM(n_neurons, batch_input_shape=(n_batch, X.shape[1], X.shape[2]), stateful=True))
+model.add(Dense(1))
+model.compile(loss='mean_squared_error', optimizer='adam')
+# fit network
+for i in range(n_epoch):
+	model.fit(X, y, epochs=1, batch_size=n_batch, verbose=1, shuffle=False)
+	model.reset_states()
+# online forecast
+for i in range(len(X)):
+	testX, testy = X[i], y[i]
+	testX = testX.reshape(1, 1, 1)
+	yhat = model.predict(testX, batch_size=1)
+	print('>Expected=%.1f, Predicted=%.1f' % (testy, yhat))
+>Expected=0.0, Predicted=0.0
+>Expected=0.1, Predicted=0.1
+>Expected=0.2, Predicted=0.2
+>Expected=0.3, Predicted=0.3
+>Expected=0.4, Predicted=0.4
+>Expected=0.5, Predicted=0.5
+>Expected=0.6, Predicted=0.6
+>Expected=0.7, Predicted=0.7
+>Expected=0.8, Predicted=0.8
+# batch forecast
+yhat = model.predict(X, batch_size=n_batch)
+for i in range(len(y)):
+	print('>Expected=%.1f, Predicted=%.1f' % (y[i], yhat[i]))
+from pandas import DataFrame
+from pandas import concat
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+# create sequence
+length = 10
+sequence = [i/float(length) for i in range(length)]
+# create X/y pairs
+df = DataFrame(sequence)
+df = concat([df, df.shift(1)], axis=1)
+df.dropna(inplace=True)
+# convert to LSTM friendly format
+values = df.values
+X, y = values[:, 0], values[:, 1]
+X = X.reshape(len(X), 1, 1)
+# configure network
+n_batch = len(X)
+n_epoch = 1000
+n_neurons = 10
+# design network
+model = Sequential()
+model.add(LSTM(n_neurons, batch_input_shape=(n_batch, X.shape[1], X.shape[2]), stateful=True))
+model.add(Dense(1))
+model.compile(loss='mean_squared_error', optimizer='adam')
+# fit network
+for i in range(n_epoch):
+	model.fit(X, y, epochs=1, batch_size=n_batch, verbose=1, shuffle=False)
+	model.reset_states()
+# batch forecast
+yhat = model.predict(X, batch_size=n_batch)
+for i in range(len(y)):
+	print('>Expected=%.1f, Predicted=%.1f' % (y[i], yhat[i]))
+>Expected=0.0, Predicted=0.0
+>Expected=0.1, Predicted=0.1
+>Expected=0.2, Predicted=0.2
+>Expected=0.3, Predicted=0.3
+>Expected=0.4, Predicted=0.4
+>Expected=0.5, Predicted=0.5
+>Expected=0.6, Predicted=0.6
+>Expected=0.7, Predicted=0.7
+>Expected=0.8, Predicted=0.8
+# re-define the batch size
+n_batch = 1
+# re-define model
+new_model = Sequential()
+new_model.add(LSTM(n_neurons, batch_input_shape=(n_batch, X.shape[1], X.shape[2]), stateful=True))
+new_model.add(Dense(1))
+# copy weights
+old_weights = model.get_weights()
+new_model.set_weights(old_weights)
+# online forecast
+for i in range(len(X)):
+	testX, testy = X[i], y[i]
+	testX = testX.reshape(1, 1, 1)
+	yhat = new_model.predict(testX, batch_size=n_batch)
+	print('>Expected=%.1f, Predicted=%.1f' % (testy, yhat))
+from pandas import DataFrame
+from pandas import concat
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+# create sequence
+length = 10
+sequence = [i/float(length) for i in range(length)]
+# create X/y pairs
+df = DataFrame(sequence)
+df = concat([df, df.shift(1)], axis=1)
+df.dropna(inplace=True)
+# convert to LSTM friendly format
+values = df.values
+X, y = values[:, 0], values[:, 1]
+X = X.reshape(len(X), 1, 1)
+# configure network
+n_batch = 3
+n_epoch = 1000
+n_neurons = 10
+# design network
+model = Sequential()
+model.add(LSTM(n_neurons, batch_input_shape=(n_batch, X.shape[1], X.shape[2]), stateful=True))
+model.add(Dense(1))
+model.compile(loss='mean_squared_error', optimizer='adam')
+# fit network
+for i in range(n_epoch):
+	model.fit(X, y, epochs=1, batch_size=n_batch, verbose=1, shuffle=False)
+	model.reset_states()
+# re-define the batch size
+n_batch = 1
+# re-define model
+new_model = Sequential()
+new_model.add(LSTM(n_neurons, batch_input_shape=(n_batch, X.shape[1], X.shape[2]), stateful=True))
+new_model.add(Dense(1))
+# copy weights
+old_weights = model.get_weights()
+new_model.set_weights(old_weights)
+# compile model
+new_model.compile(loss='mean_squared_error', optimizer='adam')
+# online forecast
+for i in range(len(X)):
+	testX, testy = X[i], y[i]
+	testX = testX.reshape(1, 1, 1)
+	yhat = new_model.predict(testX, batch_size=n_batch)
+	print('>Expected=%.1f, Predicted=%.1f' % (testy, yhat))
+>Expected=0.0, Predicted=0.0
+>Expected=0.1, Predicted=0.1
+>Expected=0.2, Predicted=0.2
+>Expected=0.3, Predicted=0.3
+>Expected=0.4, Predicted=0.4
+>Expected=0.5, Predicted=0.5
+>Expected=0.6, Predicted=0.6
+>Expected=0.7, Predicted=0.7
+>Expected=0.8, Predicted=0.8
+'''

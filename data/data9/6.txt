@@ -1,0 +1,415 @@
+Prediction Intervals for Deep Learning Neural Networks
+https://machinelearningmastery.com/prediction-intervals-for-deep-learning-neural-networks/
+2021-02-21
+Prediction intervals provide a measure of uncertainty for predictions on regression problems.
+For example, a 95% prediction interval indicates that 95 out of 100 times, the true value will fall between the lower and upper values of the range. This is different from a simple point prediction that might represent the center of the uncertainty interval.
+There are no standard techniques for calculating a prediction interval for deep learning neural networks on regression predictive modeling problems. Nevertheless, a quick and dirty prediction interval can be estimated using an ensemble of models that, in turn, provide a distribution of point predictions from which an interval can be calculated.
+In this tutorial, you will discover how to calculate a prediction interval for deep learning neural networks.
+After completing this tutorial, you will know:
+- Prediction intervals provide a measure of uncertainty on regression predictive modeling problems.
+- How to develop and evaluate a simple Multilayer Perceptron neural network on a standard regression problem.
+- How to calculate and report a prediction interval using an ensemble of neural network models.
+Let’s get started.
+Prediction Intervals for Deep Learning Neural NetworksPhoto by eugene_o, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Prediction Interval
+- Neural Network for Regression
+- Neural Network Prediction Interval
+# Prediction Interval
+Generally, predictive models for regression problems (i.e. predicting a numerical value) make a point prediction.
+This means they predict a single value but do not give any indication of the uncertainty about the prediction.
+By definition, a prediction is an estimate or an approximation and contains some uncertainty. The uncertainty comes from the errors in the model itself and noise in the input data. The model is an approximation of the relationship between the input variables and the output variables.
+A prediction interval is a quantification of the uncertainty on a prediction.
+It provides a probabilistic upper and lower bounds on the estimate of an outcome variable.
+A prediction interval for a single future observation is an interval that will, with a specified degree of confidence, contain a future randomly selected observation from a distribution.
+— Page 27, Statistical Intervals: A Guide for Practitioners and Researchers, 2017.
+Prediction intervals are most commonly used when making predictions or forecasts with a regression model, where a quantity is being predicted.
+The prediction interval surrounds the prediction made by the model and hopefully covers the range of the true outcome.
+For more on prediction intervals in general, see the tutorial:
+- Prediction Intervals for Machine Learning
+Now that we are familiar with what a prediction interval is, we can consider how we might calculate an interval for a neural network. Let’s start by defining a regression problem and a neural network model to address it.
+# Neural Network for Regression
+In this section, we will define a regression predictive modeling problem and a neural network model to address it.
+First, let’s introduce a standard regression dataset. We will use the housing dataset.
+The housing dataset is a standard machine learning dataset comprising 506 rows of data with 13 numerical input variables and a numerical target variable.
+Using a test harness of repeated stratified 10-fold cross-validation with three repeats, a naive model can achieve a mean absolute error (MAE) of about 6.6. A top-performing model can achieve a MAE on this same test harness of about 1.9. This provides the bounds of expected performance on this dataset.
+The dataset involves predicting the house price given details of the house’s suburb in the American city of Boston.
+- Housing Dataset (housing.csv)
+- Housing Description (housing.names)
+No need to download the dataset; we will download it automatically as part of our worked examples.
+The example below downloads and loads the dataset as a Pandas DataFrame and summarizes the shape of the dataset and the first five rows of data.
+Running the example confirms the 506 rows of data and 13 input variables and a single numeric target variable (14 in total). We can also see that all input variables are numeric.
+Next, we can prepare the dataset for modeling.
+First, the dataset can be split into input and output columns, and then the rows can be split into train and test datasets.
+In this case, we will use approximately 67% of the rows to train the model and the remaining 33% to estimate the performance of the model.
+You can learn more about the train-test split in this tutorial:
+- Train-Test Split for Evaluating Machine Learning Algorithms
+We will then scale all input columns (variables) to have the range 0-1, called data normalization, which is a good practice when working with neural network models.
+You can learn more about normalizing input data with the MinMaxScaler in this tutorial:
+- How to Use StandardScaler and MinMaxScaler Transforms in Python
+The complete example of preparing the data for modeling is listed below.
+Running the example loads the dataset as before, then splits the columns into input and output elements, rows into train and test sets, and finally scales all input variables to the range [0,1]
+The shape of the train and test sets is printed, showing we have 339 rows to train the model and 167 to evaluate it.
+Next, we can define, train and evaluate a Multilayer Perceptron (MLP) model on the dataset.
+We will define a simple model with two hidden layers and an output layer that predicts a numeric value. We will use the ReLU activation function and “he” weight initialization, which are a good practice.
+The number of nodes in each hidden layer was chosen after a little trial and error.
+We will use the efficient Adam version of stochastic gradient descent with close to default learning rate and momentum values and fit the model using the mean squared error (MSE) loss function, a standard for regression predictive modeling problems.
+You can learn more about the Adam optimization algorithm in this tutorial:
+- Code Adam Gradient Descent Optimization From Scratch
+The model will then be fit for 300 epochs with a batch size of 16 samples. This configuration was chosen after a little trial and error.
+You can learn more about batches and epochs in this tutorial:
+- Difference Between a Batch and an Epoch in a Neural Network
+Finally, the model can be used to make predictions on the test dataset and we can evaluate the predictions by comparing them to the expected values in the test set and calculate the mean absolute error (MAE), a useful measure of model performance.
+Tying this together, the complete example is listed below.
+Running the example loads and prepares the dataset, defines and fits the MLP model on the training dataset, and evaluates its performance on the test set.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the model achieves a mean absolute error of approximately 2.3, which is better than a naive model and getting close to an optimal model.
+No doubt we could achieve near-optimal performance with further tuning of the model, but this is good enough for our investigation of prediction intervals.
+Next, let’s look at how we might calculate a prediction interval using our MLP model on the housing dataset.
+# Neural Network Prediction Interval
+In this section, we will develop a prediction interval using the regression problem and model developed in the previous section.
+Calculating prediction intervals for nonlinear regression algorithms like neural networks is challenging compared to linear methods like linear regression where the prediction interval calculation is trivial. There is no standard technique.
+There are many ways to calculate an effective prediction interval for neural network models. I recommend some of the papers listed in the “further reading” section to learn more.
+In this tutorial, we will use a very simple approach that has plenty of room for extension. I refer to it as “quick and dirty” because it is fast and easy to calculate, but is limited.
+It involves fitting multiple final models (e.g. 10 to 30). The distribution of the point predictions from ensemble members is then used to calculate both a point prediction and a prediction interval.
+For example, a point prediction can be taken as the mean of the point predictions from ensemble members, and a 95% prediction interval can be taken as 1.96 standard deviations from the mean.
+This is a simple Gaussian prediction interval, although alternatives could be used, such as the min and max of the point predictions. Alternatively, the bootstrap method could be used to train each ensemble member on a different bootstrap sample and the 2.5th and 97.5th percentiles of the point predictions can be used as prediction intervals.
+For more on the bootstrap method, see the tutorial:
+- A Gentle Introduction to the Bootstrap Method
+These extensions are left as exercises; we will stick with the simple Gaussian prediction interval.
+Let’s assume that the training dataset, defined in the previous section, is the entire dataset and we are training a final model or models on this entire dataset. We can then make predictions with prediction intervals on the test set and evaluate how effective the interval might be in the future.
+We can simplify the code by dividing the elements developed in the previous section into functions.
+First, let’s define a function for loading and preparing a regression dataset defined by a URL.
+Next, we can define a function that will define and train an MLP model given the training dataset, then return the fit model ready for making predictions.
+We require multiple models to make point predictions that will define a distribution of point predictions from which we can estimate the interval.
+As such, we will need to fit multiple models on the training dataset. Each model must be different so that it makes different predictions. This can be achieved given the stochastic nature of training MLP models, given the random initial weights, and given the use of the stochastic gradient descent optimization algorithm.
+The more models, the better the point predictions will estimate the capability of the model. I would recommend at least 10 models, and perhaps not much benefit beyond 30 models.
+The function below fits an ensemble of models and stores them in a list that is returned.
+For interest, each fit model is also evaluated on the test set which is reported after each model is fit. We would expect that each model will have a slightly different estimated performance on the hold-out test set and the reported scores will help us confirm this expectation.
+Finally, we can use the trained ensemble of models to make point predictions, which can be summarized into a prediction interval.
+The function below implements this. First, each model makes a point prediction on the input data, then the 95% prediction interval is calculated and the lower, mean, and upper values of the interval are returned.
+The function is designed to take a single row as input, but could easily be adapted for multiple rows.
+Finally, we can call these functions.
+First, the dataset is loaded and prepared, then the ensemble is defined and fit.
+We can then use a single row of data from the test set and make a prediction with a prediction interval, the results of which are then reported.
+We also report the expected value which we would expect would be covered by the prediction interval (perhaps close to 95% of the time; this is not entirely accurate, but is a rough approximation).
+Tying this together, the complete example of making predictions with a prediction interval with a Multilayer Perceptron neural network is listed below.
+Running the example fits each ensemble member in turn and reports its estimated performance on the hold out tests set; finally, a single prediction with prediction interval is made and reported.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that each model has a slightly different performance, confirming our expectation that the models are indeed different.
+Finally, we can see that the ensemble made a point prediction of about 30.5 with a 95% prediction interval of [26.287, 34.822]. We can also see that the true value was 28.2 and that the interval does capture this value, which is great.
+This is a quick and dirty technique for making predictions with a prediction interval for neural networks, as we discussed above.
+There are easy extensions such as using the bootstrap method applied to point predictions that may be more reliable, and more advanced techniques described in some of the papers listed below that I recommend that you explore.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Prediction Intervals for Machine Learning
+- How to Use StandardScaler and MinMaxScaler Transforms in Python
+- Best Results for Standard Machine Learning Datasets
+- Difference Between a Batch and an Epoch in a Neural Network
+- Code Adam Gradient Descent Optimization From Scratch
+- High-Quality Prediction Intervals for Deep Learning: A Distribution-Free, Ensembled Approach, 2018.
+- Practical confidence and prediction intervals, 1994.
+- 1.96, Wikipedia.
+# Summary
+In this tutorial, you discovered how to calculate a prediction interval for deep learning neural networks.
+Specifically, you learned:
+- Prediction intervals provide a measure of uncertainty on regression predictive modeling problems.
+- How to develop and evaluate a simple Multilayer Perceptron neural network on a standard regression problem.
+- How to calculate and report a prediction interval using an ensemble of neural network models.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+'''
+# load and summarize the housing dataset
+from pandas import read_csv
+from matplotlib import pyplot
+# load dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+dataframe = read_csv(url, header=None)
+# summarize shape
+print(dataframe.shape)
+# summarize first few lines
+print(dataframe.head())
+(506, 14)
+        0     1     2   3      4      5   ...  8      9     10      11    12    13
+0  0.00632  18.0  2.31   0  0.538  6.575  ...   1  296.0  15.3  396.90  4.98  24.0
+1  0.02731   0.0  7.07   0  0.469  6.421  ...   2  242.0  17.8  396.90  9.14  21.6
+2  0.02729   0.0  7.07   0  0.469  7.185  ...   2  242.0  17.8  392.83  4.03  34.7
+3  0.03237   0.0  2.18   0  0.458  6.998  ...   3  222.0  18.7  394.63  2.94  33.4
+4  0.06905   0.0  2.18   0  0.458  7.147  ...   3  222.0  18.7  396.90  5.33  36.2
+
+[5 rows x 14 columns]
+
+# split into input and output values
+X, y = values[:,:-1], values[:,-1]
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.67)
+
+# scale input data
+scaler = MinMaxScaler()
+scaler.fit(X_train)
+X_train = scaler.transform(X_train)
+X_test = scaler.transform(X_test)
+# load and prepare the dataset for modeling
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+# load dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+dataframe = read_csv(url, header=None)
+values = dataframe.values
+# split into input and output values
+X, y = values[:,:-1], values[:,-1]
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.67)
+# scale input data
+scaler = MinMaxScaler()
+scaler.fit(X_train)
+X_train = scaler.transform(X_train)
+X_test = scaler.transform(X_test)
+# summarize
+print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+(339, 13) (167, 13) (339,) (167,)
+
+# define neural network model
+features = X_train.shape[1]
+model = Sequential()
+model.add(Dense(20, kernel_initializer='he_normal', activation='relu', input_dim=features))
+model.add(Dense(5, kernel_initializer='he_normal', activation='relu'))
+model.add(Dense(1))
+
+# compile the model and specify loss and optimizer
+opt = Adam(learning_rate=0.01, beta_1=0.85, beta_2=0.999)
+model.compile(optimizer=opt, loss='mse')
+
+# fit the model on the training dataset
+model.fit(X_train, y_train, verbose=2, epochs=300, batch_size=16)
+
+# make predictions on the test set
+yhat = model.predict(X_test, verbose=0)
+# calculate the average error in the predictions
+mae = mean_absolute_error(y_test, yhat)
+print('MAE: %.3f' % mae)
+# train and evaluate a multilayer perceptron neural network on the housing regression dataset
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.optimizers import Adam
+# load dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+dataframe = read_csv(url, header=None)
+values = dataframe.values
+# split into input and output values
+X, y = values[:, :-1], values[:,-1]
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.67, random_state=1)
+# scale input data
+scaler = MinMaxScaler()
+scaler.fit(X_train)
+X_train = scaler.transform(X_train)
+X_test = scaler.transform(X_test)
+# define neural network model
+features = X_train.shape[1]
+model = Sequential()
+model.add(Dense(20, kernel_initializer='he_normal', activation='relu', input_dim=features))
+model.add(Dense(5, kernel_initializer='he_normal', activation='relu'))
+model.add(Dense(1))
+# compile the model and specify loss and optimizer
+opt = Adam(learning_rate=0.01, beta_1=0.85, beta_2=0.999)
+model.compile(optimizer=opt, loss='mse')
+# fit the model on the training dataset
+model.fit(X_train, y_train, verbose=2, epochs=300, batch_size=16)
+# make predictions on the test set
+yhat = model.predict(X_test, verbose=0)
+# calculate the average error in the predictions
+mae = mean_absolute_error(y_test, yhat)
+print('MAE: %.3f' % mae)
+
+Epoch 296/300
+22/22 - 0s - loss: 7.1741
+Epoch 297/300
+22/22 - 0s - loss: 6.8044
+Epoch 298/300
+22/22 - 0s - loss: 6.8623
+Epoch 299/300
+22/22 - 0s - loss: 7.7010
+Epoch 300/300
+22/22 - 0s - loss: 6.5374
+MAE: 2.300
+# load and prepare the dataset
+def load_dataset(url):
+	dataframe = read_csv(url, header=None)
+	values = dataframe.values
+	# split into input and output values
+	X, y = values[:, :-1], values[:,-1]
+	# split into train and test sets
+	X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.67, random_state=1)
+	# scale input data
+	scaler = MinMaxScaler()
+	scaler.fit(X_train)
+	X_train = scaler.transform(X_train)
+	X_test = scaler.transform(X_test)
+	return X_train, X_test, y_train, y_test
+# define and fit the model
+def fit_model(X_train, y_train):
+	# define neural network model
+	features = X_train.shape[1]
+	model = Sequential()
+	model.add(Dense(20, kernel_initializer='he_normal', activation='relu', input_dim=features))
+	model.add(Dense(5, kernel_initializer='he_normal', activation='relu'))
+	model.add(Dense(1))
+	# compile the model and specify loss and optimizer
+	opt = Adam(learning_rate=0.01, beta_1=0.85, beta_2=0.999)
+	model.compile(optimizer=opt, loss='mse')
+	# fit the model on the training dataset
+	model.fit(X_train, y_train, verbose=0, epochs=300, batch_size=16)
+	return model
+# fit an ensemble of models
+def fit_ensemble(n_members, X_train, X_test, y_train, y_test):
+	ensemble = list()
+	for i in range(n_members):
+		# define and fit the model on the training set
+		model = fit_model(X_train, y_train)
+		# evaluate model on the test set
+		yhat = model.predict(X_test, verbose=0)
+		mae = mean_absolute_error(y_test, yhat)
+		print('>%d, MAE: %.3f' % (i+1, mae))
+		# store the model
+		ensemble.append(model)
+	return ensemble
+# make predictions with the ensemble and calculate a prediction interval
+def predict_with_pi(ensemble, X):
+	# make predictions
+	yhat = [model.predict(X, verbose=0) for model in ensemble]
+	yhat = asarray(yhat)
+	# calculate 95% gaussian prediction interval
+	interval = 1.96 * yhat.std()
+	lower, upper = yhat.mean() - interval, yhat.mean() + interval
+	return lower, yhat.mean(), upper
+
+# load dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+X_train, X_test, y_train, y_test = load_dataset(url)
+# fit ensemble
+n_members = 30
+ensemble = fit_ensemble(n_members, X_train, X_test, y_train, y_test)
+
+# make predictions with prediction interval
+newX = asarray([X_test[0, :]])
+lower, mean, upper = predict_with_pi(ensemble, newX)
+print('Point prediction: %.3f' % mean)
+print('95%% prediction interval: [%.3f, %.3f]' % (lower, upper))
+print('True value: %.3f' % y_test[0])
+# prediction interval for mlps on the housing regression dataset
+from numpy import asarray
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
+from sklearn.preprocessing import MinMaxScaler
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.optimizers import Adam
+
+# load and prepare the dataset
+def load_dataset(url):
+	dataframe = read_csv(url, header=None)
+	values = dataframe.values
+	# split into input and output values
+	X, y = values[:, :-1], values[:,-1]
+	# split into train and test sets
+	X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.67, random_state=1)
+	# scale input data
+	scaler = MinMaxScaler()
+	scaler.fit(X_train)
+	X_train = scaler.transform(X_train)
+	X_test = scaler.transform(X_test)
+	return X_train, X_test, y_train, y_test
+
+# define and fit the model
+def fit_model(X_train, y_train):
+	# define neural network model
+	features = X_train.shape[1]
+	model = Sequential()
+	model.add(Dense(20, kernel_initializer='he_normal', activation='relu', input_dim=features))
+	model.add(Dense(5, kernel_initializer='he_normal', activation='relu'))
+	model.add(Dense(1))
+	# compile the model and specify loss and optimizer
+	opt = Adam(learning_rate=0.01, beta_1=0.85, beta_2=0.999)
+	model.compile(optimizer=opt, loss='mse')
+	# fit the model on the training dataset
+	model.fit(X_train, y_train, verbose=0, epochs=300, batch_size=16)
+	return model
+
+# fit an ensemble of models
+def fit_ensemble(n_members, X_train, X_test, y_train, y_test):
+	ensemble = list()
+	for i in range(n_members):
+		# define and fit the model on the training set
+		model = fit_model(X_train, y_train)
+		# evaluate model on the test set
+		yhat = model.predict(X_test, verbose=0)
+		mae = mean_absolute_error(y_test, yhat)
+		print('>%d, MAE: %.3f' % (i+1, mae))
+		# store the model
+		ensemble.append(model)
+	return ensemble
+
+# make predictions with the ensemble and calculate a prediction interval
+def predict_with_pi(ensemble, X):
+	# make predictions
+	yhat = [model.predict(X, verbose=0) for model in ensemble]
+	yhat = asarray(yhat)
+	# calculate 95% gaussian prediction interval
+	interval = 1.96 * yhat.std()
+	lower, upper = yhat.mean() - interval, yhat.mean() + interval
+	return lower, yhat.mean(), upper
+
+# load dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+X_train, X_test, y_train, y_test = load_dataset(url)
+# fit ensemble
+n_members = 30
+ensemble = fit_ensemble(n_members, X_train, X_test, y_train, y_test)
+# make predictions with prediction interval
+newX = asarray([X_test[0, :]])
+lower, mean, upper = predict_with_pi(ensemble, newX)
+print('Point prediction: %.3f' % mean)
+print('95%% prediction interval: [%.3f, %.3f]' % (lower, upper))
+print('True value: %.3f' % y_test[0])
+>1, MAE: 2.259
+>2, MAE: 2.144
+>3, MAE: 2.732
+>4, MAE: 2.628
+>5, MAE: 2.483
+>6, MAE: 2.551
+>7, MAE: 2.505
+>8, MAE: 2.299
+>9, MAE: 2.706
+>10, MAE: 2.145
+>11, MAE: 2.765
+>12, MAE: 3.244
+>13, MAE: 2.385
+>14, MAE: 2.592
+>15, MAE: 2.418
+>16, MAE: 2.493
+>17, MAE: 2.367
+>18, MAE: 2.569
+>19, MAE: 2.664
+>20, MAE: 2.233
+>21, MAE: 2.228
+>22, MAE: 2.646
+>23, MAE: 2.641
+>24, MAE: 2.492
+>25, MAE: 2.558
+>26, MAE: 2.416
+>27, MAE: 2.328
+>28, MAE: 2.383
+>29, MAE: 2.215
+>30, MAE: 2.408
+Point prediction: 30.555
+95% prediction interval: [26.287, 34.822]
+True value: 28.200
+'''

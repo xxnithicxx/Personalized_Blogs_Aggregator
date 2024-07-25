@@ -1,0 +1,451 @@
+Feature Selection with Stochastic Optimization Algorithms
+https://machinelearningmastery.com/feature-selection-with-optimization/
+2020-12-24
+Typically, a simpler and better-performing machine learning model can be developed by removing input features (columns) from the training dataset.
+This is called feature selection and there are many different types of algorithms that can be used.
+It is possible to frame the problem of feature selection as an optimization problem. In the case that there are few input features, all possible combinations of input features can be evaluated and the best subset found definitively. In the case of a vast number of input features, a stochastic optimization algorithm can be used to explore the search space and find an effective subset of features.
+In this tutorial, you will discover how to use optimization algorithms for feature selection in machine learning.
+After completing this tutorial, you will know:
+- The problem of feature selection can be broadly defined as an optimization problem.
+- How to enumerate all possible subsets of input features for a dataset.
+- How to apply stochastic optimization to select an optimal subset of input features.
+
+Kick-start your project with my new book Optimization for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+
+How to Use Optimization for Feature SelectionPhoto by Gregory “Slobirdr” Smith, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Optimization for Feature Selection
+- Enumerate All Feature Subsets
+- Optimize Feature Subsets
+# Optimization for Feature Selection
+Feature selection is the process of reducing the number of input variables when developing a predictive model.
+It is desirable to reduce the number of input variables to both reduce the computational cost of modeling and, in some cases, to improve the performance of the model. There are many different types of feature selection algorithms, although they can broadly be grouped into two main types: wrapper and filter methods.
+Wrapper feature selection methods create many models with different subsets of input features and select those features that result in the best performing model according to a performance metric. These methods are unconcerned with the variable types, although they can be computationally expensive. RFE is a good example of a wrapper feature selection method.
+Filter feature selection methods use statistical techniques to evaluate the relationship between each input variable and the target variable, and these scores are used as the basis to choose (filter) those input variables that will be used in the model.
+- Wrapper Feature Selection: Search for well-performing subsets of features.
+- Filter Feature Selection: Select subsets of features based on their relationship with the target.
+For more on choosing feature selection algorithms, see the tutorial:
+- How to Choose a Feature Selection Method For Machine Learning
+A popular wrapper method is the Recursive Feature Elimination, or RFE, algorithm.
+RFE works by searching for a subset of features by starting with all features in the training dataset and successfully removing features until the desired number remains.
+This is achieved by fitting the given machine learning algorithm used in the core of the model, ranking features by importance, discarding the least important features, and re-fitting the model. This process is repeated until a specified number of features remains.
+For more on RFE, see the tutorial:
+- Recursive Feature Elimination (RFE) for Feature Selection in Python
+The problem of wrapper feature selection can be framed as an optimization problem. That is, find a subset of input features that result in the best model performance.
+RFE is one approach to solving this problem systematically, although it may be limited by a large number of features.
+An alternative approach would be to use a stochastic optimization algorithm, such as a stochastic hill climbing algorithm, when the number of features is very large. When the number of features is relatively small, it may be possible to enumerate all possible subsets of features.
+- Few Input Variables: Enumerate all possible subsets of features.
+- Many Input Features: Stochastic optimization algorithm to find good subsets of features.
+Now that we are familiar with the idea that feature selection may be explored as an optimization problem, let’s look at how we might enumerate all possible feature subsets.
+# Enumerate All Feature Subsets
+When the number of input variables is relatively small and the model evaluation is relatively fast, then it may be possible to enumerate all possible subsets of input variables.
+This means evaluating the performance of a model using a test harness given every possible unique group of input variables.
+We will explore how to do this with a worked example.
+First, let’s define a small binary classification dataset with few input features. We can use the make_classification() function to define a dataset with five input variables, two of which are informative, and 1,000 rows.
+The example below defines the dataset and summarizes its shape.
+Running the example creates the dataset and confirms that it has the desired shape.
+Next, we can establish a baseline in performance using a model evaluated on the entire dataset.
+We will use a DecisionTreeClassifier as the model because its performance is quite sensitive to the choice of input variables.
+We will evaluate the model using good practices, such as repeated stratified k-fold cross-validation with three repeats and 10 folds.
+The complete example is listed below.
+Running the example evaluates the decision tree on the entire dataset and reports the mean and standard deviation classification accuracy.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the model achieved an accuracy of about 80.5 percent.
+Next, we can try to improve model performance by using a subset of the input features.
+First, we must choose a representation to enumerate.
+In this case, we will enumerate a list of boolean values, with one value for each input feature: True if the feature is to be used and False if the feature is not to be used as input.
+For example, with the five input features the sequence [True, True, True, True, True] would use all input features, and [True, False, False, False, False] would only use the first input feature as input.
+We can enumerate all sequences of boolean values with the length=5 using the product() Python function. We must specify the valid values [True, False] and the number of steps in the sequence, which is equal to the number of input variables.
+The function returns an iterable that we can enumerate directly for each sequence.
+For a given sequence of boolean values, we can enumerate it and transform it into a sequence of column indexes for each True in the sequence.
+If the sequence has no column indexes (in the case of all False values), then we can skip that sequence.
+We can then use the column indexes to choose the columns in the dataset.
+And this subset of the dataset can then be evaluated as we did before.
+If the accuracy for the model is better than the best sequence found so far, we can store it.
+And that’s it.
+Tying this together, the complete example of feature selection by enumerating all possible feature subsets is listed below.
+Running the example reports the mean classification accuracy of the model for each subset of features considered. The best subset is then reported at the end of the run.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the best subset of features involved features at indexes [2, 3, 4] that resulted in a mean classification accuracy of about 83.0 percent, which is better than the result reported previously using all input features.
+Now that we know how to enumerate all possible feature subsets, let’s look at how we might use a stochastic optimization algorithm to choose a subset of features.
+# Optimize Feature Subsets
+We can apply a stochastic optimization algorithm to the search space of subsets of input features.
+First, let’s define a larger problem that has many more features, making model evaluation too slow and the search space too large for enumerating all subsets.
+We will define a classification problem with 10,000 rows and 500 input features, 10 of which are relevant and the remaining 490 are redundant.
+Running the example creates the dataset and confirms that it has the desired shape.
+We can establish a baseline in performance by evaluating a model on the dataset with all input features.
+Because the dataset is large and the model is slow to evaluate, we will modify the evaluation of the model to use 3-fold cross-validation, e.g. fewer folds and no repeats.
+The complete example is listed below.
+Running the example evaluates the decision tree on the entire dataset and reports the mean and standard deviation classification accuracy.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the model achieved an accuracy of about 91.3 percent.
+This provides a baseline that we would expect to outperform using feature selection.
+We will use a simple stochastic hill climbing algorithm as the optimization algorithm.
+First, we must define the objective function. It will take the dataset and a subset of features to use as input and return an estimated model accuracy from 0 (worst) to 1 (best). It is a maximizing optimization problem.
+This objective function is simply the decoding of the sequence and model evaluation step from the previous section.
+The objective() function below implements this and returns both the score and the decoded subset of columns used for helpful reporting.
+We also need a function that can take a step in the search space.
+Given an existing solution, it must modify it and return a new solution in close proximity. In this case, we will achieve this by randomly flipping the inclusion/exclusion of columns in subsequence.
+Each position in the sequence will be considered independently and will be flipped probabilistically where the probability of flipping is a hyperparameter.
+The mutate() function below implements this given a candidate solution (sequence of booleans) and a mutation hyperparameter, creating and returning a modified solution (a step in the search space).
+The larger the p_mutate value (in the range 0 to 1), the larger the step in the search space.
+We can now implement the hill climbing algorithm.
+The initial solution is a randomly generated sequence, which is then evaluated.
+We then loop for a fixed number of iterations, creating mutated versions of the current solution, evaluating them, and saving them if the score is better.
+The hillclimbing() function below implements this, taking the dataset, objective function, and hyperparameters as arguments and returns the best subset of dataset columns and the estimated performance of the model.
+We can then call this function and pass in our synthetic dataset to perform optimization for feature selection.
+In this case, we will run the algorithm for 100 iterations and make about five flips to the sequence for a given mutation, which is quite conservative.
+At the end of the run, we will convert the boolean sequence into column indexes (so we could fit a final model if we wanted) and report the performance of the best subsequence.
+Tying this all together, the complete example is listed below.
+Running the example reports the mean classification accuracy of the model for each subset of features considered. The best subset is then reported at the end of the run.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the best performance was achieved with a subset of 239 features and a classification accuracy of approximately 91.8 percent.
+This is better than a model evaluated on all input features.
+Although the result is better, we know we can do a lot better, perhaps with tuning of the hyperparameters of the optimization algorithm or perhaps by using an alternate optimization algorithm.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Recursive Feature Elimination (RFE) for Feature Selection in Python
+- How to Choose a Feature Selection Method For Machine Learning
+- sklearn.datasets.make_classification API.
+- itertools.product API.
+# Summary
+In this tutorial, you discovered how to use optimization algorithms for feature selection in machine learning.
+Specifically, you learned:
+- The problem of feature selection can be broadly defined as an optimization problem.
+- How to enumerate all possible subsets of input features for a dataset.
+- How to apply stochastic optimization to select an optimal subset of input features.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Modern Optimization Algorithms!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Optimization for Machine Learning
+It provides self-study tutorials with full working code on:
+Gradient Descent, Genetic Algorithms, Hill Climbing, Curve Fitting, RMSProp, Adam,
+and much more...
+See What's Inside
+
+'''
+# define a small classification dataset
+from sklearn.datasets import make_classification
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=5, n_informative=2, n_redundant=3, random_state=1)
+# summarize the shape of the dataset
+print(X.shape, y.shape)
+(1000, 5) (1000,)
+# evaluate a decision tree on the entire small dataset
+from numpy import mean
+from numpy import std
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.tree import DecisionTreeClassifier
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=3, n_informative=2, n_redundant=1, random_state=1)
+# define model
+model = DecisionTreeClassifier()
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+# report result
+print('Mean Accuracy: %.3f (%.3f)' % (mean(scores), std(scores)))
+Mean Accuracy: 0.805 (0.030)
+
+# determine the number of columns
+n_cols = X.shape[1]
+best_subset, best_score = None, 0.0
+# enumerate all combinations of input features
+for subset in product([True, False], repeat=n_cols):
+	...
+
+# convert into column indexes
+ix = [i for i, x in enumerate(subset) if x]
+# check for now column (all False)
+if len(ix) == 0:
+	continue
+
+# select columns
+X_new = X[:, ix]
+
+# define model
+model = DecisionTreeClassifier()
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X_new, y, scoring='accuracy', cv=cv, n_jobs=-1)
+# summarize scores
+result = mean(scores)
+
+# check if it is better than the best so far
+if best_score is None or result >= best_score:
+	# better result
+	best_subset, best_score = ix, result
+# feature selection by enumerating all possible subsets of features
+from itertools import product
+from numpy import mean
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.tree import DecisionTreeClassifier
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=5, n_informative=2, n_redundant=3, random_state=1)
+# determine the number of columns
+n_cols = X.shape[1]
+best_subset, best_score = None, 0.0
+# enumerate all combinations of input features
+for subset in product([True, False], repeat=n_cols):
+	# convert into column indexes
+	ix = [i for i, x in enumerate(subset) if x]
+	# check for now column (all False)
+	if len(ix) == 0:
+		continue
+	# select columns
+	X_new = X[:, ix]
+	# define model
+	model = DecisionTreeClassifier()
+	# define evaluation procedure
+	cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+	# evaluate model
+	scores = cross_val_score(model, X_new, y, scoring='accuracy', cv=cv, n_jobs=-1)
+	# summarize scores
+	result = mean(scores)
+	# report progress
+	print('>f(%s) = %f ' % (ix, result))
+	# check if it is better than the best so far
+	if best_score is None or result >= best_score:
+		# better result
+		best_subset, best_score = ix, result
+# report best
+print('Done!')
+print('f(%s) = %f' % (best_subset, best_score))
+>f([0, 1, 2, 3, 4]) = 0.813667
+>f([0, 1, 2, 3]) = 0.827667
+>f([0, 1, 2, 4]) = 0.815333
+>f([0, 1, 2]) = 0.824000
+>f([0, 1, 3, 4]) = 0.821333
+>f([0, 1, 3]) = 0.825667
+>f([0, 1, 4]) = 0.807333
+>f([0, 1]) = 0.817667
+>f([0, 2, 3, 4]) = 0.830333
+>f([0, 2, 3]) = 0.819000
+>f([0, 2, 4]) = 0.828000
+>f([0, 2]) = 0.818333
+>f([0, 3, 4]) = 0.830333
+>f([0, 3]) = 0.821333
+>f([0, 4]) = 0.816000
+>f([0]) = 0.639333
+>f([1, 2, 3, 4]) = 0.823667
+>f([1, 2, 3]) = 0.821667
+>f([1, 2, 4]) = 0.823333
+>f([1, 2]) = 0.818667
+>f([1, 3, 4]) = 0.818000
+>f([1, 3]) = 0.820667
+>f([1, 4]) = 0.809000
+>f([1]) = 0.797000
+>f([2, 3, 4]) = 0.827667
+>f([2, 3]) = 0.755000
+>f([2, 4]) = 0.827000
+>f([2]) = 0.516667
+>f([3, 4]) = 0.824000
+>f([3]) = 0.514333
+>f([4]) = 0.777667
+Done!
+f([0, 3, 4]) = 0.830333
+# define a large classification dataset
+from sklearn.datasets import make_classification
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=500, n_informative=10, n_redundant=490, random_state=1)
+# summarize the shape of the dataset
+print(X.shape, y.shape)
+(10000, 500) (10000,)
+# evaluate a decision tree on the entire larger dataset
+from numpy import mean
+from numpy import std
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import StratifiedKFold
+from sklearn.tree import DecisionTreeClassifier
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=500, n_informative=10, n_redundant=490, random_state=1)
+# define model
+model = DecisionTreeClassifier()
+# define evaluation procedure
+cv = StratifiedKFold(n_splits=3)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+# report result
+print('Mean Accuracy: %.3f (%.3f)' % (mean(scores), std(scores)))
+Mean Accuracy: 0.913 (0.001)
+# objective function
+def objective(X, y, subset):
+	# convert into column indexes
+	ix = [i for i, x in enumerate(subset) if x]
+	# check for now column (all False)
+	if len(ix) == 0:
+		return 0.0
+	# select columns
+	X_new = X[:, ix]
+	# define model
+	model = DecisionTreeClassifier()
+	# evaluate model
+	scores = cross_val_score(model, X_new, y, scoring='accuracy', cv=3, n_jobs=-1)
+	# summarize scores
+	result = mean(scores)
+	return result, ix
+# mutation operator
+def mutate(solution, p_mutate):
+	# make a copy
+	child = solution.copy()
+	for i in range(len(child)):
+		# check for a mutation
+		if rand() < p_mutate:
+			# flip the inclusion
+			child[i] = not child[i]
+	return child
+
+# generate an initial point
+solution = choice([True, False], size=X.shape[1])
+# evaluate the initial point
+solution_eval, ix = objective(X, y, solution)
+
+# run the hill climb
+for i in range(n_iter):
+	# take a step
+	candidate = mutate(solution, p_mutate)
+	# evaluate candidate point
+	candidate_eval, ix = objective(X, y, candidate)
+	# check if we should keep the new point
+	if candidate_eval >= solution_eval:
+		# store the new point
+		solution, solution_eval = candidate, candidate_eval
+	# report progress
+	print('>%d f(%s) = %f' % (i+1, len(ix), solution_eval))
+# hill climbing local search algorithm
+def hillclimbing(X, y, objective, n_iter, p_mutate):
+	# generate an initial point
+	solution = choice([True, False], size=X.shape[1])
+	# evaluate the initial point
+	solution_eval, ix = objective(X, y, solution)
+	# run the hill climb
+	for i in range(n_iter):
+		# take a step
+		candidate = mutate(solution, p_mutate)
+		# evaluate candidate point
+		candidate_eval, ix = objective(X, y, candidate)
+		# check if we should keep the new point
+		if candidate_eval >= solution_eval:
+			# store the new point
+			solution, solution_eval = candidate, candidate_eval
+		# report progress
+		print('>%d f(%s) = %f' % (i+1, len(ix), solution_eval))
+	return solution, solution_eval
+
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=500, n_informative=10, n_redundant=490, random_state=1)
+# define the total iterations
+n_iter = 100
+# probability of including/excluding a column
+p_mut = 10.0 / 500.0
+# perform the hill climbing search
+subset, score = hillclimbing(X, y, objective, n_iter, p_mut)
+
+# convert into column indexes
+ix = [i for i, x in enumerate(subset) if x]
+print('Done!')
+print('Best: f(%d) = %f' % (len(ix), score))
+# stochastic optimization for feature selection
+from numpy import mean
+from numpy.random import rand
+from numpy.random import choice
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.tree import DecisionTreeClassifier
+
+# objective function
+def objective(X, y, subset):
+	# convert into column indexes
+	ix = [i for i, x in enumerate(subset) if x]
+	# check for now column (all False)
+	if len(ix) == 0:
+		return 0.0
+	# select columns
+	X_new = X[:, ix]
+	# define model
+	model = DecisionTreeClassifier()
+	# evaluate model
+	scores = cross_val_score(model, X_new, y, scoring='accuracy', cv=3, n_jobs=-1)
+	# summarize scores
+	result = mean(scores)
+	return result, ix
+
+# mutation operator
+def mutate(solution, p_mutate):
+	# make a copy
+	child = solution.copy()
+	for i in range(len(child)):
+		# check for a mutation
+		if rand() < p_mutate:
+			# flip the inclusion
+			child[i] = not child[i]
+	return child
+
+# hill climbing local search algorithm
+def hillclimbing(X, y, objective, n_iter, p_mutate):
+	# generate an initial point
+	solution = choice([True, False], size=X.shape[1])
+	# evaluate the initial point
+	solution_eval, ix = objective(X, y, solution)
+	# run the hill climb
+	for i in range(n_iter):
+		# take a step
+		candidate = mutate(solution, p_mutate)
+		# evaluate candidate point
+		candidate_eval, ix = objective(X, y, candidate)
+		# check if we should keep the new point
+		if candidate_eval >= solution_eval:
+			# store the new point
+			solution, solution_eval = candidate, candidate_eval
+		# report progress
+		print('>%d f(%s) = %f' % (i+1, len(ix), solution_eval))
+	return solution, solution_eval
+
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=500, n_informative=10, n_redundant=490, random_state=1)
+# define the total iterations
+n_iter = 100
+# probability of including/excluding a column
+p_mut = 10.0 / 500.0
+# perform the hill climbing search
+subset, score = hillclimbing(X, y, objective, n_iter, p_mut)
+# convert into column indexes
+ix = [i for i, x in enumerate(subset) if x]
+print('Done!')
+print('Best: f(%d) = %f' % (len(ix), score))
+
+>80 f(240) = 0.918099
+>81 f(236) = 0.918099
+>82 f(238) = 0.918099
+>83 f(236) = 0.918099
+>84 f(239) = 0.918099
+>85 f(240) = 0.918099
+>86 f(239) = 0.918099
+>87 f(245) = 0.918099
+>88 f(241) = 0.918099
+>89 f(239) = 0.918099
+>90 f(239) = 0.918099
+>91 f(241) = 0.918099
+>92 f(243) = 0.918099
+>93 f(245) = 0.918099
+>94 f(239) = 0.918099
+>95 f(245) = 0.918099
+>96 f(244) = 0.918099
+>97 f(242) = 0.918099
+>98 f(238) = 0.918099
+>99 f(248) = 0.918099
+>100 f(238) = 0.918099
+Done!
+Best: f(239) = 0.918099
+'''

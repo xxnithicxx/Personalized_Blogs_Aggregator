@@ -1,0 +1,306 @@
+How to Create Custom Data Transforms for Scikit-Learn
+https://machinelearningmastery.com/create-custom-data-transforms-for-scikit-learn/
+2020-07-16
+The scikit-learn Python library for machine learning offers a suite of data transforms for changing the scale and distribution of input data, as well as removing input features (columns).
+There are many simple data cleaning operations, such as removing outliers and removing columns with few observations, that are often performed manually to the data, requiring custom code.
+The scikit-learn library provides a way to wrap these custom data transforms in a standard way so they can be used just like any other transform, either on data directly or as a part of a modeling pipeline.
+In this tutorial, you will discover how to define and use custom data transforms for scikit-learn.
+After completing this tutorial, you will know:
+- That custom data transforms can be created for scikit-learn using the FunctionTransformer class.
+- How to develop and apply a custom transform to remove columns with few unique values.
+- How to develop and apply a custom transform that replaces outliers for each column.
+Kick-start your project with my new book Data Preparation for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Create Custom Data Transforms for Scikit-LearnPhoto by Berit Watkin, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into four parts; they are:
+- Custom Data Transforms in Scikit-Learn
+- Oil Spill Dataset
+- Custom Transform to Remove Columns
+- Custom Transform to Replace Outliers
+# Custom Data Transforms in Scikit-Learn
+Data preparation refers to changing the raw data in some way that makes it more appropriate for predictive modeling with machine learning algorithms.
+The scikit-learn Python machine learning library offers many different data preparation techniques directly, such as techniques for scaling numerical input variables and changing the probability distribution of variables.
+These transforms can be fit and then applied on a dataset or used as part of a predictive modeling pipeline, allowing a sequence of transforms to be applied correctly without data leakage when evaluating model performance with data sampling techniques, such as k-fold cross-validation.
+Although the data preparation techniques available in scikit-learn are extensive, there may be additional data preparation steps that are required.
+Typically, these additional steps are performed manually prior to modeling and require writing custom code. The risk is that these data preparation steps may be performed inconsistently.
+The solution is to create a custom data transform in scikit-learn using the FunctionTransformer class.
+This class allows you to specify a function that is called to transform the data. You can define the function and perform any valid change, such as changing values or removing columns of data (not removing rows).
+The class can then be used just like any other data transform in scikit-learn, e.g. to transform data directly, or used in a modeling pipeline.
+The catch is that the transform is stateless, meaning that no state can be kept.
+This means that the transform cannot be used to calculate statistics on the training dataset that are then used to transform the train and test datasets.
+In addition to custom scaling operations, this can be helpful for standard data cleaning operations, such as identifying and removing columns with few unique values and identifying and removing relative outliers.
+We will explore both of these cases, but first, let’s define a dataset that we can use as the basis for exploration.
+
+
+
+
+# Oil Spill Dataset
+The so-called “oil spill” dataset is a standard machine learning dataset.
+The task involves predicting whether a patch contains an oil spill or not, e.g. from the illegal or accidental dumping of oil in the ocean, given a vector that describes the contents of a patch of a satellite image.
+There are 937 cases. Each case is composed of 48 numerical computer vision derived features, a patch number, and a class label.
+The normal case is no oil spill assigned the class label of 0, whereas an oil spill is indicated by a class label of 1. There are 896 cases for no oil spill and 41 cases of an oil spill.
+You can access the entire dataset here:
+- Oil Spill Dataset (oil-spill.csv)
+- Oil Spill Dataset Description (oil-spill.names)
+Review the contents of the file.
+The first few lines of the file should look as follows:
+We can see that the first column contains integers for the patch number. We can also see that the computer vision derived features are real-valued with differing scales, such as thousands in the second column and fractions in other columns.
+This dataset contains columns with very few unique values and columns with outliers that provide a good basis for data cleaning.
+The example below downloads the dataset and loads it as a numPy array and summarizes the number of rows and columns.
+Running the example loads the dataset and confirms the expected number of rows and columns.
+Now that we have a dataset that we can use as the basis for data transforms, let’s look at how we can define some custom data cleaning transforms using the FunctionTransformer class.
+# Custom Transform to Remove Columns
+Columns that have few unique values are probably not contributing anything useful to predicting the target value.
+This is not absolutely true, but it is true enough that you should test the performance of your model fit on a dataset with columns of this type removed.
+This is a type of data cleaning, and there is a data transform provided in scikit-learn called the VarianceThreshold that attempts to address this using the variance of each column.
+Another approach is to remove columns that have fewer than a specified number of unique values, such as 1.
+We can develop a function that applies this transform and use the minimum number of unique values as a configurable default argument. We will also add some debugging to confirm it is working as we expect.
+First, the number of unique values for each column can be calculated. Ten columns with equal or fewer than the minimum number of unique values can be identified. Finally, those identified columns can be removed from the dataset.
+The cust_transform() function below implements this.
+We can then use this function in the FunctionTransformer.
+A limitation of this transform is that it selects columns to delete based on the provided data. This means if a train and test dataset differ greatly, then it is possible for different columns to be removed from each, making model evaluation challenging (unstable!?). As such, it is best to keep the minimum number of unique values small, such as 1.
+We can use this transform on the oil spill dataset. The complete example is listed below.
+Running the example first reports the number of rows and columns in the raw dataset.
+Next, a list is printed that shows the number of unique values observed for each column in the dataset. We can see that many columns have very few unique values.
+The columns with one (or fewer) unique values are then identified and reported. In this case, column index 22. This column is removed from the dataset.
+Finally, the shape of the transformed dataset is reported, showing 48 instead of 49 columns, confirming that the column with a single unique value was deleted.
+There are many extensions you could explore to this transform, such as:
+- Ensure that it is only applied to numerical input variables.
+- Experiment with a different minimum number of unique values.
+- Use a percentage rather than an absolute number of unique values.
+If you explore any of these extensions, let me know in the comments below.
+Next, let’s look at a transform that replaces values in the dataset.
+# Custom Transform to Replace Outliers
+Outliers are observations that are different or unlike the other observations.
+If we consider one variable at a time, an outlier would be a value that is far from the center of mass (the rest of the values), meaning it is rare or has a low probability of being observed.
+There are standard ways for identifying outliers for common probability distributions. For Gaussian data, we can identify outliers as observations that are three or more standard deviations from the mean.
+This may or may not be a desirable way to identify outliers for data that has many input variables, yet can be effective in some cases.
+We can identify outliers in this way and replace their value with a correction, such as the mean.
+Each column is considered one at a time and mean and standard deviation statistics are calculated. Using these statistics, upper and lower bounds of “normal” values are defined, then all values that fall outside these bounds can be identified. If one or more outliers are identified, their values are then replaced with the mean value that was already calculated.
+The cust_transform() function below implements this as a function applied to the dataset, where we parameterize the number of standard deviations from the mean and whether or not debug information will be displayed.
+We can then use this function in the FunctionTransformer.
+The method of outlier detection assumes a Gaussian probability distribution and applies to each variable independently, both of which are strong assumptions.
+An additional limitation of this implementation is that the mean and standard deviation statistics are calculated on the provided dataset, meaning that the definition of an outlier and its replacement value are both relative to the dataset. This means that different definitions of outliers and different replacement values could be used if the transform is used on the train and test sets.
+We can use this transform on the oil spill dataset. The complete example is listed below.
+Running the example first reports the shape of the dataset prior to any change.
+Next, the number of outliers for each column is calculated and only those columns with one or more outliers are reported in the output. We can see that a total of 32 columns in the dataset have one or more outliers.
+The outliers are then removed and the shape of the resulting dataset is reported, confirming no change in the number of rows or columns.
+There are many extensions you could explore to this transform, such as:
+- Ensure that it is only applied to numerical input variables.
+- Experiment with a different number of standard deviations from the mean, such as 2 or 4.
+- Use a different definition of outlier, such as the IQR or a model.
+If you explore any of these extensions, let me know in the comments below.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- How to Remove Outliers for Machine Learning
+- How to Perform Data Cleaning for Machine Learning with Python
+- Custom transformers, Scikit-Learn User Guide.
+- sklearn.preprocessing.FunctionTransformer API.
+In this tutorial, you discovered how to define and use custom data transforms for scikit-learn.
+Specifically, you learned:
+- That custom data transforms can be created for scikit-learn using the FunctionTransformer class.
+- How to develop and apply a custom transform to remove columns with few unique values.
+- How to develop and apply a custom transform that replaces outliers for each column.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Modern Data Preparation!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Data Preparation for Machine Learning
+It provides self-study tutorials with full working code on:
+Feature Selection, RFE, Data Cleaning, Data Transforms, Scaling, Dimensionality Reduction,
+and much more...
+See What's Inside
+
+'''
+1,2558,1506.09,456.63,90,6395000,40.88,7.89,29780,0.19,214.7,0.21,0.26,0.49,0.1,0.4,99.59,32.19,1.84,0.16,0.2,87.65,0,0.47,132.78,-0.01,3.78,0.22,3.2,-3.71,-0.18,2.19,0,2.19,310,16110,0,138.68,89,69,2850,1000,763.16,135.46,3.73,0,33243.19,65.74,7.95,1
+2,22325,79.11,841.03,180,55812500,51.11,1.21,61900,0.02,901.7,0.02,0.03,0.11,0.01,0.11,6058.23,4061.15,2.3,0.02,0.02,87.65,0,0.58,132.78,-0.01,3.78,0.84,7.09,-2.21,0,0,0,0,704,40140,0,68.65,89,69,5750,11500,9593.48,1648.8,0.6,0,51572.04,65.73,6.26,0
+3,115,1449.85,608.43,88,287500,40.42,7.34,3340,0.18,86.1,0.21,0.32,0.5,0.17,0.34,71.2,16.73,1.82,0.19,0.29,87.65,0,0.46,132.78,-0.01,3.78,0.7,4.79,-3.36,-0.23,1.95,0,1.95,29,1530,0.01,38.8,89,69,1400,250,150,45.13,9.33,1,31692.84,65.81,7.84,1
+4,1201,1562.53,295.65,66,3002500,42.4,7.97,18030,0.19,166.5,0.21,0.26,0.48,0.1,0.38,120.22,33.47,1.91,0.16,0.21,87.65,0,0.48,132.78,-0.01,3.78,0.84,6.78,-3.54,-0.33,2.2,0,2.2,183,10080,0,108.27,89,69,6041.52,761.58,453.21,144.97,13.33,1,37696.21,65.67,8.07,1
+5,312,950.27,440.86,37,780000,41.43,7.03,3350,0.17,232.8,0.15,0.19,0.35,0.09,0.26,289.19,48.68,1.86,0.13,0.16,87.65,0,0.47,132.78,-0.01,3.78,0.02,2.28,-3.44,-0.44,2.19,0,2.19,45,2340,0,14.39,89,69,1320.04,710.63,512.54,109.16,2.58,0,29038.17,65.66,7.35,0
+...
+# load the oil dataset
+from pandas import read_csv
+# define the location of the dataset
+path = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/oil-spill.csv'
+# load the dataset
+df = read_csv(path, header=None)
+# split data into inputs and outputs
+data = df.values
+X = data[:, :-1]
+y = data[:, -1]
+print(X.shape, y.shape)
+(937, 49) (937,)
+# remove columns with few unique values
+def cust_transform(X, min_values=1, verbose=True):
+	# get number of unique values for each column
+	counts = [len(unique(X[:, i])) for i in range(X.shape[1])]
+	if verbose:
+		print('Unique Values: %s' % counts)
+	# select columns to delete
+	to_del = [i for i,v in enumerate(counts) if v <= min_values]
+	if verbose:
+		print('Deleting: %s' % to_del)
+	if len(to_del) is 0:
+		return X
+	# select all but the columns that are being removed
+	ix = [i for i in range(X.shape[1]) if i not in to_del]
+	result = X[:, ix]
+	return result
+# custom data transform for removing columns with few unique values
+from numpy import unique
+from pandas import read_csv
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.preprocessing import LabelEncoder
+
+# load a dataset
+def load_dataset(path):
+	# load the dataset
+	df = read_csv(path, header=None)
+	data = df.values
+	# split data into inputs and outputs
+	X, y = data[:, :-1], data[:, -1]
+	# minimally prepare dataset
+	X = X.astype('float')
+	y = LabelEncoder().fit_transform(y.astype('str'))
+	return X, y
+
+# remove columns with few unique values
+def cust_transform(X, min_values=1, verbose=True):
+	# get number of unique values for each column
+	counts = [len(unique(X[:, i])) for i in range(X.shape[1])]
+	if verbose:
+		print('Unique Values: %s' % counts)
+	# select columns to delete
+	to_del = [i for i,v in enumerate(counts) if v <= min_values]
+	if verbose:
+		print('Deleting: %s' % to_del)
+	if len(to_del) is 0:
+		return X
+	# select all but the columns that are being removed
+	ix = [i for i in range(X.shape[1]) if i not in to_del]
+	result = X[:, ix]
+	return result
+
+# define the location of the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/oil-spill.csv'
+# load the dataset
+X, y = load_dataset(url)
+print(X.shape, y.shape)
+# define the transformer
+trans = FunctionTransformer(cust_transform)
+# apply the transform
+X = trans.fit_transform(X)
+# summarize new shape
+print(X.shape)
+(937, 49) (937,)
+Unique Values: [238, 297, 927, 933, 179, 375, 820, 618, 561, 57, 577, 59, 73, 107, 53, 91, 893, 810, 170, 53, 68, 9, 1, 92, 9, 8, 9, 308, 447, 392, 107, 42, 4, 45, 141, 110, 3, 758, 9, 9, 388, 220, 644, 649, 499, 2, 937, 169, 286]
+Deleting: [22]
+(937, 48)
+# replace outliers
+def cust_transform(X, n_stdev=3, verbose=True):
+	# copy the array
+	result = X.copy()
+	# enumerate each column
+	for i in range(result.shape[1]):
+		# retrieve values for column
+		col = X[:, i]
+		# calculate statistics
+		mu, sigma = mean(col), std(col)
+		# define bounds
+		lower, upper = mu-(sigma*n_stdev), mu+(sigma*n_stdev)
+		# select indexes that are out of bounds
+		ix = where(logical_or(col < lower, col > upper))[0]
+		if verbose and len(ix) > 0:
+			print('>col=%d, outliers=%d' % (i, len(ix)))
+		# replace values
+		result[ix, i] = mu
+	return result
+# custom data transform for replacing outliers
+from numpy import mean
+from numpy import std
+from numpy import where
+from numpy import logical_or
+from pandas import read_csv
+from sklearn.preprocessing import FunctionTransformer
+from sklearn.preprocessing import LabelEncoder
+
+# load a dataset
+def load_dataset(path):
+	# load the dataset
+	df = read_csv(path, header=None)
+	data = df.values
+	# split data into inputs and outputs
+	X, y = data[:, :-1], data[:, -1]
+	# minimally prepare dataset
+	X = X.astype('float')
+	y = LabelEncoder().fit_transform(y.astype('str'))
+	return X, y
+
+# replace outliers
+def cust_transform(X, n_stdev=3, verbose=True):
+	# copy the array
+	result = X.copy()
+	# enumerate each column
+	for i in range(result.shape[1]):
+		# retrieve values for column
+		col = X[:, i]
+		# calculate statistics
+		mu, sigma = mean(col), std(col)
+		# define bounds
+		lower, upper = mu-(sigma*n_stdev), mu+(sigma*n_stdev)
+		# select indexes that are out of bounds
+		ix = where(logical_or(col < lower, col > upper))[0]
+		if verbose and len(ix) > 0:
+			print('>col=%d, outliers=%d' % (i, len(ix)))
+		# replace values
+		result[ix, i] = mu
+	return result
+
+# define the location of the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/oil-spill.csv'
+# load the dataset
+X, y = load_dataset(url)
+print(X.shape, y.shape)
+# define the transformer
+trans = FunctionTransformer(cust_transform)
+# apply the transform
+X = trans.fit_transform(X)
+# summarize new shape
+print(X.shape)
+(937, 49) (937,)
+>col=0, outliers=10
+>col=1, outliers=8
+>col=3, outliers=8
+>col=5, outliers=7
+>col=6, outliers=1
+>col=7, outliers=12
+>col=8, outliers=15
+>col=9, outliers=14
+>col=10, outliers=19
+>col=11, outliers=17
+>col=12, outliers=22
+>col=13, outliers=2
+>col=14, outliers=16
+>col=15, outliers=8
+>col=16, outliers=8
+>col=17, outliers=6
+>col=19, outliers=12
+>col=20, outliers=20
+>col=27, outliers=14
+>col=28, outliers=18
+>col=29, outliers=2
+>col=30, outliers=13
+>col=32, outliers=3
+>col=34, outliers=14
+>col=35, outliers=15
+>col=37, outliers=13
+>col=40, outliers=18
+>col=41, outliers=13
+>col=42, outliers=12
+>col=43, outliers=12
+>col=44, outliers=19
+>col=46, outliers=21
+(937, 49)
+'''

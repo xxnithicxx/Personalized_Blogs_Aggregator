@@ -1,0 +1,225 @@
+How to Develop Elastic Net Regression Models in Python
+https://machinelearningmastery.com/elastic-net-regression-in-python/
+2020-10-06
+Regression is a modeling task that involves predicting a numeric value given an input.
+Linear regression is the standard algorithm for regression that assumes a linear relationship between inputs and the target variable. An extension to linear regression involves adding penalties to the loss function during training that encourage simpler models that have smaller coefficient values. These extensions are referred to as regularized linear regression or penalized linear regression.
+Elastic net is a popular type of regularized linear regression that combines two popular penalties, specifically the L1 and L2 penalty functions.
+In this tutorial, you will discover how to develop Elastic Net regularized regression in Python.
+After completing this tutorial, you will know:
+- Elastic Net is an extension of linear regression that adds regularization penalties to the loss function during training.
+- How to evaluate an Elastic Net model and use a final model to make predictions for new data.
+- How to configure the Elastic Net model for a new dataset via grid search and automatically.
+Let’s get started.
+How to Develop Elastic Net Regression Models in PythonPhoto by Phil Dolby, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Elastic Net Regression
+- Example of Elastic Net Regression
+- Tuning Elastic Net Hyperparameters
+# Elastic Net Regression
+Linear regression refers to a model that assumes a linear relationship between input variables and the target variable.
+With a single input variable, this relationship is a line, and with higher dimensions, this relationship can be thought of as a hyperplane that connects the input variables to the target variable. The coefficients of the model are found via an optimization process that seeks to minimize the sum squared error between the predictions (yhat) and the expected target values (y).
+- loss = sum i=0 to n (y_i – yhat_i)^2
+A problem with linear regression is that estimated coefficients of the model can become large, making the model sensitive to inputs and possibly unstable. This is particularly true for problems with few observations (samples) or more samples (n) than input predictors (p) or variables (so-called p >> n problems).
+One approach to addressing the stability of regression models is to change the loss function to include additional costs for a model that has large coefficients. Linear regression models that use these modified loss functions during training are referred to collectively as penalized linear regression.
+One popular penalty is to penalize a model based on the sum of the squared coefficient values. This is called an L2 penalty. An L2 penalty minimizes the size of all coefficients, although it prevents any coefficients from being removed from the model.
+- l2_penalty = sum j=0 to p beta_j^2
+Another popular penalty is to penalize a model based on the sum of the absolute coefficient values. This is called the L1 penalty. An L1 penalty minimizes the size of all coefficients and allows some coefficients to be minimized to the value zero, which removes the predictor from the model.
+- l1_penalty = sum j=0 to p abs(beta_j)
+Elastic net is a penalized linear regression model that includes both the L1 and L2 penalties during training.
+Using the terminology from “The Elements of Statistical Learning,” a hyperparameter “alpha” is provided to assign how much weight is given to each of the L1 and L2 penalties. Alpha is a value between 0 and 1 and is used to weight the contribution of the L1 penalty and one minus the alpha value is used to weight the L2 penalty.
+- elastic_net_penalty = (alpha * l1_penalty) + ((1 – alpha) * l2_penalty)
+For example, an alpha of 0.5 would provide a 50 percent contribution of each penalty to the loss function. An alpha value of 0 gives all weight to the L2 penalty and a value of 1 gives all weight to the L1 penalty.
+The parameter alpha determines the mix of the penalties, and is often pre-chosen on qualitative grounds.
+— Page 663, The Elements of Statistical Learning, 2016.
+The benefit is that elastic net allows a balance of both penalties, which can result in better performance than a model with either one or the other penalty on some problems.
+Another hyperparameter is provided called “lambda” that controls the weighting of the sum of both penalties to the loss function. A default value of 1.0 is used to use the fully weighted penalty; a value of 0 excludes the penalty. Very small values of lambada, such as 1e-3 or smaller, are common.
+- elastic_net_loss = loss + (lambda * elastic_net_penalty)
+Now that we are familiar with elastic net penalized regression, let’s look at a worked example.
+# Example of Elastic Net Regression
+In this section, we will demonstrate how to use the Elastic Net regression algorithm.
+First, let’s introduce a standard regression dataset. We will use the housing dataset.
+The housing dataset is a standard machine learning dataset comprising 506 rows of data with 13 numerical input variables and a numerical target variable.
+Using a test harness of repeated stratified 10-fold cross-validation with three repeats, a naive model can achieve a mean absolute error (MAE) of about 6.6. A top-performing model can achieve a MAE on this same test harness of about 1.9. This provides the bounds of expected performance on this dataset.
+The dataset involves predicting the house price given details of the house’s suburb in the American city of Boston.
+- Housing Dataset (housing.csv)
+- Housing Description (housing.names)
+No need to download the dataset; we will download it automatically as part of our worked examples.
+The example below downloads and loads the dataset as a Pandas DataFrame and summarizes the shape of the dataset and the first five rows of data.
+Running the example confirms the 506 rows of data and 13 input variables and a single numeric target variable (14 in total).
+We can also see that all input variables are numeric.
+The scikit-learn Python machine learning library provides an implementation of the Elastic Net penalized regression algorithm via the ElasticNet class.
+Confusingly, the alpha hyperparameter can be set via the “l1_ratio” argument that controls the contribution of the L1 and L2 penalties and the lambda hyperparameter can be set via the “alpha” argument that controls the contribution of the sum of both penalties to the loss function.
+By default, an equal balance of 0.5 is used for “l1_ratio” and a full weighting of 1.0 is used for alpha.
+We can evaluate the Elastic Net model on the housing dataset using repeated 10-fold cross-validation and report the average mean absolute error (MAE) on the dataset.
+Running the example evaluates the Elastic Net algorithm on the housing dataset and reports the average MAE across the three repeats of 10-fold cross-validation.
+Your specific results may vary given the stochastic nature of the learning algorithm. Consider running the example a few times.
+In this case, we can see that the model achieved a MAE of about 3.682.
+We may decide to use the Elastic Net as our final model and make predictions on new data.
+This can be achieved by fitting the model on all available data and calling the predict() function, passing in a new row of data.
+We can demonstrate this with a complete example, listed below.
+Running the example fits the model and makes a prediction for the new rows of data.
+Next, we can look at configuring the model hyperparameters.
+# Tuning Elastic Net Hyperparameters
+How do we know that the default hyperparameters of alpha=1.0 and l1_ratio=0.5 are any good for our dataset?
+We don’t.
+Instead, it is good practice to test a suite of different configurations and discover what works best.
+One approach would be to gird search l1_ratio values between 0 and 1 with a 0.1 or 0.01 separation and alpha values from perhaps 1e-5 to 100 on a log-10 scale and discover what works best for a dataset.
+The example below demonstrates this using the GridSearchCV class with a grid of values we have defined.
+Running the example will evaluate each combination of configurations using repeated cross-validation.
+You might see some warnings that can be safely ignored, such as:
+Your specific results may vary given the stochastic nature of the learning algorithm. Try running the example a few times.
+In this case, we can see that we achieved slightly better results than the default 3.378 vs. 3.682. Ignore the sign; the library makes the MAE negative for optimization purposes.
+We can see that the model assigned an alpha weight of 0.01 to the penalty and focuses exclusively on the L2 penalty.
+The scikit-learn library also provides a built-in version of the algorithm that automatically finds good hyperparameters via the ElasticNetCV class.
+To use this class, it is first fit on the dataset, then used to make a prediction. It will automatically find appropriate hyperparameters.
+By default, the model will test 100 alpha values and use a default ratio. We can specify our own lists of values to test via the “l1_ratio” and “alphas” arguments, as we did with the manual grid search.
+The example below demonstrates this.
+Your specific results may vary given the stochastic nature of the learning algorithm. Try running the example a few times.
+Again, you might see some warnings that can be safely ignored, such as:
+In this case, we can see that an alpha of 0.0 was chosen, removing both penalties from the loss function.
+This is different from what we found via our manual grid search, perhaps due to the systematic way in which configurations were searched or selected.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- The Elements of Statistical Learning, 2016.
+- Applied Predictive Modeling, 2013.
+- sklearn.linear_model.ElasticNet API.
+- sklearn.linear_model.ElasticNetCV API.
+- Elastic net regularization, Wikipedia.
+# Summary
+In this tutorial, you discovered how to develop Elastic Net regularized regression in Python.
+Specifically, you learned:
+- Elastic Net is an extension of linear regression that adds regularization penalties to the loss function during training.
+- How to evaluate an Elastic Net model and use a final model to make predictions for new data.
+- How to configure the Elastic Net model for a new dataset via grid search and automatically.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Discover Fast Machine Learning in Python!
+...with just a few lines of scikit-learn code
+Learn how in my new Ebook:
+Machine Learning Mastery With Python
+Covers self-study tutorials and end-to-end projects like:
+Loading data, visualization, modeling, tuning, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+# load and summarize the housing dataset
+from pandas import read_csv
+from matplotlib import pyplot
+# load dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+dataframe = read_csv(url, header=None)
+# summarize shape
+print(dataframe.shape)
+# summarize first few lines
+print(dataframe.head())
+(506, 14)
+        0     1     2   3      4      5   ...  8      9     10      11    12    13
+0  0.00632  18.0  2.31   0  0.538  6.575  ...   1  296.0  15.3  396.90  4.98  24.0
+1  0.02731   0.0  7.07   0  0.469  6.421  ...   2  242.0  17.8  396.90  9.14  21.6
+2  0.02729   0.0  7.07   0  0.469  7.185  ...   2  242.0  17.8  392.83  4.03  34.7
+3  0.03237   0.0  2.18   0  0.458  6.998  ...   3  222.0  18.7  394.63  2.94  33.4
+4  0.06905   0.0  2.18   0  0.458  7.147  ...   3  222.0  18.7  396.90  5.33  36.2
+
+[5 rows x 14 columns]
+
+# define model
+model = ElasticNet(alpha=1.0, l1_ratio=0.5)
+# evaluate an elastic net model on the dataset
+from numpy import mean
+from numpy import std
+from numpy import absolute
+from pandas import read_csv
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedKFold
+from sklearn.linear_model import ElasticNet
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+dataframe = read_csv(url, header=None)
+data = dataframe.values
+X, y = data[:, :-1], data[:, -1]
+# define model
+model = ElasticNet(alpha=1.0, l1_ratio=0.5)
+# define model evaluation method
+cv = RepeatedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='neg_mean_absolute_error', cv=cv, n_jobs=-1)
+# force scores to be positive
+scores = absolute(scores)
+print('Mean MAE: %.3f (%.3f)' % (mean(scores), std(scores)))
+Mean MAE: 3.682 (0.530)
+# make a prediction with an elastic net model on the dataset
+from pandas import read_csv
+from sklearn.linear_model import ElasticNet
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+dataframe = read_csv(url, header=None)
+data = dataframe.values
+X, y = data[:, :-1], data[:, -1]
+# define model
+model = ElasticNet(alpha=1.0, l1_ratio=0.5)
+# fit model
+model.fit(X, y)
+# define new data
+row = [0.00632,18.00,2.310,0,0.5380,6.5750,65.20,4.0900,1,296.0,15.30,396.90,4.98]
+# make a prediction
+yhat = model.predict([row])
+# summarize prediction
+print('Predicted: %.3f' % yhat)
+Predicted: 31.047
+# grid search hyperparameters for the elastic net
+from numpy import arange
+from pandas import read_csv
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import RepeatedKFold
+from sklearn.linear_model import ElasticNet
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+dataframe = read_csv(url, header=None)
+data = dataframe.values
+X, y = data[:, :-1], data[:, -1]
+# define model
+model = ElasticNet()
+# define model evaluation method
+cv = RepeatedKFold(n_splits=10, n_repeats=3, random_state=1)
+# define grid
+grid = dict()
+grid['alpha'] = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 0.0, 1.0, 10.0, 100.0]
+grid['l1_ratio'] = arange(0, 1, 0.01)
+# define search
+search = GridSearchCV(model, grid, scoring='neg_mean_absolute_error', cv=cv, n_jobs=-1)
+# perform the search
+results = search.fit(X, y)
+# summarize
+print('MAE: %.3f' % results.best_score_)
+print('Config: %s' % results.best_params_)
+Objective did not converge. You might want to increase the number of iterations.
+MAE: -3.378
+Config: {'alpha': 0.01, 'l1_ratio': 0.97}
+# use automatically configured elastic net algorithm
+from numpy import arange
+from pandas import read_csv
+from sklearn.linear_model import ElasticNetCV
+from sklearn.model_selection import RepeatedKFold
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+dataframe = read_csv(url, header=None)
+data = dataframe.values
+X, y = data[:, :-1], data[:, -1]
+# define model evaluation method
+cv = RepeatedKFold(n_splits=10, n_repeats=3, random_state=1)
+# define model
+ratios = arange(0, 1, 0.01)
+alphas = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 0.0, 1.0, 10.0, 100.0]
+model = ElasticNetCV(l1_ratio=ratios, alphas=alphas, cv=cv, n_jobs=-1)
+# fit model
+model.fit(X, y)
+# summarize chosen configuration
+print('alpha: %f' % model.alpha_)
+print('l1_ratio_: %f' % model.l1_ratio_)
+Objective did not converge. You might want to increase the number of iterations.
+alpha: 0.000000
+l1_ratio_: 0.470000
+'''

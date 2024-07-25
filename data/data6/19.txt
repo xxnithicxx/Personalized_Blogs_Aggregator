@@ -1,0 +1,371 @@
+4 Automatic Outlier Detection Algorithms in Python
+https://machinelearningmastery.com/model-based-outlier-detection-and-removal-in-python/
+2020-07-07
+The presence of outliers in a classification or regression dataset can result in a poor fit and lower predictive modeling performance.
+Identifying and removing outliers is challenging with simple statistical methods for most machine learning datasets given the large number of input variables. Instead, automatic outlier detection methods can be used in the modeling pipeline and compared, just like other data preparation transforms that may be applied to the dataset.
+In this tutorial, you will discover how to use automatic outlier detection and removal to improve machine learning predictive modeling performance.
+After completing this tutorial, you will know:
+- Automatic outlier detection models provide an alternative to statistical techniques with a larger number of input variables with complex and unknown inter-relationships.
+- How to correctly apply automatic outlier detection and removal to the training dataset only to avoid data leakage.
+- How to evaluate and compare predictive modeling pipelines with outliers removed from the training dataset.
+Kick-start your project with my new book Data Preparation for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+Model-Based Outlier Detection and Removal in PythonPhoto by Zoltán Vörös, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Outlier Detection and Removal
+- Dataset and Performance Baseline
+
+House Price Regression Dataset
+Baseline Model Performance
+
+
+- House Price Regression Dataset
+- Baseline Model Performance
+- Automatic Outlier Detection
+
+Isolation Forest
+Minimum Covariance Determinant
+Local Outlier Factor
+One-Class SVM
+
+
+- Isolation Forest
+- Minimum Covariance Determinant
+- Local Outlier Factor
+- One-Class SVM
+# Outlier Detection and Removal
+Outliers are observations in a dataset that don’t fit in some way.
+Perhaps the most common or familiar type of outlier is the observations that are far from the rest of the observations or the center of mass of observations.
+This is easy to understand when we have one or two variables and we can visualize the data as a histogram or scatter plot, although it becomes very challenging when we have many input variables defining a high-dimensional input feature space.
+In this case, simple statistical methods for identifying outliers can break down, such as methods that use standard deviations or the interquartile range.
+It can be important to identify and remove outliers from data when training machine learning algorithms for predictive modeling.
+Outliers can skew statistical measures and data distributions, providing a misleading representation of the underlying data and relationships. Removing outliers from training data prior to modeling can result in a better fit of the data and, in turn, more skillful predictions.
+Thankfully, there are a variety of automatic model-based methods for identifying outliers in input data. Importantly, each method approaches the definition of an outlier is slightly different ways, providing alternate approaches to preparing a training dataset that can be evaluated and compared, just like any other data preparation step in a modeling pipeline.
+Before we dive into automatic outlier detection methods, let’s first select a standard machine learning dataset that we can use as the basis for our investigation.
+
+
+
+
+# Dataset and Performance Baseline
+In this section, we will first select a standard machine learning dataset and establish a baseline in performance on this dataset.
+This will provide the context for exploring the outlier identification and removal method of data preparation in the next section.
+We will use the house price regression dataset.
+This dataset has 13 input variables that describe the properties of the house and suburb and requires the prediction of the median value of houses in the suburb in thousands of dollars.
+You can learn more about the dataset here:
+- House Price Dataset (housing.csv)
+- House Price Dataset Description (housing.names)
+No need to download the dataset as we will download it automatically as part of our worked examples.
+Open the dataset and review the raw data. The first few rows of data are listed below.
+We can see that it is a regression predictive modeling problem with numerical input variables, each of which has different scales.
+The dataset has many numerical input variables that have unknown and complex relationships. We don’t know that outliers exist in this dataset, although we may guess that some outliers may be present.
+The example below loads the dataset and splits it into the input and output columns, splits it into train and test datasets, then summarizes the shapes of the data arrays.
+Running the example, we can see that the dataset was loaded correctly and that there are 506 rows of data with 13 input variables and a single target variable.
+The dataset is split into train and test sets with 339 rows used for model training and 167 for model evaluation.
+Next, let’s evaluate a model on this dataset and establish a baseline in performance.
+It is a regression predictive modeling problem, meaning that we will be predicting a numeric value. All input variables are also numeric.
+In this case, we will fit a linear regression algorithm and evaluate model performance by training the model on the test dataset and making a prediction on the test data and evaluate the predictions using the mean absolute error (MAE).
+The complete example of evaluating a linear regression model on the dataset is listed below.
+Running the example fits and evaluates the model, then reports the MAE.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the model achieved a MAE of about 3.417. This provides a baseline in performance to which we can compare different outlier identification and removal procedures.
+Next, we can try removing outliers from the training dataset.
+# Automatic Outlier Detection
+The scikit-learn library provides a number of built-in automatic methods for identifying outliers in data.
+In this section, we will review four methods and compare their performance on the house price dataset.
+Each method will be defined, then fit on the training dataset. The fit model will then predict which examples in the training dataset are outliers and which are not (so-called inliers). The outliers will then be removed from the training dataset, then the model will be fit on the remaining examples and evaluated on the entire test dataset.
+It would be invalid to fit the outlier detection method on the entire training dataset as this would result in data leakage. That is, the model would have access to data (or information about the data) in the test set not used to train the model. This may result in an optimistic estimate of model performance.
+We could attempt to detect outliers on “new data” such as the test set prior to making a prediction, but then what do we do if outliers are detected?
+One approach might be to return a “None” indicating that the model is unable to make a prediction on those outlier cases. This might be an interesting extension to explore that may be appropriate for your project.
+Isolation Forest, or iForest for short, is a tree-based anomaly detection algorithm.
+It is based on modeling the normal data in such a way as to isolate anomalies that are both few in number and different in the feature space.
+… our proposed method takes advantage of two anomalies’ quantitative properties: i) they are the minority consisting of fewer instances and ii) they have attribute-values that are very different from those of normal instances.
+— Isolation Forest, 2008.
+The scikit-learn library provides an implementation of Isolation Forest in the IsolationForest class.
+Perhaps the most important hyperparameter in the model is the “contamination” argument, which is used to help estimate the number of outliers in the dataset. This is a value between 0.0 and 0.5 and by default is set to 0.1.
+Once identified, we can remove the outliers from the training dataset.
+Tying this together, the complete example of evaluating the linear model on the housing dataset with outliers identified and removed with isolation forest is listed below.
+Running the example fits and evaluates the model, then reports the MAE.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that that model identified and removed 34 outliers and achieved a MAE of about 3.189, an improvement over the baseline that achieved a score of about 3.417.
+
+If the input variables have a Gaussian distribution, then simple statistical methods can be used to detect outliers.
+For example, if the dataset has two input variables and both are Gaussian, then the feature space forms a multi-dimensional Gaussian and knowledge of this distribution can be used to identify values far from the distribution.
+This approach can be generalized by defining a hypersphere (ellipsoid) that covers the normal data, and data that falls outside this shape is considered an outlier. An efficient implementation of this technique for multivariate data is known as the Minimum Covariance Determinant, or MCD for short.
+The Minimum Covariance Determinant (MCD) method is a highly robust estimator of multivariate location and scatter, for which a fast algorithm is available. […] It also serves as a convenient and efficient tool for outlier detection.
+— Minimum Covariance Determinant and Extensions, 2017.
+The scikit-learn library provides access to this method via the EllipticEnvelope class.
+It provides the “contamination” argument that defines the expected ratio of outliers to be observed in practice. In this case, we will set it to a value of 0.01, found with a little trial and error.
+Once identified, the outliers can be removed from the training dataset as we did in the prior example.
+Tying this together, the complete example of identifying and removing outliers from the housing dataset using the elliptical envelope (minimum covariant determinant) method is listed below.
+Running the example fits and evaluates the model, then reports the MAE.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the elliptical envelope method identified and removed only 4 outliers, resulting in a drop in MAE from 3.417 with the baseline to 3.388.
+
+A simple approach to identifying outliers is to locate those examples that are far from the other examples in the feature space.
+This can work well for feature spaces with low dimensionality (few features), although it can become less reliable as the number of features is increased, referred to as the curse of dimensionality.
+The local outlier factor, or LOF for short, is a technique that attempts to harness the idea of nearest neighbors for outlier detection. Each example is assigned a scoring of how isolated or how likely it is to be outliers based on the size of its local neighborhood. Those examples with the largest score are more likely to be outliers.
+We introduce a local outlier (LOF) for each object in the dataset, indicating its degree of outlier-ness.
+— LOF: Identifying Density-based Local Outliers, 2000.
+The scikit-learn library provides an implementation of this approach in the LocalOutlierFactor class.
+The model provides the “contamination” argument, that is the expected percentage of outliers in the dataset, be indicated and defaults to 0.1.
+Tying this together, the complete example of identifying and removing outliers from the housing dataset using the local outlier factor method is listed below.
+Running the example fits and evaluates the model, then reports the MAE.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the local outlier factor method identified and removed 34 outliers, the same number as isolation forest, resulting in a drop in MAE from 3.417 with the baseline to 3.356. Better, but not as good as isolation forest, suggesting a different set of outliers were identified and removed.
+
+The support vector machine, or SVM, algorithm developed initially for binary classification can be used for one-class classification.
+When modeling one class, the algorithm captures the density of the majority class and classifies examples on the extremes of the density function as outliers. This modification of SVM is referred to as One-Class SVM.
+… an algorithm that computes a binary function that is supposed to capture regions in input space where the probability density lives (its support), that is, a function such that most of the data will live in the region where the function is nonzero.
+— Estimating the Support of a High-Dimensional Distribution, 2001.
+Although SVM is a classification algorithm and One-Class SVM is also a classification algorithm, it can be used to discover outliers in input data for both regression and classification datasets.
+The scikit-learn library provides an implementation of one-class SVM in the OneClassSVM class.
+The class provides the “nu” argument that specifies the approximate ratio of outliers in the dataset, which defaults to 0.1. In this case, we will set it to 0.01, found with a little trial and error.
+Tying this together, the complete example of identifying and removing outliers from the housing dataset using the one class SVM method is listed below.
+Running the example fits and evaluates the model, then reports the MAE.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that only three outliers were identified and removed and the model achieved a MAE of about 3.431, which is not better than the baseline model that achieved 3.417. Perhaps better performance can be achieved with more tuning.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- One-Class Classification Algorithms for Imbalanced Datasets
+- How to Remove Outliers for Machine Learning
+- Isolation Forest, 2008.
+- Minimum Covariance Determinant and Extensions, 2017.
+- LOF: Identifying Density-based Local Outliers, 2000.
+- Estimating the Support of a High-Dimensional Distribution, 2001.
+- Novelty and Outlier Detection, scikit-learn user guide.
+- sklearn.covariance.EllipticEnvelope API.
+- sklearn.svm.OneClassSVM API.
+- sklearn.neighbors.LocalOutlierFactor API.
+- sklearn.ensemble.IsolationForest API.
+# Summary
+In this tutorial, you discovered how to use automatic outlier detection and removal to improve machine learning predictive modeling performance.
+Specifically, you learned:
+- Automatic outlier detection models provide an alternative to statistical techniques with a larger number of input variables with complex and unknown inter-relationships.
+- How to correctly apply automatic outlier detection and removal to the training dataset only to avoid data leakage.
+- How to evaluate and compare predictive modeling pipelines with outliers removed from the training dataset.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Modern Data Preparation!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Data Preparation for Machine Learning
+It provides self-study tutorials with full working code on:
+Feature Selection, RFE, Data Cleaning, Data Transforms, Scaling, Dimensionality Reduction,
+and much more...
+See What's Inside
+
+'''
+0.00632,18.00,2.310,0,0.5380,6.5750,65.20,4.0900,1,296.0,15.30,396.90,4.98,24.00
+0.02731,0.00,7.070,0,0.4690,6.4210,78.90,4.9671,2,242.0,17.80,396.90,9.14,21.60
+0.02729,0.00,7.070,0,0.4690,7.1850,61.10,4.9671,2,242.0,17.80,392.83,4.03,34.70
+0.03237,0.00,2.180,0,0.4580,6.9980,45.80,6.0622,3,222.0,18.70,394.63,2.94,33.40
+0.06905,0.00,2.180,0,0.4580,7.1470,54.20,6.0622,3,222.0,18.70,396.90,5.33,36.20
+...
+# load and summarize the dataset
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+df = read_csv(url, header=None)
+# retrieve the array
+data = df.values
+# split into input and output elements
+X, y = data[:, :-1], data[:, -1]
+# summarize the shape of the dataset
+print(X.shape, y.shape)
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# summarize the shape of the train and test sets
+print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
+(506, 13) (506,)
+(339, 13) (167, 13) (339,) (167,)
+# evaluate model on the raw dataset
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_absolute_error
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+df = read_csv(url, header=None)
+# retrieve the array
+data = df.values
+# split into input and output elements
+X, y = data[:, :-1], data[:, -1]
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# fit the model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# evaluate the model
+yhat = model.predict(X_test)
+# evaluate predictions
+mae = mean_absolute_error(y_test, yhat)
+print('MAE: %.3f' % mae)
+MAE: 3.417
+
+# identify outliers in the training dataset
+iso = IsolationForest(contamination=0.1)
+yhat = iso.fit_predict(X_train)
+
+# select all rows that are not outliers
+mask = yhat != -1
+X_train, y_train = X_train[mask, :], y_train[mask]
+# evaluate model performance with outliers removed using isolation forest
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.ensemble import IsolationForest
+from sklearn.metrics import mean_absolute_error
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+df = read_csv(url, header=None)
+# retrieve the array
+data = df.values
+# split into input and output elements
+X, y = data[:, :-1], data[:, -1]
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# summarize the shape of the training dataset
+print(X_train.shape, y_train.shape)
+# identify outliers in the training dataset
+iso = IsolationForest(contamination=0.1)
+yhat = iso.fit_predict(X_train)
+# select all rows that are not outliers
+mask = yhat != -1
+X_train, y_train = X_train[mask, :], y_train[mask]
+# summarize the shape of the updated training dataset
+print(X_train.shape, y_train.shape)
+# fit the model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# evaluate the model
+yhat = model.predict(X_test)
+# evaluate predictions
+mae = mean_absolute_error(y_test, yhat)
+print('MAE: %.3f' % mae)
+(339, 13) (339,)
+(305, 13) (305,)
+MAE: 3.189
+
+# identify outliers in the training dataset
+ee = EllipticEnvelope(contamination=0.01)
+yhat = ee.fit_predict(X_train)
+# evaluate model performance with outliers removed using elliptical envelope
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.covariance import EllipticEnvelope
+from sklearn.metrics import mean_absolute_error
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+df = read_csv(url, header=None)
+# retrieve the array
+data = df.values
+# split into input and output elements
+X, y = data[:, :-1], data[:, -1]
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# summarize the shape of the training dataset
+print(X_train.shape, y_train.shape)
+# identify outliers in the training dataset
+ee = EllipticEnvelope(contamination=0.01)
+yhat = ee.fit_predict(X_train)
+# select all rows that are not outliers
+mask = yhat != -1
+X_train, y_train = X_train[mask, :], y_train[mask]
+# summarize the shape of the updated training dataset
+print(X_train.shape, y_train.shape)
+# fit the model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# evaluate the model
+yhat = model.predict(X_test)
+# evaluate predictions
+mae = mean_absolute_error(y_test, yhat)
+print('MAE: %.3f' % mae)
+(339, 13) (339,)
+(335, 13) (335,)
+MAE: 3.388
+
+# identify outliers in the training dataset
+lof = LocalOutlierFactor()
+yhat = lof.fit_predict(X_train)
+# evaluate model performance with outliers removed using local outlier factor
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.neighbors import LocalOutlierFactor
+from sklearn.metrics import mean_absolute_error
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+df = read_csv(url, header=None)
+# retrieve the array
+data = df.values
+# split into input and output elements
+X, y = data[:, :-1], data[:, -1]
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# summarize the shape of the training dataset
+print(X_train.shape, y_train.shape)
+# identify outliers in the training dataset
+lof = LocalOutlierFactor()
+yhat = lof.fit_predict(X_train)
+# select all rows that are not outliers
+mask = yhat != -1
+X_train, y_train = X_train[mask, :], y_train[mask]
+# summarize the shape of the updated training dataset
+print(X_train.shape, y_train.shape)
+# fit the model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# evaluate the model
+yhat = model.predict(X_test)
+# evaluate predictions
+mae = mean_absolute_error(y_test, yhat)
+print('MAE: %.3f' % mae)
+(339, 13) (339,)
+(305, 13) (305,)
+MAE: 3.356
+
+# identify outliers in the training dataset
+ee = OneClassSVM(nu=0.01)
+yhat = ee.fit_predict(X_train)
+# evaluate model performance with outliers removed using one class SVM
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.svm import OneClassSVM
+from sklearn.metrics import mean_absolute_error
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+df = read_csv(url, header=None)
+# retrieve the array
+data = df.values
+# split into input and output elements
+X, y = data[:, :-1], data[:, -1]
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# summarize the shape of the training dataset
+print(X_train.shape, y_train.shape)
+# identify outliers in the training dataset
+ee = OneClassSVM(nu=0.01)
+yhat = ee.fit_predict(X_train)
+# select all rows that are not outliers
+mask = yhat != -1
+X_train, y_train = X_train[mask, :], y_train[mask]
+# summarize the shape of the updated training dataset
+print(X_train.shape, y_train.shape)
+# fit the model
+model = LinearRegression()
+model.fit(X_train, y_train)
+# evaluate the model
+yhat = model.predict(X_test)
+# evaluate predictions
+mae = mean_absolute_error(y_test, yhat)
+print('MAE: %.3f' % mae)
+(339, 13) (339,)
+(336, 13) (336,)
+MAE: 3.431
+'''

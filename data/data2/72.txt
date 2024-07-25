@@ -1,0 +1,204 @@
+A Gentle Introduction to CycleGAN for Image Translation
+https://machinelearningmastery.com/what-is-cyclegan/
+2019-08-04
+Image-to-image translation involves generating a new synthetic version of a given image with a specific modification, such as translating a summer landscape to winter.
+Training a model for image-to-image translation typically requires a large dataset of paired examples. These datasets can be difficult and expensive to prepare, and in some cases impossible, such as photographs of paintings by long dead artists.
+The CycleGAN is a technique that involves the automatic training of image-to-image translation models without paired examples. The models are trained in an unsupervised manner using a collection of images from the source and target domain that do not need to be related in any way.
+This simple technique is powerful, achieving visually impressive results on a range of application domains, most notably translating photographs of horses to zebra, and the reverse.
+In this post, you will discover the CycleGAN technique for unpaired image-to-image translation.
+After reading this post, you will know:
+- Image-to-Image translation involves the controlled modification of an image and requires large datasets of paired images that are complex to prepare or sometimes don’t exist.
+- CycleGAN is a technique for training unsupervised image translation models via the GAN architecture using unpaired collections of images from two different domains.
+- CycleGAN has been demonstrated on a range of applications including season translation, object transfiguration, style transfer, and generating photos from paintings.
+Kick-start your project with my new book Generative Adversarial Networks with Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+A Gentle Introduction to CycleGANPhoto by Trish Hartmann, some rights reserved.
+# Overview
+This tutorial is divided into five parts; they are:
+- Problem With Image-to-Image Translation
+- Unpaired Image-to-Image Translation with CycleGAN
+- What Is the CycleGAN Model Architecture
+- Applications of CycleGAN
+- Implementation Tips for CycleGAN
+# Problem With Image-to-Image Translation
+Image-to-image translation is an image synthesis task that requires the generation of a new image that is a controlled modification of a given image.
+Image-to-image translation is a class of vision and graphics problems where the goal is to learn the mapping between an input image and an output image using a training set of aligned image pairs.
+— Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks, 2017.
+Examples of image-to-image translation include:
+- Translating summer landscapes to winter landscapes (or the reverse).
+- Translating paintings to photographs (or the reverse).
+- Translating horses to zebras (or the reverse).
+Traditionally, training an image-to-image translation model requires a dataset comprised of paired examples. That is, a large dataset of many examples of input images X (e.g. summer landscapes) and the same image with the desired modification that can be used as an expected output image Y (e.g. winter landscapes).
+The requirement for a paired training dataset is a limitation. These datasets are challenging and expensive to prepare, e.g. photos of different scenes under different conditions.
+In many cases, the datasets simply do not exist, such as famous paintings and their respective photographs.
+However, obtaining paired training data can be difficult and expensive. […] Obtaining input-output pairs for graphics tasks like artistic stylization can be even more difficult since the desired output is highly complex, typically requiring artistic authoring. For many tasks, like object transfiguration (e.g., zebra <-> horse), the desired output is not even well-defined.
+— Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks, 2017.
+As such, there is a desire for techniques for training an image-to-image translation system that does not require paired examples. Specifically, where any two collections of unrelated images can be used and the general characteristics extracted from each collection and used in the image translation process.
+For example, to be able to take a large collection of photos of summer landscapes and a large collection of photos of winter landscapes with unrelated scenes and locations as the first location and be able to translate specific photos from one group to the other.
+This is called the problem of unpaired image-to-image translation.
+# Unpaired Image-to-Image Translation With CycleGAN
+A successful approach for unpaired image-to-image translation is CycleGAN.
+CycleGAN is an approach to training image-to-image translation models using the generative adversarial network, or GAN, model architecture.
+[…] we present a method that can learn to [capture] special characteristics of one image collection and figuring out how these characteristics could be translated into the other image collection, all in the absence of any paired training examples.
+— Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks, 2017.
+The GAN architecture is an approach to training a model for image synthesis that is comprised of two models: a generator model and a discriminator model. The generator takes a point from a latent space as input and generates new plausible images from the domain, and the discriminator takes an image as input and predicts whether it is real (from a dataset) or fake (generated). Both models are trained in a game, such that the generator is updated to better fool the discriminator and the discriminator is updated to better detect generated images.
+The CycleGAN is an extension of the GAN architecture that involves the simultaneous training of two generator models and two discriminator models.
+One generator takes images from the first domain as input and outputs images for the second domain, and the other generator takes images from the second domain as input and generates images for the first domain. Discriminator models are then used to determine how plausible the generated images are and update the generator models accordingly.
+This extension alone might be enough to generate plausible images in each domain, but not sufficient to generate translations of the input images.
+… adversarial losses alone cannot guarantee that the learned function can map an individual input xi to a desired output yi
+— Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks, 2017.
+The CycleGAN uses an additional extension to the architecture called cycle consistency. This is the idea that an image output by the first generator could be used as input to the second generator and the output of the second generator should match the original image. The reverse is also true: that an output from the second generator can be fed as input to the first generator and the result should match the input to the second generator.
+Cycle consistency is a concept from machine translation where a phrase translated from English to French should translate from French back to English and be identical to the original phrase. The reverse process should also be true.
+… we exploit the property that translation should be “cycle consistent”, in the sense that if we translate, e.g., a sentence from English to French, and then translate it back from French to English, we should arrive back at the original sentence
+— Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks, 2017.
+The CycleGAN encourages cycle consistency by adding an additional loss to measure the difference between the generated output of the second generator and the original image, and the reverse. This acts as a regularization of the generator models, guiding the image generation process in the new domain toward image translation.
+# What Is the CycleGAN Model Architecture
+At first glance, the architecture of the CycleGAN appears complex.
+Let’s take a moment to step through all of the models involved and their inputs and outputs.
+Consider the problem where we are interested in translating images from summer to winter and winter to summer.
+We have two collections of photographs and they are unpaired, meaning they are photos of different locations at different times; we don’t have the exact same scenes in winter and summer.
+- Collection 1: Photos of summer landscapes.
+- Collection 2: Photos of winter landscapes.
+We will develop an architecture of two GANs, and each GAN has a discriminator and a generator model, meaning there are four models in total in the architecture.
+The first GAN will generate photos of winter given photos of summer, and the second GAN will generate photos of summer given photos of winter.
+- GAN 1: Translates photos of summer (collection 1) to winter (collection 2).
+- GAN 2: Translates photos of winter (collection 2) to summer (collection 1).
+Each GAN has a conditional generator model that will synthesize an image given an input image. And each GAN has a discriminator model to predict how likely the generated image is to have come from the target image collection. The discriminator and generator models for a GAN are trained under normal adversarial loss like a standard GAN model.
+We can summarize the generator and discriminator models from GAN 1 as follows:
+- Generator Model 1:
+
+Input: Takes photos of summer (collection 1).
+Output: Generates photos of winter (collection 2).
+
+
+- Input: Takes photos of summer (collection 1).
+- Output: Generates photos of winter (collection 2).
+- Discriminator Model 1:
+
+Input: Takes photos of winter from collection 2 and output from Generator Model 1.
+Output: Likelihood of image is from collection 2.
+
+
+- Input: Takes photos of winter from collection 2 and output from Generator Model 1.
+- Output: Likelihood of image is from collection 2.
+Similarly, we can summarize the generator and discriminator models from GAN 2 as follows:
+- Generator Model 2:
+
+Input: Takes photos of winter (collection 2).
+Output: Generates photos of summer (collection 1).
+
+
+- Input: Takes photos of winter (collection 2).
+- Output: Generates photos of summer (collection 1).
+- Discriminator Model 2:
+
+Input: Takes photos of summer from collection 1 and output from Generator Model 2.
+Output: Likelihood of image is from collection 1.
+
+
+- Input: Takes photos of summer from collection 1 and output from Generator Model 2.
+- Output: Likelihood of image is from collection 1.
+So far, the models are sufficient for generating plausible images in the target domain but are not translations of the input image.
+Each of the GANs are also updated using cycle consistency loss. This is designed to encourage the synthesized images in the target domain that are translations of the input image.
+Cycle consistency loss compares an input photo to the Cycle GAN to the generated photo and calculates the difference between the two, e.g. using the L1 norm or summed absolute difference in pixel values.
+There are two ways in which cycle consistency loss is calculated and used to update the generator models each training iteration.
+The first GAN (GAN 1) will take an image of a summer landscape, generate image of a winter landscape, which is provided as input to the second GAN (GAN 2), which in turn will generate an image of a summer landscape. The cycle consistency loss calculates the difference between the image input to GAN 1 and the image output by GAN 2 and the generator models are updated accordingly to reduce the difference in the images.
+This is a forward-cycle for cycle consistency loss. The same process is related in reverse for a backward cycle consistency loss from generator 2 to generator 1 and comparing the original photo of winter to the generated photo of winter.
+- Forward Cycle Consistency Loss:
+
+Input photo of summer (collection 1) to GAN 1
+Output photo of winter from GAN 1
+Input photo of winter from GAN 1 to GAN 2
+Output photo of summer from GAN 2
+Compare photo of summer (collection 1) to photo of summer from GAN 2
+
+
+- Input photo of summer (collection 1) to GAN 1
+- Output photo of winter from GAN 1
+- Input photo of winter from GAN 1 to GAN 2
+- Output photo of summer from GAN 2
+- Compare photo of summer (collection 1) to photo of summer from GAN 2
+- Backward Cycle Consistency Loss:
+
+Input photo of winter (collection 2) to GAN 2
+Output photo of summer from GAN 2
+Input photo of summer from GAN 2 to GAN 1
+Output photo of winter from GAN 1
+Compare photo of winter (collection 2) to photo of winter from GAN 1
+
+
+- Input photo of winter (collection 2) to GAN 2
+- Output photo of summer from GAN 2
+- Input photo of summer from GAN 2 to GAN 1
+- Output photo of winter from GAN 1
+- Compare photo of winter (collection 2) to photo of winter from GAN 1
+# Applications of CycleGAN
+The CycleGAN approach is presented with many impressive applications.
+In this section, we will review five of these applications to get an idea of the capability of the technique.
+Style transfer refers to the learning of artistic style from one domain, often paintings, and applying the artistic style to another domain, such as photographs.
+The CycleGAN is demonstrated by applying the artistic style from Monet, Van Gogh, Cezanne, and Ukiyo-e to photographs of landscapes.
+Example of Style Transfer from Famous Painters to Photographs of Landscapes.Taken from: Unpaired Image-to-Image Translation Using Cycle-Consistent Adversarial Networks.
+Object transfiguration refers to the transformation of objects from one class, such as dogs into another class of objects, such as cats.
+The CycleGAN is demonstrated transforming photographs of horses into zebras and the reverse: photographs of zebras into horses. This type of transfiguration makes sense given that both horse and zebras look similar in size and structure, except for their coloring.
+Example of Object Transfiguration from Horses to Zebra and Zebra to Horses.Taken from: Unpaired Image-to-Image Translation Using Cycle-Consistent Adversarial Networks.
+The CycleGAN is also demonstrated on translating photographs of apples to oranges, as well as the reverse: photographs of oranges to apples.
+Again, this transfiguration makes sense as both oranges and apples have the same structure and size.
+Example of Object Transfiguration from Apples to Oranges and Oranges to Apples.Taken from: Unpaired Image-to-Image Translation Using Cycle-Consistent Adversarial Networks.
+Season transfer refers to the translation of photographs taken in one season, such as summer, to another season, such as winter.
+The CycleGAN is demonstrated on translating photographs of winter landscapes to summer landscapes, and the reverse of summer landscapes to winter landscapes.
+Example of Season Transfer from Winter to Summer and Summer to WinterTaken from: Unpaired Image-to-Image Translation Using Cycle-Consistent Adversarial Networks.
+Photograph generation from paintings, as its name suggests, is the synthesis of photorealistic images given a painting, typically by a famous artist or famous scene.
+The CycleGAN is demonstrated on translating many paintings by Monet to plausible photographs.
+Example of Translation Paintings by Monet to Photorealistic Scenes.Taken from: Unpaired Image-to-Image Translation Using Cycle-Consistent Adversarial Networks.
+Photograph enhancement refers to transforms that improve the original image in some way.
+The CycleGAN is demonstrated on photo enhancement by improving the depth of field (e.g. giving a macro effect) on close-up photographs of flowers.
+Example of Photograph Enhancement Improving the Depth of Field on Photos of Flowers.Taken from: Unpaired Image-to-Image Translation Using Cycle-Consistent Adversarial Networks.
+# Implementation Tips for CycleGAN
+The CycleGAN paper provides a number of technical details regarding how to implement the technique in practice.
+The generator network implementation is based on the approach described for style transfer by Justin Johnson in the 2016 paper titled “Perceptual Losses for Real-Time Style Transfer and Super-Resolution.”
+The generator model starts with best practices for generators using the deep convolutional GAN, which is implemented using multiple residual blocks (e.g. from the ResNet).
+The discriminator models use PatchGAN, as described by Phillip Isola, et al. in their 2016 paper titled “Image-to-Image Translation with Conditional Adversarial Networks.”
+This discriminator tries to classify if each NxN patch in an image is real or fake. We run this discriminator convolutionally across the image, averaging all responses to provide the ultimate output of D.
+— Image-to-Image Translation with Conditional Adversarial Networks, 2016.
+PatchGANs are used in the discriminator models to classify 70×70 overlapping patches of input images as belonging to the domain or having been generated. The discriminator output is then taken as the average of the prediction for each patch.
+The adversarial loss is implemented using a least-squared loss function, as described in Xudong Mao, et al’s 2016 paper titled “Least Squares Generative Adversarial Networks.”
+[…] we propose the Least Squares Generative Adversarial Networks (LSGANs) which adopt the least squares loss function for the discriminator. The idea is simple yet powerful: the least squares loss function is able to move the fake samples toward the decision boundary, because the least squares loss function penalizes samples that lie in a long way on the correct side of the decision boundary.
+— Least squares generative adversarial networks, 2016.
+Additionally, a buffer of 50 generated images is used to update the discriminator models instead of freshly generated images, as described in Ashish Shrivastava’s 2016 paper titled “Learning from Simulated and Unsupervised Images through Adversarial Training.”
+[…] we introduce a method to improve the stability of adversarial training by updating the discriminator using a history of refined images, rather than only the ones in the current minibatch.
+— Learning from Simulated and Unsupervised Images through Adversarial Training, 2016.
+The models are trained with the Adam version of stochastic gradient descent and a small learning rate for 100 epochs, then a further 100 epochs with a learning rate decay. The models are updated after each image, e.g. a batch size of 1.
+Additional model-specific details are provided in the appendix of the paper for each of the datasets on which the technique as demonstrated.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Unpaired Image-to-Image Translation using Cycle-Consistent Adversarial Networks, 2017.
+- Perceptual Losses for Real-Time Style Transfer and Super-Resolution, 2016.
+- Image-to-Image Translation with Conditional Adversarial Networks, 2016.
+- Least squares generative adversarial networks, 2016.
+- Learning from Simulated and Unsupervised Images through Adversarial Training, 2016.
+- Understanding and Implementing CycleGAN in TensorFlow
+- CycleGAN Project (official), GitHub
+- CycleGAN Project Page (official)
+# Summary
+In this post, you discovered the CycleGAN technique for unpaired image-to-image translation.
+Specifically, you learned:
+- Image-to-Image translation involves the controlled modification of an image and requires large datasets of paired images that are complex to prepare or sometimes don’t exist.
+- CycleGAN is a technique for training unsupervised image translation models via the GAN architecture using unpaired collections of images from two different domains.
+- CycleGAN has been demonstrated on a range of applications including season translation, object transfiguration, style transfer, and generating photos from paintings.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop Generative Adversarial Networks Today!
+
+
+Discover how in my new Ebook:
+Generative Adversarial Networks with Python
+It provides self-study tutorials and end-to-end projects on:
+DCGAN, conditional GANs, image translation, Pix2Pix, CycleGAN
+and much more...
+
+
+See What's Inside
+
+'''
+
+'''

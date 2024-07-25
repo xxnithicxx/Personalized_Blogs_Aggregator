@@ -1,0 +1,638 @@
+Impact of Dataset Size on Deep Learning Model Skill And Performance Estimates
+https://machinelearningmastery.com/impact-of-dataset-size-on-deep-learning-model-skill-and-performance-estimates/
+2019-01-01
+Supervised learning is challenging, although the depths of this challenge are often learned then forgotten or willfully ignored.
+This must be the case, because dwelling too long on this challenge may result in a pessimistic outlook. In spite of the challenge, we continue to wield supervised learning algorithms and they perform well in practice.
+Fundamental to the challenge of supervised learning, are the concerns:
+- How much data is needed to reasonably approximate the unknown underlying mapping function from inputs to outputs?
+- How much data is needed to reasonably estimate the performance of an approximate of the mapping function?
+Generally, it is common knowledge that too little training data results in a poor approximation. An over-constrained model will underfit the small training dataset, whereas an under-constrained model, in turn, will likely overfit the training data, both resulting in poor performance. Too little test data will result in an optimistic and high variance estimation of model performance.
+It is critical to make this “common knowledge” concrete with worked examples.
+In this post, we will work through a detailed case study for developing a Multilayer Perceptron neural network on a simple two-class classification problem. You will discover that, in practice, we don’t have enough data to learn the mapping function or to evaluate models, yet supervised learning algorithms like neural networks remain remarkably effective.
+- How to analyze the two circles classification problem and measure the variance introduced by the neural network learning algorithm.
+- How changes in the size of a training dataset directly impact the quality of the mapping function approximated by neural networks.
+- How the changes in the size of a test dataset directly impact the quality of the estimated in the performance of a fit neural network model.
+Kick-start your project with my new book Better Deep Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+Impact of Dataset Size on Deep Learning Model Skill And Performance EstimatesPhoto by Eneas De Troya, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into five parts; they are:
+- Challenge of Supervised Learning
+- Introduction to the Circles Problem
+- Neural Network Model Variance
+- Study Test Accuracy vs Training Set Size
+- Study Test Set Size vs Test Set Accuracy
+# Introduction to the Circles Problem
+As the basis for our exploration, we will use a very simple two-class or binary classification problem.
+The scikit-learn library provides the make_circles() function that can be used to create a binary classification problem with the prescribed number of samples and statistical noise.
+Each example has two input variables that define the x and y coordinates of the point on a two-dimensional plane. The points are arranged in two concentric circles (they have the same center) for the two classes.
+The number of points in the dataset is specified by a parameter, half of which will be drawn from each circle. Gaussian noise can be added when sampling the points via the “noise” argument that defines the standard deviation of the noise, where 0.0 indicates no noise or points drawn exactly from the circles. The seed for the pseudorandom number generator can be specified via the “random_state” argument that allows the exact same points to be sampled each time the function is called.
+The example below generates 100 examples from the two circles with no noise and a value of 1 to seed the pseudorandom number generator.
+Running the example generates the points and prints the shape of the input (X) and output (y) components of the samples. We can see that there are 100 examples of inputs with two features per example for the x and y coordinates and a matching 100 examples of the output variable or class value with 1 variable.
+The first five examples from the dataset are shown. We can see that the x and y components of the input variables are centered on 0.0 and have the bounds [-1, 1]. We can also see that the class values are integers for either 0 or 1 and that examples are shuffled between the classes.
+
+We can re-run the example and always get the same “randomly generated” points given the same pseudorandom number generator seed.
+The example below generates the same points and plots the input variables of the samples using a scatter plot. We can use the scatter() matplotlib function to create the plot and pass in all rows of the X array with the first variable for the x coordinates and the second variable for the y coordinates on the plot.
+Running the example creates a scatter plot clearly showing the concentric circles of the dataset.
+Scatter Plot of the Input Variables of the Circles Dataset
+We can re-create the scatter plot, but instead plot all input samples for class 0 blue and all points for class 1 red.
+We can select the indices of samples in the y array that have a given value using the where() NumPy function and then use those indices to select rows in the X array. The complete example is below.
+Running the example, we can see that the samples for class 0 are the inner circle in blue and samples for class belong to the outer circle in red.
+Scatter Plot of the Input Variables of the Circles Dataset Colored By Class Value
+All real data has statistical noise. More statistical noise means that the problem is more challenging for the learning algorithm to map the input variables to the output or target variables.
+The circles dataset allows us to simulate the addition of noise to the samples via the “noise” argument.
+We can create a new function called scatter_plot_circles_problem() that creates a dataset with the given amount of noise and creates a scatter plot with points colored by their class value.
+We can call this function multiple times with differing amounts of noise to see the effect on the complexity of the problem.
+We will create four scatter plots as subplots via the subplot() matplotlib function in a 4-by-4 matrix with the noise values [0.0, 0.1, 0.2, 0.3]. The complete example is listed below.
+Running the example, a plot is created with four subplots, one for each of the four different noise values [0.0, 0.1, 0.2, 0.3] in the top left, top right, bottom left, and bottom right respectively.
+We can see that a small amount of noise 0.1 makes the problem challenging, but still distinguishable. A noise value of 0.0 is not realistic and a dataset so perfect would not require machine learning. A noise value of 0.2 makes the problem very challenging and a value of 0.3 may the problem too challenging to learn.
+Four Scatter Plots of the Circles Dataset Varied by the Amount of Statistical Noise
+We can create a similar plot of the problem with a varied number of samples.
+More samples give a learning algorithm more opportunity to understand the underlying mapping of inputs to outputs, and, in turn, a better performing model.
+We can update the scatter_plot_circles_problem() function to take the number of samples to generate as an argument as well as the amount of noise, and set a default for the noise of 0.1, which makes the problem noisy, but not too noisy.
+We can call this function to create multiple scatter plots with different numbers of points, spread evenly between the two circles or classes.
+We will try versions of the problem with the following sized samples [50, 100, 500, 1000]. The complete example is listed below.
+Running the example creates a plot with four subplots, one for each of the different sized samples [50, 100, 500, 1000] in the top left, top right, bottom left, and bottom right respectively.
+We can see that 50 examples are probably too few and even 100 points do not look sufficient to really learn the problem. The plots suggest that 500 and 1,000 examples may be significantly easier to learn, although hide the fact that many “outlier” points result in overlaps between the two circles.
+Four Scatter Plots of the Circles Dataset Varied by the Amount of Samples
+# Neural Network Model Variance
+We can model the circles problem with a neural network.
+Specifically, we can train a Multilayer Perceptron model, or MLP for short, providing input and output examples generated from the circles problem to the model. Once learned, we can evaluate how well the model has learned the problem by using it to make predictions on new examples and evaluate the accuracy.
+We can develop a small MLP for the problem using the Keras deep learning library with two inputs, 25 nodes in the hidden layer, and one output. A rectified linear activation function can be used for the nodes in the hidden layer. Because the problem is a binary classification problem, the model can use the sigmoid activation function on the output layer to predict the probability of a sample belonging to class 0 or 1.
+The model can be trained using an efficient version of mini-batch stochastic gradient descent called Adam, where each weight in the model has its own adaptive learning rate. The binary cross entropy loss function can be used as the basis for optimization, where smaller loss values indicate a better model fit.
+We require samples generated from the circles problem to train the model and a separate test set not used to train the model that can be used estimate how well the model might perform on average when making predictions on new data.
+The create_dataset() function below will create these train and test sets of a given size and uses a default noise of 0.1.
+We can call this function to prepare the train and test sets split into input and output components.
+Once we have defined the datasets and the model, we can train the model. We will train the model for 500 epochs on the training dataset.
+Once fit, we use the model to make predictions for the input examples of the test set and compare them to the true output values of the test set, then calculate an accuracy score.
+The evaluate() function performs this operation returning both the loss and accuracy of the model on the test dataset. We can ignore the loss and display the accuracy to get an idea of how well the model has learned to map random examples from the circles domain to a class 0 or class 1.
+Tying all of this together, the complete example is listed below.
+Running the example generates the dataset, fits the model on the training dataset, and evaluates the model on the test dataset.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, the model achieved an estimated accuracy of about 84.4%.
+
+A problem with this example is that your results may vary.
+You may see different estimated accuracy each time the example is run.
+Running the example again, I see an estimated accuracy of about 84.8%. Again, your specific results are expected to vary.
+The examples from the dataset are the same each time the example is run. This is because we fixed the pseudorandom number generator when creating the samples. The samples do have noise, but we are getting the same noise each time.
+Neural networks are a nonlinear learning algorithm, meaning that they can learn complex nonlinear relationships between the input variables and the output variables. They can approximate challenging nonlinear functions.
+As such, we refer to neural network models as having a low bias and a high variance. They have a low bias because the approach makes few assumptions about the mathematical functional form of the mapping function. They have a high variance because they are sensitive to the specific examples used to train the model. Differences in the training examples can mean a very different resulting model with, in turn, differing skill.
+Although neural networks are a high-variance low-bias method, this is not the cause of the difference in estimated performance when the same algorithm is run on the same generated data points.
+Instead, we are seeing a difference in performance across multiple runs because the learning algorithm is stochastic.
+The learning algorithm uses elements of randomness that aid the model in doing a good job on average of learning how to map input variables to output variables in the training dataset. Examples of randomness include the small random values used to initialize the model weights and the random sorting of examples in the training dataset before each training epoch.
+This is useful randomness as it allows the model to automatically “discover” good solutions to the mapping function.
+It can be frustrating because it often finds different solutions each time the learning algorithm is run, and sometimes the differences between the solutions is large, resulting in differences in the estimated performance of the model when making predictions on new data.
+We can counter the variance in the solution found by a specific neural network by summarizing the performance of the approach over multiple runs.
+This involves fitting the same algorithm on the same dataset multiple times but allowing the randomness used in the learning algorithm to vary each time the algorithm is run. The model is evaluated on the same test set each run and the score is recorded. At the end of all repeats, the distribution of the scores is summarized using a mean and standard deviation.
+The mean of the performance of a model over multiple runs gives an idea of the average performance of the specific model on the specific dataset. The spread or standard deviation of the scores gives an idea of the variance introduced by the learning algorithm.
+We can move the evaluation of a single MLP to a function that takes the dataset and returns the accuracy on the test set. The evaluate_model() function below implements this behavior.
+We can then call this function multiple times such as 10, 30, or more.
+Given the law of large numbers, more runs will mean a more accurate estimate. To keep running time modest, we will repeat the run 10 times.
+Then, at the end of these runs, the mean and standard deviation of the scores will be reported. We can also summarize the distribution using a box and whisker plot via the boxplot() matplotlib function.
+Tying all of these elements together, an example of the repeated evaluation of an MLP model on the circles dataset is listed below.
+Running the example first reports the score of the model on each repeated evaluation.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+At the end of the repeats, the average score is reported as about 84.7% with a standard deviation of about 0.5%. That means for this specific model trained on the specific training set and evaluated on the specific test set, that 99% of runs will result in a test accuracy between 83.2% and 86.2%, given three standard deviations from the mean.
+No doubt, the small sample size of 10 has resulted in some error in these estimates.
+A box and whisker plot of the test accuracy scores is created showing the middle 50% of scores (called the interquartile range) denoted by the box ranges from a little below 84.5% to a little below 85%.
+We can also see that the 83% value observed may be an outlier, given it is denoted as a dot.
+Box and Whisker Plot of Test Accuracy of MLP on the Circles Problem
+# Study Test Accuracy vs Training Set Size
+Given a fixed amount of statistical noise and a fixed but reasonably configured model, how many examples are required to learn the circles problem?
+We can investigate this question by evaluating the performance of MLP models fit on training datasets of different size.
+As a foundation, we can define a large number of examples that we believe would be far more than sufficient to learn the problem, such as 100,000. We can use this as an upper-bound on the number of training examples and use this many examples in the test set. We will define a model that performs well on this dataset as a model that has effectively learned the two circles problem.
+We can then experiment by fitting models with different sized training datasets and evaluate their performance on the test set.
+Too few examples will result in a low test accuracy, perhaps because the chosen model overfits the training set or the training set is not sufficiently representative of the problem.
+Too many examples will result in good, but perhaps slightly lower than ideal test accuracy, perhaps because the chosen model does not have the capacity to learn the nuance of such a large training dataset, or the dataset is over-representative of the problem.
+A line plot of training dataset size to model test accuracy should show an increasing trend to a point of diminishing returns and perhaps even a final slight drop in performance.
+We can use the create_dataset() function defined in the previous section to create train and test datasets and set a default for the size of the test set argument to be 100,000 examples while allowing the size of the training set to be specified and vary with each call. Importantly, we want to use the same test set for each different sized training dataset.
+We can directly use the same evaluate_model() function from the previous section to fit and evaluate an MLP model on a given train and test set.
+We can create a new function to perform the repeated evaluation of a given model to account for the stochastic learning algorithm.
+The evaluate_size() function below takes the size of the training set as an argument, as well as the number of repeats, that defaults to five to keep running time down. The create_dataset() function is created to create the train and test sets, and then the evaluate_model() function is called repeatedly to evaluate the model. The function then returns a list of scores for the repeats.
+This function can then be called repeatedly. I would guess that somewhere between 1,000 and 10,000 examples of the problem would be sufficient to learn the problem, where sufficient means only small fractional differences in test accuracy.
+Therefore, we will investigate training set sizes of 100, 1,000, 5,000, and 10,000 examples. The mean test accuracy will be reported for each test size to give an idea of progress.
+At the end of the run, a line plot will be created to show the relationship between train set size and model test set accuracy. We would expect to see an exponential curve from poor accuracy to a point of diminishing returns.
+Box and whisker plots of the score distributions for each test set size are also created. We would expect to see a shrinking in the spread of test accuracy as the size of the training set is increased.
+The complete example is listed below.
+Running the example may take a few minutes on modern hardware.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+The mean model performance is reported for each training set size, showing a steady improvement in test accuracy as the training set is increased, as we expect. We also see a small drop in the average model performance from 5,000 to 10,000 examples, very likely highlighting that the variance in the data sample has exceeded the capacity of the chosen model configuration (number of layers and nodes).
+A line plot of test accuracy vs training set size is created.
+We can see a sharp increase in test accuracy from 100 to 1,000 examples, after which performance appears to level off.
+Line Plot of Training Set Size vs Test Set Accuracy for an MLP Model on the Circles Problem
+A box and whisker plot is created showing the distribution of test accuracy scores for each sized training dataset. As expected, we can see that the spread of test set accuracy scores shrinks dramatically as the training set size is increased, although remains small on the plot given the chosen scale.
+Box and Whisker Plots of Test Set Accuracy of MLPs Trained With Different Sized Training Sets on the Circles Problem
+The results suggest that the chosen MLP model configuration can learn the problem reasonably well with 1,000 examples, with quite modest improvements seen with 5,000 and 10,000 examples. Perhaps there is a sweet spot of 2,500 examples that results in an 84% test set accuracy with less than 5,000 examples.
+The performance of neural networks can continually improve as more and more data is provided to the model, but the capacity of the model must be adjusted to support the increases in data. Eventually, there will be a point of diminishing returns where more data will not provide more insight into how to best model the mapping problem. For simpler problems, like two circles, this point will be reached sooner than in more complex problems, such as classifying photos of objects.
+This study has highlighted a fundamental aspect of applied machine learning, specifically that you need enough examples of the problem to learn a useful approximation of the unknown underlying mapping function.
+We almost never have an abundance of or too much training data. Therefore, our focus is often on how to most economically use available data and how to avoid overfitting the statistical noise present in the training dataset.
+# Study Test Set Size vs Test Set Accuracy
+Given a fixed model and a fixed training dataset, how much test data is required to achieve an accurate estimate of the model performance?
+We can investigate this question by fitting an MLP with a fixed sized training set and evaluating the model with different sized test sets.
+We can use much the same strategy as the study in the previous section. We will fix the training set size at 1,000 examples as it resulted in a reasonably effective model with an estimated accuracy of about 83.7% when evaluated on 100,000 examples. We would expect that there is a smaller test set size that can reasonably approximate this value.
+The create_dataset() function can be updated to specify the test set size and to use a default of 1,000 examples for the training set size. Importantly, the same 1,000 examples are used for the training set each time the size of the test set is varied.
+We can use the same fit_model() function to fit the model. Because we’re using the same training dataset and varying the test dataset, we can create and fit the models once and re-use them for each differently sized test set. In this case, we will fit 10 models on the same training dataset to simulate 10 repeats.
+Once fit, we can evaluate each of the models using a given sized test dataset. The evaluate_test_set_size() function below implements this behavior, returning a list of test set accuracy scores for the list of fit models and a given test set size.
+We will evaluate four different sized test sets with 100, 1,000, 5,000, and 10,000 examples. We can then report the mean scores for each sized test set and create the same line and box and whisker plots.
+Tying these elements together, the complete example is listed below.
+Running the example reports the test set accuracy for each differently sized test set, averaged across the 10 models trained on the same dataset.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+If we take the result from the previous section of 83.7% when evaluated on 100,000 examples as an estimate of ground truth, then we can see that the smaller sized test sets vary above and below this estimate.
+A line plot of test set size vs test set accuracy is created.
+The plot shows that smaller test set sizes of 100 and 1,000 examples overestimate and underestimate the accuracy of the model respectively. The results for a test set of 5,000 and 10,000 are a closer fit, the latter perhaps showing the best match.
+This is surprising as a naive expectation might be that a test set of the same size as the training set would be a reasonable approximation of model accuracy, e.g. as though we performed a 50%/50% split of a 2,000 example dataset.
+Line Plot of Test Set Size vs Test Set Accuracy for an MLP on the Circles Problem
+A box and whisker plots show that the smaller test set demonstrates a large spread of scores, all of which are optimistic.
+Box and Whisker Plot of the Distribution of Test set Accuracy for Different Test Set Sizes on the Circles Problem
+It should be pointed out that we are not reporting on the average performance of the chosen model on random examples drawn from the domain. The model and the examples are fixed and the only source of variation is from the learning algorithm.
+The study demonstrates how sensitive the estimated accuracy of the model is to the size of the test dataset. This is an important consideration as often little thought is given to the test set size, using a familiar split of 70%/30% or 80%/20% for train/test splits.
+As pointed out in the previous section, we often rarely have enough data, and spending a precious portion of the data on a test or even validation dataset is often rarely considered in any great depth. The results highlight how important cross-validation methods such as leave-one-out cross-validation are, allowing the model to make a test prediction for each example in the dataset, yet come at such a great computational cost, requiring almost one model to be trained for each example in the dataset.
+In practice, we must struggle with a training dataset that is too small to learn the unknown underlying mapping function and a test dataset that is too small to reasonably approximate the performance of the model on the problem.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- sklearn.datasets.make_circles API
+- matplotlib.pyplot.scatter API
+- matplotlib.pyplot.subplot API
+- numpy.where API
+- Keras Homepage
+- Keras Sequential Model API
+# Summary
+In this tutorial, you discovered that in practice, we don’t have enough data to learn the mapping function or to evaluate models, yet supervised learning algorithms like neural networks remain remarkably effective.
+Specifically, you learned:
+- How to analyze the two circles classification problem and measure the variance introduced by the neural network learning algorithm.
+- How changes in the size of a training dataset directly impact the quality of the mapping function approximated by neural networks.
+- How the changes in the size of a test dataset directly impact the quality of the estimated in the performance of a fit neural network model.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop Better Deep Learning Models Today!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Better Deep Learning
+It provides self-study tutorials on topics like: weight decay, batch normalization, dropout, model stacking and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+# example of generating circles dataset
+from sklearn.datasets import make_circles
+# generate circles
+X, y = make_circles(n_samples=100, noise=0.0, random_state=1)
+# show size of the dataset
+print(X.shape, y.shape)
+# show first few examples
+for i in range(5):
+	print(X[i], y[i])
+(100, 2) (100,)
+[-0.6472136 -0.4702282] 1
+[-0.34062343 -0.72386164] 1
+[-0.53582679 -0.84432793] 0
+[-0.5831749  -0.54763768] 1
+[ 0.50993919 -0.61641059] 1
+# example of creating a scatter plot of the circles dataset
+from sklearn.datasets import make_circles
+from matplotlib import pyplot
+# generate circles
+X, y = make_circles(n_samples=100, noise=0.0, random_state=1)
+# scatter plot of generated dataset
+pyplot.scatter(X[:, 0], X[:, 1])
+pyplot.show()
+#  scatter plot of the circles dataset with points colored by class
+from sklearn.datasets import make_circles
+from numpy import where
+from matplotlib import pyplot
+# generate circles
+X, y = make_circles(n_samples=100, noise=0.0, random_state=1)
+# select indices of points with each class label
+zero_ix, one_ix = where(y == 0), where(y == 1)
+# points for class zero
+pyplot.scatter(X[zero_ix, 0], X[zero_ix, 1], color='red')
+# points for class one
+pyplot.scatter(X[one_ix, 0], X[one_ix, 1], color='blue')
+pyplot.show()
+# create a scatter plot of the circles dataset with the given amount of noise
+def scatter_plot_circles_problem(noise_value):
+	# generate circles
+	X, y = make_circles(n_samples=100, noise=noise_value, random_state=1)
+	# select indices of points with each class label
+	zero_ix, one_ix = where(y == 0), where(y == 1)
+	# points for class zero
+	pyplot.scatter(X[zero_ix, 0], X[zero_ix, 1], color='red')
+	# points for class one
+	pyplot.scatter(X[one_ix, 0], X[one_ix, 1], color='blue')
+# scatter plots of the circles dataset with varied amounts of noise
+from sklearn.datasets import make_circles
+from numpy import where
+from matplotlib import pyplot
+
+# create a scatter plot of the circles dataset with the given amount of noise
+def scatter_plot_circles_problem(noise_value):
+	# generate circles
+	X, y = make_circles(n_samples=100, noise=noise_value, random_state=1)
+	# select indices of points with each class label
+	zero_ix, one_ix = where(y == 0), where(y == 1)
+	# points for class zero
+	pyplot.scatter(X[zero_ix, 0], X[zero_ix, 1], color='red')
+	# points for class one
+	pyplot.scatter(X[one_ix, 0], X[one_ix, 1], color='blue')
+
+# vary noise and plot
+values = [0.0, 0.1, 0.2, 0.3]
+for i in range(len(values)):
+	value = 220 + (i+1)
+	pyplot.subplot(value)
+	scatter_plot_circles_problem(values[i])
+pyplot.show()
+# create a scatter plot of the circles problem
+def scatter_plot_circles_problem(n_samples, noise_value=0.1):
+	# generate circles
+	X, y = make_circles(n_samples=n_samples, noise=noise_value, random_state=1)
+	# select indices of points with each class label
+	zero_ix, one_ix = where(y == 0), where(y == 1)
+	# points for class zero
+	pyplot.scatter(X[zero_ix, 0], X[zero_ix, 1], color='red')
+	# points for class one
+	pyplot.scatter(X[one_ix, 0], X[one_ix, 1], color='blue')
+# scatter plots of the circles dataset with varied sample sizes
+from sklearn.datasets import make_circles
+from numpy import where
+from matplotlib import pyplot
+
+# create a scatter plot of the circles problem
+def scatter_plot_circles_problem(n_samples, noise_value=0.1):
+	# generate circles
+	X, y = make_circles(n_samples=n_samples, noise=noise_value, random_state=1)
+	# select indices of points with each class label
+	zero_ix, one_ix = where(y == 0), where(y == 1)
+	# points for class zero
+	pyplot.scatter(X[zero_ix, 0], X[zero_ix, 1], color='red')
+	# points for class one
+	pyplot.scatter(X[one_ix, 0], X[one_ix, 1], color='blue')
+
+# vary sample size and plot
+values = [50, 100, 500, 1000]
+for i in range(len(values)):
+	value = 220 + (i+1)
+	pyplot.subplot(value)
+	scatter_plot_circles_problem(values[i])
+pyplot.show()
+# define model
+model = Sequential()
+model.add(Dense(25, input_dim=2, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+# create a test dataset
+def create_dataset(n_train, n_test, noise=0.1):
+	# generate samples
+	n_samples = n_train + n_test
+	X, y = make_circles(n_samples=n_samples, noise=noise, random_state=1)
+	# split into train and test
+	trainX, testX = X[:n_train, :], X[n_train:, :]
+	trainy, testy = y[:n_train], y[n_train:]
+	# return samples
+	return trainX, trainy, testX, testy
+# create dataset
+trainX, trainy, testX, testy = create_dataset(500, 500)
+# fit model
+history = model.fit(trainX, trainy, epochs=500, verbose=0)
+# evaluate the model
+_, test_acc = model.evaluate(testX, testy, verbose=0)
+print('Test Accuracy: %.3f' % (test_acc*100))
+# mlp evaluated on the circles dataset
+from sklearn.datasets import make_circles
+from keras.layers import Dense
+from keras.models import Sequential
+
+# create a test dataset
+def create_dataset(n_train, n_test, noise=0.1):
+	# generate samples
+	n_samples = n_train + n_test
+	X, y = make_circles(n_samples=n_samples, noise=noise, random_state=1)
+	# split into train and test
+	trainX, testX = X[:n_train, :], X[n_train:, :]
+	trainy, testy = y[:n_train], y[n_train:]
+	# return samples
+	return trainX, trainy, testX, testy
+
+# create dataset
+trainX, trainy, testX, testy = create_dataset(500, 500)
+# define model
+model = Sequential()
+model.add(Dense(25, input_dim=2, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+# fit model
+history = model.fit(trainX, trainy, epochs=500, verbose=0)
+# evaluate the model
+_, test_acc = model.evaluate(testX, testy, verbose=0)
+print('Test Accuracy: %.3f' % (test_acc*100))
+Test Accuracy: 84.400
+Test Accuracy: 84.800
+# evaluate an mlp model
+def evaluate_model(trainX, trainy, testX, testy):
+	# define model
+	model = Sequential()
+	model.add(Dense(25, input_dim=2, activation='relu'))
+	model.add(Dense(1, activation='sigmoid'))
+	model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+	# fit model
+	model.fit(trainX, trainy, epochs=500, verbose=0)
+	# evaluate the model
+	_, test_acc = model.evaluate(testX, testy, verbose=0)
+	return test_acc
+# evaluate model
+n_repeats = 10
+scores = list()
+for i in range(n_repeats):
+	# evaluate model
+	score = evaluate_model(trainX, trainy, testX, testy)
+	# store score
+	scores.append(score)
+	# summarize score for this run
+	print('>%d: %.3f' % (i+1, score*100))
+# report distribution of scores
+mean_score, std_score = mean(scores)*100, std(scores)*100
+print('Score Over %d Runs: %.3f (%.3f)' % (n_repeats, mean_score, std_score))
+# plot distribution
+pyplot.boxplot(scores)
+pyplot.show()
+# repeated evaluation of mlp on the circles dataset
+from sklearn.datasets import make_circles
+from keras.layers import Dense
+from keras.models import Sequential
+from numpy import mean
+from numpy import std
+from matplotlib import pyplot
+
+# create a test dataset
+def create_dataset(n_train, n_test, noise=0.1):
+	# generate samples
+	n_samples = n_train + n_test
+	X, y = make_circles(n_samples=n_samples, noise=noise, random_state=1)
+	# split into train and test
+	trainX, testX = X[:n_train, :], X[n_train:, :]
+	trainy, testy = y[:n_train], y[n_train:]
+	# return samples
+	return trainX, trainy, testX, testy
+
+# evaluate an mlp model
+def evaluate_model(trainX, trainy, testX, testy):
+	# define model
+	model = Sequential()
+	model.add(Dense(25, input_dim=2, activation='relu'))
+	model.add(Dense(1, activation='sigmoid'))
+	model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+	# fit model
+	model.fit(trainX, trainy, epochs=500, verbose=0)
+	# evaluate the model
+	_, test_acc = model.evaluate(testX, testy, verbose=0)
+	return test_acc
+
+# create dataset
+trainX, trainy, testX, testy = create_dataset(500, 500)
+# evaluate model
+n_repeats = 10
+scores = list()
+for i in range(n_repeats):
+	# evaluate model
+	score = evaluate_model(trainX, trainy, testX, testy)
+	# store score
+	scores.append(score)
+	# summarize score for this run
+	print('>%d: %.3f' % (i+1, score*100))
+# report distribution of scores
+mean_score, std_score = mean(scores)*100, std(scores)*100
+print('Score Over %d Runs: %.3f (%.3f)' % (n_repeats, mean_score, std_score))
+# plot distribution
+pyplot.boxplot(scores)
+pyplot.show()
+>1: 84.600
+>2: 84.800
+>3: 85.400
+>4: 85.000
+>5: 83.600
+>6: 85.600
+>7: 84.400
+>8: 84.600
+>9: 84.600
+>10: 84.400
+Score Over 10 Runs: 84.700 (0.531)
+# create train and test datasets
+def create_dataset(n_train, n_test=100000, noise=0.1):
+	# generate samples
+	n_samples = n_train + n_test
+	X, y = make_circles(n_samples=n_samples, noise=noise, random_state=1)
+	# split into train and test, first n for test
+	trainX, testX = X[n_test:, :], X[:n_test, :]
+	trainy, testy = y[n_test:], y[:n_test]
+	# return samples
+	return trainX, trainy, testX, testy
+# evaluate an mlp model
+def evaluate_model(trainX, trainy, testX, testy):
+	# define model
+	model = Sequential()
+	model.add(Dense(25, input_dim=2, activation='relu'))
+	model.add(Dense(1, activation='sigmoid'))
+	model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+	# fit model
+	model.fit(trainX, trainy, epochs=500, verbose=0)
+	# evaluate the model
+	_, test_acc = model.evaluate(testX, testy, verbose=0)
+	return test_acc
+# repeated evaluation of mlp model with dataset of a given size
+def evaluate_size(n_train, n_repeats=5):
+	# create dataset
+	trainX, trainy, testX, testy = create_dataset(n_train)
+	# repeat evaluation of model with dataset
+	scores = list()
+	for _ in range(n_repeats):
+		# evaluate model for size
+		score = evaluate_model(trainX, trainy, testX, testy)
+		scores.append(score)
+	return scores
+# define dataset sizes to evaluate
+sizes = [100, 1000, 5000, 10000]
+score_sets, means = list(), list()
+for n_train in sizes:
+	# repeated evaluate model with training set size
+	scores = evaluate_size(n_train)
+	score_sets.append(scores)
+	# summarize score for size
+	mean_score = mean(scores)
+	means.append(mean_score)
+	print('Train Size=%d, Test Accuracy %.3f' % (n_train, mean_score*100))
+# study of training set size for an mlp on the circles problem
+from sklearn.datasets import make_circles
+from keras.layers import Dense
+from keras.models import Sequential
+from numpy import mean
+from matplotlib import pyplot
+
+# create train and test datasets
+def create_dataset(n_train, n_test=100000, noise=0.1):
+	# generate samples
+	n_samples = n_train + n_test
+	X, y = make_circles(n_samples=n_samples, noise=noise, random_state=1)
+	# split into train and test, first n for test
+	trainX, testX = X[n_test:, :], X[:n_test, :]
+	trainy, testy = y[n_test:], y[:n_test]
+	# return samples
+	return trainX, trainy, testX, testy
+
+# evaluate an mlp model
+def evaluate_model(trainX, trainy, testX, testy):
+	# define model
+	model = Sequential()
+	model.add(Dense(25, input_dim=2, activation='relu'))
+	model.add(Dense(1, activation='sigmoid'))
+	model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+	# fit model
+	model.fit(trainX, trainy, epochs=500, verbose=0)
+	# evaluate the model
+	_, test_acc = model.evaluate(testX, testy, verbose=0)
+	return test_acc
+
+# repeated evaluation of mlp model with dataset of a given size
+def evaluate_size(n_train, n_repeats=5):
+	# create dataset
+	trainX, trainy, testX, testy = create_dataset(n_train)
+	# repeat evaluation of model with dataset
+	scores = list()
+	for _ in range(n_repeats):
+		# evaluate model for size
+		score = evaluate_model(trainX, trainy, testX, testy)
+		scores.append(score)
+	return scores
+
+# define dataset sizes to evaluate
+sizes = [100, 1000, 5000, 10000]
+score_sets, means = list(), list()
+for n_train in sizes:
+	# repeated evaluate model with training set size
+	scores = evaluate_size(n_train)
+	score_sets.append(scores)
+	# summarize score for size
+	mean_score = mean(scores)
+	means.append(mean_score)
+	print('Train Size=%d, Test Accuracy %.3f' % (n_train, mean_score*100))
+# summarize relationship of train size to test accuracy
+pyplot.plot(sizes, means, marker='o')
+pyplot.show()
+# plot distributions of test accuracy for train size
+pyplot.boxplot(score_sets, labels=sizes)
+pyplot.show()
+Train Size=100, Test Accuracy 72.041
+Train Size=1000, Test Accuracy 83.719
+Train Size=5000, Test Accuracy 84.062
+Train Size=10000, Test Accuracy 84.025
+# create dataset
+def create_dataset(n_test, n_train=1000, noise=0.1):
+	# generate samples
+	n_samples = n_train + n_test
+	X, y = make_circles(n_samples=n_samples, noise=noise, random_state=1)
+	# split into train and test, first n for test
+	trainX, testX = X[:n_train, :], X[n_train:, :]
+	trainy, testy = y[:n_train], y[n_train:]
+	# return samples
+	return trainX, trainy, testX, testy
+# create fixed training dataset
+trainX, trainy, _, _ = create_dataset(10)
+# fit one model for each repeat
+n_repeats = 10
+models = [fit_model(trainX, trainy) for _ in range(n_repeats)]
+print('Fit %d models' % n_repeats)
+# evaluate a test set of a given size on the fit models
+def evaluate_test_set_size(models, n_test):
+	# create dataset
+	_, _, testX, testy = create_dataset(n_test)
+	scores = list()
+	for model in models:
+		# evaluate the model
+		_, test_acc = model.evaluate(testX, testy, verbose=0)
+		scores.append(test_acc)
+	return scores
+# define test set sizes to evaluate
+sizes = [100, 1000, 5000, 10000]
+score_sets, means = list(), list()
+for n_test in sizes:
+	# evaluate a test set of a given size on the models
+	scores = evaluate_test_set_size(models, n_test)
+	score_sets.append(scores)
+	# summarize score for size
+	mean_score = mean(scores)
+	means.append(mean_score)
+	print('Test Size=%d, Test Accuracy %.3f' % (n_test, mean_score*100))
+# summarize relationship of test size to test accuracy
+pyplot.plot(sizes, means, marker='o')
+pyplot.show()
+# plot distributions of test size to test accuracy
+pyplot.boxplot(score_sets, labels=sizes)
+pyplot.show()
+# study of test set size for an mlp on the circles problem
+from sklearn.datasets import make_circles
+from keras.layers import Dense
+from keras.models import Sequential
+from numpy import mean
+from matplotlib import pyplot
+
+# create dataset
+def create_dataset(n_test, n_train=1000, noise=0.1):
+	# generate samples
+	n_samples = n_train + n_test
+	X, y = make_circles(n_samples=n_samples, noise=noise, random_state=1)
+	# split into train and test, first n for test
+	trainX, testX = X[:n_train, :], X[n_train:, :]
+	trainy, testy = y[:n_train], y[n_train:]
+	# return samples
+	return trainX, trainy, testX, testy
+
+# fit an mlp model
+def fit_model(trainX, trainy):
+	# define model
+	model = Sequential()
+	model.add(Dense(25, input_dim=2, activation='relu'))
+	model.add(Dense(1, activation='sigmoid'))
+	model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+	# fit model
+	model.fit(trainX, trainy, epochs=500, verbose=0)
+	return model
+
+# evaluate a test set of a given size on the fit models
+def evaluate_test_set_size(models, n_test):
+	# create dataset
+	_, _, testX, testy = create_dataset(n_test)
+	scores = list()
+	for model in models:
+		# evaluate the model
+		_, test_acc = model.evaluate(testX, testy, verbose=0)
+		scores.append(test_acc)
+	return scores
+
+# create fixed training dataset
+trainX, trainy, _, _ = create_dataset(10)
+# fit one model for each repeat
+n_repeats = 10
+models = [fit_model(trainX, trainy) for _ in range(n_repeats)]
+print('Fit %d models' % n_repeats)
+# define test set sizes to evaluate
+sizes = [100, 1000, 5000, 10000]
+score_sets, means = list(), list()
+for n_test in sizes:
+	# evaluate a test set of a given size on the models
+	scores = evaluate_test_set_size(models, n_test)
+	score_sets.append(scores)
+	# summarize score for size
+	mean_score = mean(scores)
+	means.append(mean_score)
+	print('Test Size=%d, Test Accuracy %.3f' % (n_test, mean_score*100))
+# summarize relationship of test size to test accuracy
+pyplot.plot(sizes, means, marker='o')
+pyplot.show()
+# plot distributions of test size to test accuracy
+pyplot.boxplot(score_sets, labels=sizes)
+pyplot.show()
+Fit 10 models
+Test Size=100, Test Accuracy 86.100
+Test Size=1000, Test Accuracy 82.410
+Test Size=5000, Test Accuracy 84.228
+Test Size=10000, Test Accuracy 83.760
+'''

@@ -1,0 +1,111 @@
+A Gentle Introduction to Backpropagation Through Time
+https://machinelearningmastery.com/gentle-introduction-backpropagation-time/
+2017-06-22
+Backpropagation Through Time, or BPTT, is the training algorithm used to update weights in recurrent neural networks like LSTMs.
+To effectively frame sequence prediction problems for recurrent neural networks, you must have a strong conceptual understanding of what Backpropagation Through Time is doing and how configurable variations like Truncated Backpropagation Through Time will affect the skill, stability, and speed when training your network.In this post, you will get a gentle introduction to Backpropagation Through Time intended for the practitioner (no equations!).
+In this post, you will get a gentle introduction to Backpropagation Through Time intended for the practitioner (no equations!).
+After reading this post, you will know:
+- What Backpropagation Through Time is and how it relates to the Backpropagation training algorithm used by Multilayer Perceptron networks.
+- The motivations that lead to the need for Truncated Backpropagation Through Time, the most widely used variant in deep learning for training LSTMs.
+- A notation for thinking about how to configure Truncated Backpropagation Through Time and the canonical configurations used in research and by deep learning libraries.
+Kick-start your project with my new book Long Short-Term Memory Networks With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+A Gentle Introduction to Backpropagation Through TimePhoto by Jocelyn Kinghorn, some rights reserved.
+# Backpropagation Training Algorithm
+Backpropagation refers to two things:
+- The mathematical method used to calculate derivatives and an application of the derivative chain rule.
+- The training algorithm for updating network weights to minimize error.
+It is this latter understanding of backpropagation that we are using here.
+The goal of the backpropagation training algorithm is to modify the weights of a neural network in order to minimize the error of the network outputs compared to some expected output in response to corresponding inputs.
+It is a supervised learning algorithm that allows the network to be corrected with regard to the specific errors made.
+The general algorithm is as follows:
+- Present a training input pattern and propagate it through the network to get an output.
+- Compare the predicted outputs to the expected outputs and calculate the error.
+- Calculate the derivatives of the error with respect to the network weights.
+- Adjust the weights to minimize the error.
+- Repeat.
+For more on Backpropagation, see the post:
+- How to Implement the Backpropagation Algorithm from Scratch In Python
+The Backpropagation training algorithm is suitable for training feed-forward neural networks on fixed-sized input-output pairs, but what about sequence data that may be temporally ordered?
+# Backpropagation Through Time
+Backpropagation Through Time, or BPTT, is the application of the Backpropagation training algorithm to recurrent neural network applied to sequence data like a time series.
+A recurrent neural network is shown one input each timestep and predicts one output.
+Conceptually, BPTT works by unrolling all input timesteps. Each timestep has one input timestep, one copy of the network, and one output. Errors are then calculated and accumulated for each timestep. The network is rolled back up and the weights are updated.
+Spatially, each timestep of the unrolled recurrent neural network may be seen as an additional layer given the order dependence of the problem and the internal state from the previous timestep is taken as an input on the subsequent timestep.
+We can summarize the algorithm as follows:
+- Present a sequence of timesteps of input and output pairs to the network.
+- Unroll the network then calculate and accumulate errors across each timestep.
+- Roll-up the network and update weights.
+- Repeat.
+BPTT can be computationally expensive as the number of timesteps increases.
+If input sequences are comprised of thousands of timesteps, then this will be the number of derivatives required for a single update weight update. This can cause weights to vanish or explode (go to zero or overflow) and make slow learning and model skill noisy.
+# Truncated Backpropagation Through Time
+Truncated Backpropagation Through Time, or TBPTT, is a modified version of the BPTT training algorithm for recurrent neural networks where the sequence is processed one timestep at a time and periodically (k1 timesteps) the BPTT update is performed back for a fixed number of timesteps (k2 timesteps).
+Ilya Sutskever makes this clear in his dissertation:
+Truncated backpropagation is arguably the most practical method for training RNNs.
+…
+One of the main problems of BPTT is the high cost of a single parameter update, which makes it impossible to use a large number of iterations.
+…
+The cost can be reduced with a naive method that splits the 1,000-long sequence into 50 sequences (say) each of length 20 and treats each sequence of length 20 as a separate training case. This is a sensible approach that can work well in practice, but it is blind to temporal dependencies that span more than 20 timesteps.
+…
+Truncated BPTT is a closely related method. It processes the sequence one timestep at a time, and every k1 timesteps, it runs BPTT for k2 timesteps, so a parameter update can be cheap if k2 is small. Consequently, its hidden states have been exposed to many timesteps and so may contain useful information about the far past, which would be opportunistically exploited.
+— Ilya Sutskever, Training Recurrent Neural Networks, Thesis, 2013
+We can summarize the algorithm as follows:
+- Present a sequence of k1 timesteps of input and output pairs to the network.
+- Unroll the network then calculate and accumulate errors across k2 timesteps.
+- Roll-up the network and update weights.
+- Repeat
+The TBPTT algorithm requires the consideration of two parameters:
+- k1: The number of forward-pass timesteps between updates. Generally, this influences how slow or fast training will be, given how often weight updates are performed.
+- k2: The number of timesteps to which to apply BPTT. Generally, it should be large enough to capture the temporal structure in the problem for the network to learn. Too large a value results in vanishing gradients.
+To make this clearer:
+…one can use a bounded-history approximation to it in which relevant information is saved for a fixed number h of time steps and any information older than that is forgotten. In general, this should be regarded as a heuristic technique for simplifying the computation, although, as discussed below, it can sometimes serve as an adequate approximation to the true gradient and may also be more appropriate in those situations where weights are adjusted as the network runs. Let us call this algorithm truncated backpropagation through time. With h representing the number of prior time steps saved, this algorithm will be denoted BPTT(h).
+…
+Note that in BPTT(h) a backward pass through the most recent h time steps is performed anew each time the network is run through an additional time step. To generalize this, one may consider letting the network run through h0 additional time steps before performing the next BPTT computation, where h0 <= h.
+…
+The key feature of this algorithm is that the next backward pass is not performed until time step t + h0; in the intervening time the history of network input, network state, and target values are saved in the history buffer, but no processing is performed on this data. Let us denote this algorithm BPTT(h; h0). Clearly BPTT(h) is the same as BPTT(h; 1), and BPTT(h; h) is the epochwise BPTT algorithm.
+— Ronald J. Williams and Jing Peng, An Efficient Gradient-Based Algorithm for On-Line Training of Recurrent Network Trajectories, 1990
+We can borrow the notation from Williams and Peng and refer to different TBPTT configurations as TBPTT(k1, k2).
+Using this notation, we can define some standard or common approaches:
+Note, here n refers to the total number of timesteps in the sequence:
+- TBPTT(n,n): Updates are performed at the end of the sequence across all timesteps in the sequence (e.g. classical BPTT).
+- TBPTT(1,n): timesteps are processed one at a time followed by an update that covers all timesteps seen so far (e.g. classical TBPTT by Williams and Peng).
+- TBPTT(k1,1): The network likely does not have enough temporal context to learn, relying heavily on internal state and inputs.
+- TBPTT(k1,k2), where k1<k2<n: Multiple updates are performed per sequence which can accelerate training.
+- TBPTT(k1,k2), where k1=k2: A common configuration where a fixed number of timesteps are used for both forward and backward-pass timesteps (e.g. 10s to 100s).
+We can see that all configurations are a variation on TBPTT(n,n) that essentially attempt to approximate the same effect with perhaps faster training and more stable results.
+Canonical TBPTT reported in papers may be considered TBPTT(k1,k2), where k1=k2=h and h<=n, and where the chosen parameter is small (tens to hundreds of timesteps).
+In libraries like TensorFlow and Keras, things look similar and h defines the vectorized fixed length of the timesteps of the prepared data.
+# Further Reading
+This section provides some resources for further reading.
+- Neural Smithing: Supervised Learning in Feedforward Artificial Neural Networks, 1999
+- Deep Learning, 2016
+- Learning Representations by back-propagating errors, 1986
+- Backpropagation through time: what it does and how to do it, 1990
+- An Efficient Gradient-Based Algorithm for On-Line Training of Recurrent Network Trajectories, 1990
+- Training Recurrent Neural Networks, Thesis, 2013
+- Gradient-Based Learning Algorithms for Recurrent Networks and Their Computational Complexity, 1995
+- Backpropagation on Wikipedia
+- Backpropagation through time on Wikipedia
+- Styles of Truncated Backpropagation
+- Answer to question “RNNs: When to apply BPTT and/or update weights?” on CrossValidated
+# Summary
+In this post, you discovered the Backpropagation Through Time for training recurrent neural networks.
+Specifically, you learned:
+- What Backpropagation Through Time is and how it relates to the Backpropagation training algorithm used by Multilayer Perceptron networks.
+- The motivations that lead to the need for Truncated Backpropagation Through Time, the most widely used variant in deep learning for training LSTMs.
+- A notation for thinking about how to configure Truncated Backpropagation Through Time and the canonical configurations used in research and by deep learning libraries.
+Do you have any questions about Backpropagation Through Time?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop LSTMs for Sequence Prediction Today!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Long Short-Term Memory Networks with Python
+It provides self-study tutorials on topics like:
+CNN LSTMs, Encoder-Decoder LSTMs, generative models, data preparation, making predictions and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+
+'''

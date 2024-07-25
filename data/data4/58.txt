@@ -1,0 +1,432 @@
+How to Prepare a French-to-English Dataset for Machine Translation
+https://machinelearningmastery.com/prepare-french-english-dataset-machine-translation/
+2018-01-07
+Machine translation is the challenging task of converting text from a source language into coherent and matching text in a target language.
+Neural machine translation systems such as encoder-decoder recurrent neural networks are achieving state-of-the-art results for machine translation with a single end-to-end system trained directly on source and target language.
+Standard datasets are required to develop, explore, and familiarize yourself with how to develop neural machine translation systems.
+In this tutorial, you will discover the Europarl standard machine translation dataset and how to prepare the data for modeling.
+After completing this tutorial, you will know:
+- The Europarl dataset comprised of the proceedings from the European Parliament in a host of 11 languages.
+- How to load and clean the parallel French and English transcripts ready for modeling in a neural machine translation system.
+- How to reduce the vocabulary size of both French and English data in order to reduce the complexity of the translation task.
+Kick-start your project with my new book Deep Learning for Natural Language Processing, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Prepare a French-to-English Dataset for Machine TranslationPhoto by Giuseppe Milo, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into 5 parts; they are:
+- Europarl Machine Translation Dataset
+- Download French-English Dataset
+- Load Dataset
+- Clean Dataset
+- Reduce Vocabulary
+This tutorial assumes you have a Python SciPy environment installed with Python 3 installed.
+The tutorial also assumes you have scikit-learn, Pandas, NumPy, and Matplotlib installed.
+If you need help with your environment, see this post:
+- How to Setup a Python Environment for Machine Learning and Deep Learning with Anaconda
+
+
+
+
+# Europarl Machine Translation Dataset
+The Europarl is a standard dataset used for statistical machine translation, and more recently, neural machine translation.
+It is comprised of the proceedings of the European Parliament, hence the name of the dataset as the contraction Europarl.
+The proceedings are the transcriptions of speakers at the European Parliament, which are translated into 11 different languages.
+It is a collection of the proceedings of the European Parliament, dating back to 1996. Altogether, the corpus comprises of about 30 million words for each of the 11 official languages of the European Union
+— Europarl: A Parallel Corpus for Statistical Machine Translation, 2005.
+The raw data is available on the European Parliament website in HTML format.
+The creation of the dataset was lead by Philipp Koehn, author of the book “Statistical Machine Translation.”
+The dataset was made available for free to researchers on the website “European Parliament Proceedings Parallel Corpus 1996-2011,” and often appears as a part of machine translation challenges, such as the Machine Translation task in the 2014 Workshop on Statistical Machine Translation.
+The most recent version of the dataset is version 7, released in 2012, comprised of data from 1996 to 2011.
+# Download French-English Dataset
+We will focus on the parallel French-English dataset.
+This is a prepared corpus of aligned French and English sentences recorded between 1996 and 2011.
+The dataset has the following statistics:
+- Sentences: 2,007,723
+- French words: 51,388,643
+- English words: 50,196,035
+You can download the dataset from here:
+- Parallel corpus French-English (194 Megabytes)
+Once downloaded, you should have the file “fr-en.tgz” in your current working directory.
+You can unzip this archive file using the tar command, as follows:
+You will now have two files, as follows:
+- English: europarl-v7.fr-en.en (288M)
+- French: europarl-v7.fr-en.fr (331M)
+Below is a sample of the English file.
+Below is a sample of the French file.
+
+# Load Dataset
+Let’s start off by loading the data files.
+We can load each file as a string. Because the files contain unicode characters, we must specify an encoding when loading the files as text. In this case, we will use UTF-8 that will easily handle the unicode characters in both files.
+The function below, named load_doc(), will load a given file and return it as a blob of text.
+Next, we can split the file into sentences.
+Generally, one utterance is stored on each line. We can treat these as sentences and split the file by new line characters. The function to_sentences() below will split a loaded document.
+When preparing our model later, we will need to know the length of sentences in the dataset. We can write a short function to calculate the shortest and longest sentences.
+We can tie all of this together to load and summarize the English and French data files. The complete example is listed below.
+Running the example summarizes the number of lines or sentences in each file and the length of the longest and shortest lines in each file.
+Importantly, we can see that the number of lines 2,007,723 matches the expectation.
+# Clean Dataset
+The data needs some minimal cleaning before being used to train a neural translation model.
+Looking at some samples of text, some minimal text cleaning may include:
+- Tokenizing text by white space.
+- Normalizing case to lowercase.
+- Removing punctuation from each word.
+- Removing non-printable characters.
+- Converting French characters to Latin characters.
+- Removing words that contain non-alphabetic characters.
+These are just some basic operations as a starting point; you may know of or require more elaborate data cleaning operations.
+The function clean_lines() below implements these cleaning operations. Some notes:
+- We use the unicode API to normalize unicode characters, which converts French characters to Latin equivalents.
+- We use an inverse regex match to retain only those characters in words that are printable.
+- We use a translation table to translate characters as-is, but exclude all punctuation characters.
+
+Once normalized, we save the lists of clean lines directly in binary format using the pickle API. This will speed up loading for further operations later and in the future.
+Reusing the loading and splitting functions developed in the previous sections, the complete example is listed below.
+After running, the clean sentences are saved in english.pkl and french.pkl files respectively.
+As part of the run, we also print the first few lines of each list of clean sentences, reproduced below.
+English:
+French:
+My reading of French is very limited, but at least as the English is concerned, further improves could be made, such as dropping or concatenating hanging ‘s‘ characters for plurals.
+# Reduce Vocabulary
+As part of the data cleaning, it is important to constrain the vocabulary of both the source and target languages.
+The difficulty of the translation task is proportional to the size of the vocabularies, which in turn impacts model training time and the size of a dataset required to make the model viable.
+In this section, we will reduce the vocabulary of both the English and French text and mark all out of vocabulary (OOV) words with a special token.
+We can start by loading the pickled clean lines saved from the previous section. The load_clean_sentences() function below will load and return a list for a given filename.
+Next, we can count the occurrence of each word in the dataset. For this we can use a Counter object, which is a Python dictionary keyed on words and updates a count each time a new occurrence of each word is added.
+The to_vocab() function below creates a vocabulary for a given list of sentences.
+We can then process the created vocabulary and remove all words from the Counter that have an occurrence below a specific threshold.
+The trim_vocab() function below does this and accepts a minimum occurrence count as a parameter and returns an updated vocabulary.
+Finally, we can update the sentences, remove all words not in the trimmed vocabulary and mark their removal with a special token, in this case, the string “unk“.
+The update_dataset() function below performs this operation and returns a list of updated lines that can then be saved to a new file.
+We can tie all of this together and reduce the vocabulary for both the English and French dataset and save the results to new data files.
+We will use a min occurrence of 5, but you are free to explore other min occurrence counts suitable for your application.
+The complete code example is listed below.
+First, the size of the English vocabulary is reported followed by the updated size. The updated dataset is saved to the file ‘english_vocab.pkl‘ and a spot check of some updated examples with out of vocabulary words replace with “unk” are printed.
+We can see that the size of the vocabulary was shrunk by about half to a little over 40,000 words.
+The same procedure is then performed on the French dataset, saving the result to the file ‘french_vocab.pkl‘.
+We see a similar shrinking of the size of the French vocabulary.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Europarl: A Parallel Corpus for Statistical Machine Translation, 2005.
+- European Parliament Proceedings Parallel Corpus 1996-2011 Homepage
+- Europarl Corpus on Wikipedia
+# Summary
+In this tutorial, you discovered the Europarl machine translation dataset and how to prepare the data ready for modeling.
+Specifically, you learned:
+- The Europarl dataset comprised of the proceedings from the European Parliament in a host of 11 languages.
+- How to load and clean the parallel French and English transcripts ready for modeling in a neural machine translation system.
+- How to reduce the vocabulary size of both French and English data in order to reduce the complexity of the translation task.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop Deep Learning models for Text Data Today!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Deep Learning for Natural Language Processing
+It provides self-study tutorials on topics like:
+Bag-of-Words, Word Embedding, Language Models, Caption Generation, Text Translation and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+tar zxvf fr-en.tgz
+Resumption of the session
+I declare resumed the session of the European Parliament adjourned on Friday 17 December 1999, and I would like once again to wish you a happy new year in the hope that you enjoyed a pleasant festive period.
+Although, as you will have seen, the dreaded 'millennium bug' failed to materialise, still the people in a number of countries suffered a series of natural disasters that truly were dreadful.
+You have requested a debate on this subject in the course of the next few days, during this part-session.
+In the meantime, I should like to observe a minute' s silence, as a number of Members have requested, on behalf of all the victims concerned, particularly those of the terrible storms, in the various countries of the European Union.
+Reprise de la session
+Je déclare reprise la session du Parlement européen qui avait été interrompue le vendredi 17 décembre dernier et je vous renouvelle tous mes vux en espérant que vous avez passé de bonnes vacances.
+Comme vous avez pu le constater, le grand "bogue de l'an 2000" ne s'est pas produit. En revanche, les citoyens d'un certain nombre de nos pays ont été victimes de catastrophes naturelles qui ont vraiment été terribles.
+Vous avez souhaité un débat à ce sujet dans les prochains jours, au cours de cette période de session.
+En attendant, je souhaiterais, comme un certain nombre de collègues me l'ont demandé, que nous observions une minute de silence pour toutes les victimes, des tempêtes notamment, dans les différents pays de l'Union européenne qui ont été touchés.
+# load doc into memory
+def load_doc(filename):
+	# open the file as read only
+	file = open(filename, mode='rt', encoding='utf-8')
+	# read all text
+	text = file.read()
+	# close the file
+	file.close()
+	return text
+# split a loaded document into sentences
+def to_sentences(doc):
+	return doc.strip().split('\n')
+# shortest and longest sentence lengths
+def sentence_lengths(sentences):
+	lengths = [len(s.split()) for s in sentences]
+	return min(lengths), max(lengths)
+# load doc into memory
+def load_doc(filename):
+	# open the file as read only
+	file = open(filename, mode='rt', encoding='utf-8')
+	# read all text
+	text = file.read()
+	# close the file
+	file.close()
+	return text
+
+# split a loaded document into sentences
+def to_sentences(doc):
+	return doc.strip().split('\n')
+
+# shortest and longest sentence lengths
+def sentence_lengths(sentences):
+	lengths = [len(s.split()) for s in sentences]
+	return min(lengths), max(lengths)
+
+# load English data
+filename = 'europarl-v7.fr-en.en'
+doc = load_doc(filename)
+sentences = to_sentences(doc)
+minlen, maxlen = sentence_lengths(sentences)
+print('English data: sentences=%d, min=%d, max=%d' % (len(sentences), minlen, maxlen))
+
+# load French data
+filename = 'europarl-v7.fr-en.fr'
+doc = load_doc(filename)
+sentences = to_sentences(doc)
+minlen, maxlen = sentence_lengths(sentences)
+print('French data: sentences=%d, min=%d, max=%d' % (len(sentences), minlen, maxlen))
+English data: sentences=2007723, min=0, max=668
+French data: sentences=2007723, min=0, max=693
+# clean a list of lines
+def clean_lines(lines):
+	cleaned = list()
+	# prepare regex for char filtering
+	re_print = re.compile('[^%s]' % re.escape(string.printable))
+	# prepare translation table for removing punctuation
+	table = str.maketrans('', '', string.punctuation)
+	for line in lines:
+		# normalize unicode characters
+		line = normalize('NFD', line).encode('ascii', 'ignore')
+		line = line.decode('UTF-8')
+		# tokenize on white space
+		line = line.split()
+		# convert to lower case
+		line = [word.lower() for word in line]
+		# remove punctuation from each token
+		line = [word.translate(table) for word in line]
+		# remove non-printable chars form each token
+		line = [re_print.sub('', w) for w in line]
+		# remove tokens with numbers in them
+		line = [word for word in line if word.isalpha()]
+		# store as string
+		cleaned.append(' '.join(line))
+	return cleaned
+import string
+import re
+from pickle import dump
+from unicodedata import normalize
+
+# load doc into memory
+def load_doc(filename):
+	# open the file as read only
+	file = open(filename, mode='rt', encoding='utf-8')
+	# read all text
+	text = file.read()
+	# close the file
+	file.close()
+	return text
+
+# split a loaded document into sentences
+def to_sentences(doc):
+	return doc.strip().split('\n')
+
+# clean a list of lines
+def clean_lines(lines):
+	cleaned = list()
+	# prepare regex for char filtering
+	re_print = re.compile('[^%s]' % re.escape(string.printable))
+	# prepare translation table for removing punctuation
+	table = str.maketrans('', '', string.punctuation)
+	for line in lines:
+		# normalize unicode characters
+		line = normalize('NFD', line).encode('ascii', 'ignore')
+		line = line.decode('UTF-8')
+		# tokenize on white space
+		line = line.split()
+		# convert to lower case
+		line = [word.lower() for word in line]
+		# remove punctuation from each token
+		line = [word.translate(table) for word in line]
+		# remove non-printable chars form each token
+		line = [re_print.sub('', w) for w in line]
+		# remove tokens with numbers in them
+		line = [word for word in line if word.isalpha()]
+		# store as string
+		cleaned.append(' '.join(line))
+	return cleaned
+
+# save a list of clean sentences to file
+def save_clean_sentences(sentences, filename):
+	dump(sentences, open(filename, 'wb'))
+	print('Saved: %s' % filename)
+
+# load English data
+filename = 'europarl-v7.fr-en.en'
+doc = load_doc(filename)
+sentences = to_sentences(doc)
+sentences = clean_lines(sentences)
+save_clean_sentences(sentences, 'english.pkl')
+# spot check
+for i in range(10):
+	print(sentences[i])
+
+# load French data
+filename = 'europarl-v7.fr-en.fr'
+doc = load_doc(filename)
+sentences = to_sentences(doc)
+sentences = clean_lines(sentences)
+save_clean_sentences(sentences, 'french.pkl')
+# spot check
+for i in range(10):
+	print(sentences[i])
+resumption of the session
+i declare resumed the session of the european parliament adjourned on friday december and i would like once again to wish you a happy new year in the hope that you enjoyed a pleasant festive period
+although as you will have seen the dreaded millennium bug failed to materialise still the people in a number of countries suffered a series of natural disasters that truly were dreadful
+you have requested a debate on this subject in the course of the next few days during this partsession
+in the meantime i should like to observe a minute s silence as a number of members have requested on behalf of all the victims concerned particularly those of the terrible storms in the various countries of the european union
+please rise then for this minute s silence
+the house rose and observed a minute s silence
+madam president on a point of order
+you will be aware from the press and television that there have been a number of bomb explosions and killings in sri lanka
+one of the people assassinated very recently in sri lanka was mr kumar ponnambalam who had visited the european parliament just a few months ago
+reprise de la session
+je declare reprise la session du parlement europeen qui avait ete interrompue le vendredi decembre dernier et je vous renouvelle tous mes vux en esperant que vous avez passe de bonnes vacances
+comme vous avez pu le constater le grand bogue de lan ne sest pas produit en revanche les citoyens dun certain nombre de nos pays ont ete victimes de catastrophes naturelles qui ont vraiment ete terribles
+vous avez souhaite un debat a ce sujet dans les prochains jours au cours de cette periode de session
+en attendant je souhaiterais comme un certain nombre de collegues me lont demande que nous observions une minute de silence pour toutes les victimes des tempetes notamment dans les differents pays de lunion europeenne qui ont ete touches
+je vous invite a vous lever pour cette minute de silence
+le parlement debout observe une minute de silence
+madame la presidente cest une motion de procedure
+vous avez probablement appris par la presse et par la television que plusieurs attentats a la bombe et crimes ont ete perpetres au sri lanka
+lune des personnes qui vient detre assassinee au sri lanka est m kumar ponnambalam qui avait rendu visite au parlement europeen il y a quelques mois a peine
+# load a clean dataset
+def load_clean_sentences(filename):
+	return load(open(filename, 'rb'))
+# create a frequency table for all words
+def to_vocab(lines):
+	vocab = Counter()
+	for line in lines:
+		tokens = line.split()
+		vocab.update(tokens)
+	return vocab
+# remove all words with a frequency below a threshold
+def trim_vocab(vocab, min_occurance):
+	tokens = [k for k,c in vocab.items() if c >= min_occurance]
+	return set(tokens)
+# mark all OOV with "unk" for all lines
+def update_dataset(lines, vocab):
+	new_lines = list()
+	for line in lines:
+		new_tokens = list()
+		for token in line.split():
+			if token in vocab:
+				new_tokens.append(token)
+			else:
+				new_tokens.append('unk')
+		new_line = ' '.join(new_tokens)
+		new_lines.append(new_line)
+	return new_lines
+from pickle import load
+from pickle import dump
+from collections import Counter
+
+# load a clean dataset
+def load_clean_sentences(filename):
+	return load(open(filename, 'rb'))
+
+# save a list of clean sentences to file
+def save_clean_sentences(sentences, filename):
+	dump(sentences, open(filename, 'wb'))
+	print('Saved: %s' % filename)
+
+# create a frequency table for all words
+def to_vocab(lines):
+	vocab = Counter()
+	for line in lines:
+		tokens = line.split()
+		vocab.update(tokens)
+	return vocab
+
+# remove all words with a frequency below a threshold
+def trim_vocab(vocab, min_occurance):
+	tokens = [k for k,c in vocab.items() if c >= min_occurance]
+	return set(tokens)
+
+# mark all OOV with "unk" for all lines
+def update_dataset(lines, vocab):
+	new_lines = list()
+	for line in lines:
+		new_tokens = list()
+		for token in line.split():
+			if token in vocab:
+				new_tokens.append(token)
+			else:
+				new_tokens.append('unk')
+		new_line = ' '.join(new_tokens)
+		new_lines.append(new_line)
+	return new_lines
+
+# load English dataset
+filename = 'english.pkl'
+lines = load_clean_sentences(filename)
+# calculate vocabulary
+vocab = to_vocab(lines)
+print('English Vocabulary: %d' % len(vocab))
+# reduce vocabulary
+vocab = trim_vocab(vocab, 5)
+print('New English Vocabulary: %d' % len(vocab))
+# mark out of vocabulary words
+lines = update_dataset(lines, vocab)
+# save updated dataset
+filename = 'english_vocab.pkl'
+save_clean_sentences(lines, filename)
+# spot check
+for i in range(10):
+	print(lines[i])
+
+# load French dataset
+filename = 'french.pkl'
+lines = load_clean_sentences(filename)
+# calculate vocabulary
+vocab = to_vocab(lines)
+print('French Vocabulary: %d' % len(vocab))
+# reduce vocabulary
+vocab = trim_vocab(vocab, 5)
+print('New French Vocabulary: %d' % len(vocab))
+# mark out of vocabulary words
+lines = update_dataset(lines, vocab)
+# save updated dataset
+filename = 'french_vocab.pkl'
+save_clean_sentences(lines, filename)
+# spot check
+for i in range(10):
+	print(lines[i])
+English Vocabulary: 105357
+New English Vocabulary: 41746
+Saved: english_vocab.pkl
+resumption of the session
+i declare resumed the session of the european parliament adjourned on friday december and i would like once again to wish you a happy new year in the hope that you enjoyed a pleasant festive period
+although as you will have seen the dreaded millennium bug failed to materialise still the people in a number of countries suffered a series of natural disasters that truly were dreadful
+you have requested a debate on this subject in the course of the next few days during this partsession
+in the meantime i should like to observe a minute s silence as a number of members have requested on behalf of all the victims concerned particularly those of the terrible storms in the various countries of the european union
+please rise then for this minute s silence
+the house rose and observed a minute s silence
+madam president on a point of order
+you will be aware from the press and television that there have been a number of bomb explosions and killings in sri lanka
+one of the people assassinated very recently in sri lanka was mr unk unk who had visited the european parliament just a few months ago
+French Vocabulary: 141642
+New French Vocabulary: 58800
+Saved: french_vocab.pkl
+reprise de la session
+je declare reprise la session du parlement europeen qui avait ete interrompue le vendredi decembre dernier et je vous renouvelle tous mes vux en esperant que vous avez passe de bonnes vacances
+comme vous avez pu le constater le grand bogue de lan ne sest pas produit en revanche les citoyens dun certain nombre de nos pays ont ete victimes de catastrophes naturelles qui ont vraiment ete terribles
+vous avez souhaite un debat a ce sujet dans les prochains jours au cours de cette periode de session
+en attendant je souhaiterais comme un certain nombre de collegues me lont demande que nous observions une minute de silence pour toutes les victimes des tempetes notamment dans les differents pays de lunion europeenne qui ont ete touches
+je vous invite a vous lever pour cette minute de silence
+le parlement debout observe une minute de silence
+madame la presidente cest une motion de procedure
+vous avez probablement appris par la presse et par la television que plusieurs attentats a la bombe et crimes ont ete perpetres au sri lanka
+lune des personnes qui vient detre assassinee au sri lanka est m unk unk qui avait rendu visite au parlement europeen il y a quelques mois a peine
+'''

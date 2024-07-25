@@ -1,0 +1,255 @@
+Auto-Sklearn for Automated Machine Learning in Python
+https://machinelearningmastery.com/auto-sklearn-for-automated-machine-learning-in-python/
+2020-09-06
+Automated Machine Learning (AutoML) refers to techniques for automatically discovering well-performing models for predictive modeling tasks with very little user involvement.
+Auto-Sklearn is an open-source library for performing AutoML in Python. It makes use of the popular Scikit-Learn machine learning library for data transforms and machine learning algorithms and uses a Bayesian Optimization search procedure to efficiently discover a top-performing model pipeline for a given dataset.
+In this tutorial, you will discover how to use Auto-Sklearn for AutoML with Scikit-Learn machine learning algorithms in Python.
+After completing this tutorial, you will know:
+- Auto-Sklearn is an open-source library for AutoML with scikit-learn data preparation and machine learning models.
+- How to use Auto-Sklearn to automatically discover top-performing models for classification tasks.
+- How to use Auto-Sklearn to automatically discover top-performing models for regression tasks.
+Let’s get started.
+Auto-Sklearn for Automated Machine Learning in PythonPhoto by Richard, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into four parts; they are:
+- AutoML With Auto-Sklearn
+- Install and Using Auto-Sklearn
+- Auto-Sklearn for Classification
+- Auto-Sklearn for Regression
+# AutoML With Auto-Sklearn
+Automated Machine Learning, or AutoML for short, is a process of discovering the best-performing pipeline of data transforms, model, and model configuration for a dataset.
+AutoML often involves the use of sophisticated optimization algorithms, such as Bayesian Optimization, to efficiently navigate the space of possible models and model configurations and quickly discover what works well for a given predictive modeling task. It allows non-expert machine learning practitioners to quickly and easily discover what works well or even best for a given dataset with very little technical background or direct input.
+Auto-Sklearn is an open-source Python library for AutoML using machine learning models from the scikit-learn machine learning library.
+It was developed by Matthias Feurer, et al. and described in their 2015 paper titled “Efficient and Robust Automated Machine Learning.”
+… we introduce a robust new AutoML system based on scikit-learn (using 15 classifiers, 14 feature preprocessing methods, and 4 data preprocessing methods, giving rise to a structured hypothesis space with 110 hyperparameters).
+— Efficient and Robust Automated Machine Learning, 2015.
+The benefit of Auto-Sklearn is that, in addition to discovering the data preparation and model that performs for a dataset, it also is able to learn from models that performed well on similar datasets and is able to automatically create an ensemble of top-performing models discovered as part of the optimization process.
+This system, which we dub AUTO-SKLEARN, improves on existing AutoML methods by automatically taking into account past performance on similar datasets, and by constructing ensembles from the models evaluated during the optimization.
+— Efficient and Robust Automated Machine Learning, 2015.
+The authors provide a useful depiction of their system in the paper, provided below.
+Overview of the Auto-Sklearn System.Taken from: Efficient and Robust Automated Machine Learning, 2015.
+# Install and Using Auto-Sklearn
+The first step is to install the Auto-Sklearn library, which can be achieved using pip, as follows:
+Once installed, we can import the library and print the version number to confirm it was installed successfully:
+Running the example prints the version number.
+Your version number should be the same or higher.
+Using Auto-Sklearn is straightforward.
+Depending on whether your prediction task is classification or regression, you create and configure an instance of the AutoSklearnClassifier or AutoSklearnRegressor class, fit it on your dataset, and that’s it. The resulting model can then be used to make predictions directly or saved to file (using pickle) for later use.
+There are a ton of configuration options provided as arguments to the AutoSklearn class.
+By default, the search will use a train-test split of your dataset during the search, and this default is recommended both for speed and simplicity.
+Importantly, you should set the “n_jobs” argument to the number of cores in your system, e.g. 8 if you have 8 cores.
+The optimization process will run for as long as you allow, measure in minutes. By default, it will run for one hour.
+I recommend setting the “time_left_for_this_task” argument for the number of seconds you want the process to run. E.g. less than 5-10 minutes is probably plenty for many small predictive modeling tasks (sub 1,000 rows).
+We will use 5 minutes (300 seconds) for the examples in this tutorial. We will also limit the time allocated to each model evaluation to 30 seconds via the “per_run_time_limit” argument. For example:
+You can limit the algorithms considered in the search, as well as the data transforms.
+By default, the search will create an ensemble of top-performing models discovered as part of the search. Sometimes, this can lead to overfitting and can be disabled by setting the “ensemble_size” argument to 1 and “initial_configurations_via_metalearning” to 0.
+At the end of a run, the list of models can be accessed, as well as other details.
+Perhaps the most useful feature is the sprint_statistics() function that summarizes the search and the performance of the final model.
+Now that we are familiar with the Auto-Sklearn library, let’s look at some worked examples.
+# Auto-Sklearn for Classification
+In this section, we will use Auto-Sklearn to discover a model for the sonar dataset.
+The sonar dataset is a standard machine learning dataset comprised of 208 rows of data with 60 numerical input variables and a target variable with two class values, e.g. binary classification.
+Using a test harness of repeated stratified 10-fold cross-validation with three repeats, a naive model can achieve an accuracy of about 53 percent. A top-performing model can achieve accuracy on this same test harness of about 88 percent. This provides the bounds of expected performance on this dataset.
+The dataset involves predicting whether sonar returns indicate a rock or simulated mine.
+- Sonar Dataset (sonar.csv)
+- Sonar Dataset Description (sonar.names)
+No need to download the dataset; we will download it automatically as part of our worked examples.
+The example below downloads the dataset and summarizes its shape.
+Running the example downloads the dataset and splits it into input and output elements. As expected, we can see that there are 208 rows of data with 60 input variables.
+We will use Auto-Sklearn to find a good model for the sonar dataset.
+First, we will split the dataset into train and test sets and allow the process to find a good model on the training set, then later evaluate the performance of what was found on the holdout test set.
+The AutoSklearnClassifier is configured to run for 5 minutes with 8 cores and limit each model evaluation to 30 seconds.
+The search is then performed on the training dataset.
+Afterward, a summary of the search and best-performing model is reported.
+Finally, we evaluate the performance of the model that was prepared on the holdout test dataset.
+Tying this together, the complete example is listed below.
+Running the example will take about five minutes, given the hard limit we imposed on the run.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+At the end of the run, a summary is printed showing that 1,054 models were evaluated and the estimated performance of the final model was 91 percent.
+We then evaluate the model on the holdout dataset and see that classification accuracy of 81.2 percent was achieved, which is reasonably skillful.
+
+# Auto-Sklearn for Regression
+In this section, we will use Auto-Sklearn to discover a model for the auto insurance dataset.
+The auto insurance dataset is a standard machine learning dataset comprised of 63 rows of data with one numerical input variable and a numerical target variable.
+Using a test harness of repeated stratified 10-fold cross-validation with three repeats, a naive model can achieve a mean absolute error (MAE) of about 66. A top-performing model can achieve a MAE on this same test harness of about 28. This provides the bounds of expected performance on this dataset.
+The dataset involves predicting the total amount in claims (thousands of Swedish Kronor) given the number of claims for different geographical regions.
+- Auto Insurance Dataset (auto-insurance.csv)
+- Auto Insurance Dataset Description (auto-insurance.names)
+No need to download the dataset; we will download it automatically as part of our worked examples.
+The example below downloads the dataset and summarizes its shape.
+Running the example downloads the dataset and splits it into input and output elements. As expected, we can see that there are 63 rows of data with one input variable.
+We will use Auto-Sklearn to find a good model for the auto insurance dataset.
+We can use the same process as was used in the previous section, although we will use the AutoSklearnRegressor class instead of the AutoSklearnClassifier.
+By default, the regressor will optimize the R^2 metric.
+In this case, we are interested in the mean absolute error, or MAE, which we can specify via the “metric” argument when calling the fit() function.
+The complete example is listed below.
+Running the example will take about five minutes, given the hard limit we imposed on the run.
+You might see some warning messages during the run and you can safely ignore them, such as:
+
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+
+At the end of the run, a summary is printed showing that 1,759 models were evaluated and the estimated performance of the final model was a MAE of 29.
+We then evaluate the model on the holdout dataset and see that a MAE of 26 was achieved, which is a great result.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Automated machine learning, Wikipedia.
+- Efficient and Robust Automated Machine Learning, 2015.
+- Auto-Sklearn Homepage.
+- Auto-Sklearn GitHub Project.
+- Auto-Sklearn Manual.
+# Summary
+In this tutorial, you discovered how to use Auto-Sklearn for AutoML with Scikit-Learn machine learning algorithms in Python.
+Specifically, you learned:
+- Auto-Sklearn is an open-source library for AutoML with scikit-learn data preparation and machine learning models.
+- How to use Auto-Sklearn to automatically discover top-performing models for classification tasks.
+- How to use Auto-Sklearn to automatically discover top-performing models for regression tasks.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Discover Fast Machine Learning in Python!
+...with just a few lines of scikit-learn code
+Learn how in my new Ebook:
+Machine Learning Mastery With Python
+Covers self-study tutorials and end-to-end projects like:
+Loading data, visualization, modeling, tuning, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+sudo pip install autosklearn
+# print autosklearn version
+import autosklearn
+print('autosklearn: %s' % autosklearn.__version__)
+autosklearn: 0.6.0
+
+# define search
+model = AutoSklearnClassifier()
+# perform the search
+model.fit(X_train, y_train)
+
+# define search
+model = AutoSklearnClassifier(time_left_for_this_task=5*60, per_run_time_limit=30, n_jobs=8)
+
+# define search
+model = AutoSklearnClassifier(ensemble_size=1, initial_configurations_via_metalearning=0)
+
+# summarize performance
+print(model.sprint_statistics())
+# summarize the sonar dataset
+from pandas import read_csv
+# load dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/sonar.csv'
+dataframe = read_csv(url, header=None)
+# split into input and output elements
+data = dataframe.values
+X, y = data[:, :-1], data[:, -1]
+print(X.shape, y.shape)
+(208, 60) (208,)
+
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+
+# define search
+model = AutoSklearnClassifier(time_left_for_this_task=5*60, per_run_time_limit=30, n_jobs=8)
+
+# perform the search
+model.fit(X_train, y_train)
+
+# summarize
+print(model.sprint_statistics())
+
+# evaluate best model
+y_hat = model.predict(X_test)
+acc = accuracy_score(y_test, y_hat)
+print("Accuracy: %.3f" % acc)
+# example of auto-sklearn for the sonar classification dataset
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score
+from autosklearn.classification import AutoSklearnClassifier
+# load dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/sonar.csv'
+dataframe = read_csv(url, header=None)
+# print(dataframe.head())
+# split into input and output elements
+data = dataframe.values
+X, y = data[:, :-1], data[:, -1]
+# minimally prepare dataset
+X = X.astype('float32')
+y = LabelEncoder().fit_transform(y.astype('str'))
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# define search
+model = AutoSklearnClassifier(time_left_for_this_task=5*60, per_run_time_limit=30, n_jobs=8)
+# perform the search
+model.fit(X_train, y_train)
+# summarize
+print(model.sprint_statistics())
+# evaluate best model
+y_hat = model.predict(X_test)
+acc = accuracy_score(y_test, y_hat)
+print("Accuracy: %.3f" % acc)
+auto-sklearn results:
+Dataset name: f4c282bd4b56d4db7e5f7fe1a6a8edeb
+Metric: accuracy
+Best validation score: 0.913043
+Number of target algorithm runs: 1054
+Number of successful target algorithm runs: 952
+Number of crashed target algorithm runs: 94
+Number of target algorithms that exceeded the time limit: 8
+Number of target algorithms that exceeded the memory limit: 0
+Accuracy: 0.812
+# summarize the auto insurance dataset
+from pandas import read_csv
+# load dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/auto-insurance.csv'
+dataframe = read_csv(url, header=None)
+# split into input and output elements
+data = dataframe.values
+X, y = data[:, :-1], data[:, -1]
+print(X.shape, y.shape)
+(63, 1) (63,)
+
+# define search
+model = AutoSklearnRegressor(time_left_for_this_task=5*60, per_run_time_limit=30, n_jobs=8)
+
+# perform the search
+model.fit(X_train, y_train, metric=auto_mean_absolute_error)
+# example of auto-sklearn for the insurance regression dataset
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
+from autosklearn.regression import AutoSklearnRegressor
+from autosklearn.metrics import mean_absolute_error as auto_mean_absolute_error
+# load dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/auto-insurance.csv'
+dataframe = read_csv(url, header=None)
+# split into input and output elements
+data = dataframe.values
+data = data.astype('float32')
+X, y = data[:, :-1], data[:, -1]
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# define search
+model = AutoSklearnRegressor(time_left_for_this_task=5*60, per_run_time_limit=30, n_jobs=8)
+# perform the search
+model.fit(X_train, y_train, metric=auto_mean_absolute_error)
+# summarize
+print(model.sprint_statistics())
+# evaluate best model
+y_hat = model.predict(X_test)
+mae = mean_absolute_error(y_test, y_hat)
+print("MAE: %.3f" % mae)
+Target Algorithm returned NaN or inf as quality. Algorithm run is treated as CRASHED, cost is set to 1.0 for quality scenarios. (Change value through "cost_for_crash"-option.)
+auto-sklearn results:
+Dataset name: ff51291d93f33237099d48c48ee0f9ad
+Metric: mean_absolute_error
+Best validation score: 29.911203
+Number of target algorithm runs: 1759
+Number of successful target algorithm runs: 1362
+Number of crashed target algorithm runs: 394
+Number of target algorithms that exceeded the time limit: 3
+Number of target algorithms that exceeded the memory limit: 0
+MAE: 26.498
+'''

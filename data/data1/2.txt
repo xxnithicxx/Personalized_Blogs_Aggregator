@@ -1,0 +1,437 @@
+How to Normalize, Center, and Standardize Image Pixels in Keras
+https://machinelearningmastery.com/how-to-normalize-center-and-standardize-images-with-the-imagedatagenerator-in-keras/
+2019-04-02
+The pixel values in images must be scaled prior to providing the images as input to a deep learning neural network model during the training or evaluation of the model.
+Traditionally, the images would have to be scaled prior to the development of the model and stored in memory or on disk in the scaled format.
+An alternative approach is to scale the images using a preferred scaling technique just-in-time during the training or model evaluation process. Keras supports this type of data preparation for image data via the ImageDataGenerator class and API.
+In this tutorial, you will discover how to use the ImageDataGenerator class to scale pixel data just-in-time when fitting and evaluating deep learning neural network models.
+After completing this tutorial, you will know:
+- How to configure and a use the ImageDataGenerator class for train, validation, and test datasets of images.
+- How to use the ImageDataGenerator to normalize pixel values when fitting and evaluating a convolutional neural network model.
+- How to use the ImageDataGenerator to center and standardize pixel values when fitting and evaluating a convolutional neural network model.
+Kick-start your project with my new book Deep Learning for Computer Vision, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Normalize, Center, and Standardize Images With the ImageDataGenerator in KerasPhoto by Sagar, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into five parts; they are:
+- MNIST Handwritten Image Classification Dataset
+- ImageDataGenerator class for Pixel Scaling
+- How to Normalize Images With ImageDataGenerator
+- How to Center Images With ImageDataGenerator
+- How to Standardize Image With ImageDataGenerator
+# MNIST Handwritten Image Classification Dataset
+Before we dive into the usage of the ImageDataGenerator class for preparing image data, we must select an image dataset on which to test the generator.
+The MNIST problem, is an image classification problem comprised of 70,000 images of handwritten digits.
+The goal of the problem is to classify a given image of a handwritten digit as an integer from 0 to 9. As such, it is a multiclass image classification problem.
+This dataset is provided as part of the Keras library and can be automatically downloaded (if needed) and loaded into memory by a call to the keras.datasets.mnist.load_data() function.
+The function returns two tuples: one for the training inputs and outputs and one for the test inputs and outputs. For example:
+We can load the MNIST dataset and summarize the dataset. The complete example is listed below.
+Running the example first loads the dataset into memory. Then the shape of the train and test datasets is reported.
+We can see that all images are 28 by 28 pixels with a single channel for black-and-white images. There are 60,000 images for the training dataset and 10,000 for the test dataset.
+We can also see that pixel values are integer values between 0 and 255 and that the mean and standard deviation of the pixel values are similar between the two datasets.
+We will use this dataset to explore different pixel scaling methods using the ImageDataGenerator class in Keras.
+# ImageDataGenerator Class for Pixel Scaling
+The ImageDataGenerator class in Keras provides a suite of techniques for scaling pixel values in your image dataset prior to modeling.
+The class will wrap your image dataset, then when requested, it will return images in batches to the algorithm during training, validation, or evaluation and apply the scaling operations just-in-time. This provides an efficient and convenient approach to scaling image data when modeling with neural networks.
+The usage of the ImageDataGenerator class is as follows.
+- 1. Load your dataset.
+- 2. Configure the ImageDataGenerator (e.g. construct an instance).
+- 3. Calculate image statistics (e.g. call the fit() function).
+- 4. Use the generator to fit the model (e.g. pass the instance to the fit_generator() function).
+- 5. Use the generator to evaluate the model (e.g. pass the instance to the evaluate_generator() function).
+The ImageDataGenerator class supports a number of pixel scaling methods, as well as a range of data augmentation techniques. We will focus on the pixel scaling techniques and leave the data augmentation methods to a later discussion.
+The three main types of pixel scaling techniques supported by the ImageDataGenerator class are as follows:
+- Pixel Normalization: scale pixel values to the range 0-1.
+- Pixel Centering: scale pixel values to have a zero mean.
+- Pixel Standardization: scale pixel values to have a zero mean and unit variance.
+The pixel standardization is supported at two levels: either per-image (called sample-wise) or per-dataset (called feature-wise). Specifically, the mean and/or mean and standard deviation statistics required to standardize pixel values can be calculated from the pixel values in each image only (sample-wise) or across the entire training dataset (feature-wise).
+Other pixel scaling methods are supported, such as ZCA, brightening, and more, but wel will focus on these three most common methods.
+The choice of pixel scaling is selected by specifying arguments to the ImageDataGenerator when an instance is constructed; for example:
+Next, if the chosen scaling method requires that statistics be calculated across the training dataset, then these statistics can be calculated and stored by calling the fit() function.
+When evaluating and selecting a model, it is common to calculate these statistics on the training dataset and then apply them to the validation and test datasets.
+Once prepared, the data generator can be used to fit a neural network model by calling the flow() function to retrieve an iterator that returns batches of samples and passing it to the fit_generator() function.
+If a validation dataset is required, a separate batch iterator can be created from the same data generator that will perform the same pixel scaling operations and use any required statistics calculated on the training dataset.
+Once fit, the model can be evaluated by creating a batch iterator for the test dataset and calling the evaluate_generator() function on the model.
+Again, the same pixel scaling operations will be performed and any statistics calculated on the training dataset will be used, if needed.
+Now that we are familiar with how to use the ImageDataGenerator class for scaling pixel values, let’s look at some specific examples.
+# How to Normalize Images With ImageDataGenerator
+The ImageDataGenerator class can be used to rescale pixel values from the range of 0-255 to the range 0-1 preferred for neural network models.
+Scaling data to the range of 0-1 is traditionally referred to as normalization.
+This can be achieved by setting the rescale argument to a ratio by which each pixel can be multiplied to achieve the desired range.
+In this case, the ratio is 1/255 or about 0.0039. For example:
+The ImageDataGenerator does not need to be fit in this case because there are no global statistics that need to be calculated.
+Next, iterators can be created using the generator for both the train and test datasets. We will use a batch size of 64. This means that each of the train and test datasets of images are divided into groups of 64 images that will then be scaled when returned from the iterator.
+We can see how many batches there will be in one epoch, e.g. one pass through the training dataset, by printing the length of each iterator.
+We can then confirm that the pixel normalization has been performed as expected by retrieving the first batch of scaled images and inspecting the min and max pixel values.
+Next, we can use the data generator to fit and evaluate a model. We will define a simple convolutional neural network model and fit it on the train_iterator for five epochs with 60,000 samples divided by 64 samples per batch, or about 938 batches per epoch.
+Once fit, we will evaluate the model on the test dataset, with about 10,000 images divided by 64 samples per batch, or about 157 steps in a single epoch.
+We can tie all of this together; the complete example is listed below.
+Running the example first reports the min and max pixel values on the train and test sets. This confirms that indeed the raw data has pixel values in the range 0-255.
+Next, the data generator is created and the iterators are prepared. We can see that we have 938 batches per epoch with the training dataset and 157 batches per epoch with the test dataset.
+We retrieve the first batch from the dataset and confirm that it contains 64 images with the height and width (rows and columns) of 28 pixels and 1 channel, and that the new minimum and maximum pixel values are 0 and 1 respectively. This confirms that the normalization has had the desired effect.
+The model is then fit on the normalized image data. Training does not take long on the CPU. Finally, the model is evaluated in the test dataset, applying the same normalization.
+Now that we are familiar with how to use the ImageDataGenerator in general and specifically for image normalization, let’s look at examples of pixel centering and standardization.
+# How to Center Images With ImageDataGenerator
+Another popular pixel scaling method is to calculate the mean pixel value across the entire training dataset, then subtract it from each image.
+This is called centering and has the effect of centering the distribution of pixel values on zero: that is, the mean pixel value for centered images will be zero.
+The ImageDataGenerator class refers to centering that uses the mean calculated on the training dataset as feature-wise centering. It requires that the statistic is calculated on the training dataset prior to scaling.
+It is different to calculating of the mean pixel value for each image, which Keras refers to as sample-wise centering and does not require any statistics to be calculated on the training dataset.
+We will demonstrate feature-wise centering in this section. Once the statistic is calculated on the training dataset, we can confirm the value by accessing and printing it; for example:
+We can also confirm that the scaling procedure has had the desired effect by calculating the mean of a batch of images returned from the batch iterator. We would expect the mean to be a small value close to zero, but not zero because of the small number of images in the batch.
+A better check would be to set the batch size to the size of the training dataset (e.g. 60,000 samples), retrieve one batch, then calculate the mean. It should be a very small value close to zero.
+The complete example is listed below.
+Running the example first reports the mean pixel value for the train and test datasets.
+The MNIST dataset only has a single channel because the images are black and white (grayscale), but if the images were color, the mean pixel values would be calculated across all channels in all images in the training dataset, i.e. there would not be a separate mean value for each channel.
+The ImageDataGenerator is fit on the training dataset and we can confirm that the mean pixel value matches our own manual calculation.
+A single batch of centered images is retrieved and we can confirm that the mean pixel value is a small-ish value close to zero. The test is repeated using the entire training dataset as a the batch size, and in this case, the mean pixel value for the scaled dataset is a number very close to zero, confirming that centering is having the desired effect.
+We can demonstrate centering with our convolutional neural network developed in the previous section.
+The complete example with feature-wise centering is listed below.
+Running the example prepares the ImageDataGenerator, centering images using statistics calculated on the training dataset.
+We can see that performance starts off poor but does improve. The centered pixel values will have a range of about -227 to 227, and neural networks often train more efficiently with small inputs. Normalizing followed by centering would be a better approach in practice.
+Importantly, the model is evaluated on the test dataset, where the images in the test dataset were centered using the mean value calculated on the training dataset. This is to avoid any data leakage.
+
+# How to Standardize Image With ImageDataGenerator
+Standardization is a data scaling technique that assumes that the distribution of the data is Gaussian and shifts the distribution of the data to have a mean of zero and a standard deviation of one.
+Data with this distribution is referred to as a standard Gaussian. It can be beneficial when training neural networks as the dataset sums to zero and the inputs are small values in the rough range of about -3.0 to 3.0 (e.g. 99.7 of the values will fall within three standard deviations of the mean).
+Standardization of images is achieved by subtracting the mean pixel value and dividing the result by the standard deviation of the pixel values.
+The mean and standard deviation statistics can be calculated on the training dataset, and as discussed in the previous section, Keras refers to this as feature-wise.
+The statistics can also be calculated then used to standardize each image separately, and Keras refers to this as sample-wise standardization.
+We will demonstrate the former or feature-wise approach to image standardization in this section. The effect will be batches of images with an approximate mean of zero and a standard deviation of one.
+As with the previous section, we can confirm this with some simple experiments. The complete example is listed below.
+Running the example first reports the mean and standard deviation of pixel values in the train and test datasets.
+The data generator is then configured for feature-wise standardization and the statistics are calculated on the training dataset, matching what we would expect when the statistics are calculated manually.
+A single batch of 64 standardized images is then retrieved and we can confirm that the mean and standard deviation of this small sample is close to the expected standard Gaussian.
+The test is then repeated on the entire training dataset and we can confirm that the mean is indeed a very small value close to 0.0 and the standard deviation is a value very close to 1.0.
+Now that we have confirmed that the standardization of pixel values is being performed as we expect, we can apply the pixel scaling while fitting and evaluating a convolutional neural network model.
+The complete example is listed below.
+Running the example configures the ImageDataGenerator class to standardize images, calculates the required statistics on the training set only, then prepares the train and test iterators for fitting and evaluating the model respectively.
+
+# Extensions
+This section lists some ideas for extending the tutorial that you may wish to explore.
+- Color. Update an example to use an image dataset with color images and confirm that scaling is performed across the entire image rather than per-channel.
+- Sample-Wise. Demonstrate an example of sample-wise centering or standardization of pixel images.
+- ZCA Whitening. Demonstrate an example of using the ZCA approach to image data preparation.
+If you explore any of these extensions, I’d love to know.
+Post your findings in the comments below.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- MNIST database of handwritten digits, Keras API.
+- Image Preprocessing Keras API
+- Sequential Model Keras API
+- MNIST database, Wikipedia.
+- 68–95–99.7 rule, Wikipedia.
+# Summary
+In this tutorial, you discovered how to use the ImageDataGenerator class to scale pixel data just-in-time when fitting and evaluating deep learning neural network models.
+Specifically, you learned:
+- How to configure and a use the ImageDataGenerator class for train, validation, and test datasets of images.
+- How to use the ImageDataGenerator to normalize pixel values when fitting and evaluating a convolutional neural network model.
+- How to use the ImageDataGenerator to center and standardize pixel values when fitting and evaluating a convolutional neural network model.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+
+'''
+# example of loading the MNIST dataset
+from keras.datasets import mnist
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+# load and summarize the MNIST dataset
+from keras.datasets import mnist
+# load dataset
+(train_images, train_labels), (test_images, test_labels) = mnist.load_data()
+# summarize dataset shape
+print('Train', train_images.shape, train_labels.shape)
+print('Test', (test_images.shape, test_labels.shape))
+# summarize pixel values
+print('Train', train_images.min(), train_images.max(), train_images.mean(), train_images.std())
+print('Test', test_images.min(), test_images.max(), test_images.mean(), test_images.std())
+Train (60000, 28, 28) (60000,)
+Test ((10000, 28, 28), (10000,))
+Train 0 255 33.318421449829934 78.56748998339798
+Test 0 255 33.791224489795916 79.17246322228644
+# create and configure the data generator
+datagen = ImageDataGenerator(...)
+# calculate scaling statistics on the training dataset
+datagen.fit(trainX)
+# get batch iterator
+train_iterator = datagen.flow(trainX, trainy)
+# fit model
+model.fit_generator(train_iterator, ...)
+# get batch iterator for training
+train_iterator = datagen.flow(trainX, trainy)
+# get batch iterator for validation
+val_iterator = datagen.flow(valX, valy)
+# fit model
+model.fit_generator(train_iterator, validation_data=val_iterator, ...)
+# get batch iterator for testing
+test_iterator = datagen.flow(testX, testy)
+# evaluate model loss on test dataset
+loss = model.evaluate_generator(test_iterator, ...)
+# create generator (1.0/255.0 = 0.003921568627451)
+datagen = ImageDataGenerator(rescale=1.0/255.0)
+# prepare an iterators to scale images
+train_iterator = datagen.flow(trainX, trainY, batch_size=64)
+test_iterator = datagen.flow(testX, testY, batch_size=64)
+print('Batches train=%d, test=%d' % (len(train_iterator), len(test_iterator)))
+# confirm the scaling works
+batchX, batchy = train_iterator.next()
+print('Batch shape=%s, min=%.3f, max=%.3f' % (batchX.shape, batchX.min(), batchX.max()))
+# fit model with generator
+model.fit_generator(train_iterator, steps_per_epoch=len(train_iterator), epochs=5)
+_, acc = model.evaluate_generator(test_iterator, steps=len(test_iterator), verbose=0)
+print('Test Accuracy: %.3f' % (acc * 100))
+# example of using ImageDataGenerator to normalize images
+from keras.datasets import mnist
+from keras.utils import to_categorical
+from keras.models import Sequential
+from keras.layers import Conv2D
+from keras.layers import MaxPooling2D
+from keras.layers import Dense
+from keras.layers import Flatten
+from keras.preprocessing.image import ImageDataGenerator
+# load dataset
+(trainX, trainY), (testX, testY) = mnist.load_data()
+# reshape dataset to have a single channel
+width, height, channels = trainX.shape[1], trainX.shape[2], 1
+trainX = trainX.reshape((trainX.shape[0], width, height, channels))
+testX = testX.reshape((testX.shape[0], width, height, channels))
+# one hot encode target values
+trainY = to_categorical(trainY)
+testY = to_categorical(testY)
+# confirm scale of pixels
+print('Train min=%.3f, max=%.3f' % (trainX.min(), trainX.max()))
+print('Test min=%.3f, max=%.3f' % (testX.min(), testX.max()))
+# create generator (1.0/255.0 = 0.003921568627451)
+datagen = ImageDataGenerator(rescale=1.0/255.0)
+# prepare an iterators to scale images
+train_iterator = datagen.flow(trainX, trainY, batch_size=64)
+test_iterator = datagen.flow(testX, testY, batch_size=64)
+print('Batches train=%d, test=%d' % (len(train_iterator), len(test_iterator)))
+# confirm the scaling works
+batchX, batchy = train_iterator.next()
+print('Batch shape=%s, min=%.3f, max=%.3f' % (batchX.shape, batchX.min(), batchX.max()))
+# define model
+model = Sequential()
+model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(width, height, channels)))
+model.add(MaxPooling2D((2, 2)))
+model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(MaxPooling2D((2, 2)))
+model.add(Flatten())
+model.add(Dense(64, activation='relu'))
+model.add(Dense(10, activation='softmax'))
+# compile model
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+# fit model with generator
+model.fit_generator(train_iterator, steps_per_epoch=len(train_iterator), epochs=5)
+# evaluate model
+_, acc = model.evaluate_generator(test_iterator, steps=len(test_iterator), verbose=0)
+print('Test Accuracy: %.3f' % (acc * 100))
+Train min=0.000, max=255.000
+Test min=0.000, max=255.000
+Batches train=938, test=157
+Batch shape=(64, 28, 28, 1), min=0.000, max=1.000
+Epoch 1/5
+938/938 [==============================] - 12s 13ms/step - loss: 0.1841 - acc: 0.9448
+Epoch 2/5
+938/938 [==============================] - 12s 13ms/step - loss: 0.0573 - acc: 0.9826
+Epoch 3/5
+938/938 [==============================] - 12s 13ms/step - loss: 0.0407 - acc: 0.9870
+Epoch 4/5
+938/938 [==============================] - 12s 13ms/step - loss: 0.0299 - acc: 0.9904
+Epoch 5/5
+938/938 [==============================] - 12s 13ms/step - loss: 0.0238 - acc: 0.9928
+Test Accuracy: 99.050
+# create generator that centers pixel values
+datagen = ImageDataGenerator(featurewise_center=True)
+# calculate the mean on the training dataset
+datagen.fit(trainX)
+# create generator that centers pixel values
+datagen = ImageDataGenerator(samplewise_center=True)
+# print the mean calculated on the training dataset.
+print(datagen.mean)
+# get a batch
+batchX, batchy = iterator.next()
+# mean pixel value in the batch
+print(batchX.shape, batchX.mean())
+# try to flow the entire training dataset
+iterator = datagen.flow(trainX, trainy, batch_size=len(trainX), shuffle=False)
+# get a batch
+batchX, batchy = iterator.next()
+# mean pixel value in the batch
+print(batchX.shape, batchX.mean())
+# example of centering a image dataset
+from keras.datasets import mnist
+from keras.preprocessing.image import ImageDataGenerator
+# load dataset
+(trainX, trainy), (testX, testy) = mnist.load_data()
+# reshape dataset to have a single channel
+width, height, channels = trainX.shape[1], trainX.shape[2], 1
+trainX = trainX.reshape((trainX.shape[0], width, height, channels))
+testX = testX.reshape((testX.shape[0], width, height, channels))
+# report per-image mean
+print('Means train=%.3f, test=%.3f' % (trainX.mean(), testX.mean()))
+# create generator that centers pixel values
+datagen = ImageDataGenerator(featurewise_center=True)
+# calculate the mean on the training dataset
+datagen.fit(trainX)
+print('Data Generator Mean: %.3f' % datagen.mean)
+# demonstrate effect on a single batch of samples
+iterator = datagen.flow(trainX, trainy, batch_size=64)
+# get a batch
+batchX, batchy = iterator.next()
+# mean pixel value in the batch
+print(batchX.shape, batchX.mean())
+# demonstrate effect on entire training dataset
+iterator = datagen.flow(trainX, trainy, batch_size=len(trainX), shuffle=False)
+# get a batch
+batchX, batchy = iterator.next()
+# mean pixel value in the batch
+print(batchX.shape, batchX.mean())
+Means train=33.318, test=33.791
+Data Generator Mean: 33.318
+(64, 28, 28, 1) 0.09971977
+(60000, 28, 28, 1) -1.9512918e-05
+# example of using ImageDataGenerator to center images
+from keras.datasets import mnist
+from keras.utils import to_categorical
+from keras.models import Sequential
+from keras.layers import Conv2D
+from keras.layers import MaxPooling2D
+from keras.layers import Dense
+from keras.layers import Flatten
+from keras.preprocessing.image import ImageDataGenerator
+# load dataset
+(trainX, trainY), (testX, testY) = mnist.load_data()
+# reshape dataset to have a single channel
+width, height, channels = trainX.shape[1], trainX.shape[2], 1
+trainX = trainX.reshape((trainX.shape[0], width, height, channels))
+testX = testX.reshape((testX.shape[0], width, height, channels))
+# one hot encode target values
+trainY = to_categorical(trainY)
+testY = to_categorical(testY)
+# create generator to center images
+datagen = ImageDataGenerator(featurewise_center=True)
+# calculate mean on training dataset
+datagen.fit(trainX)
+# prepare an iterators to scale images
+train_iterator = datagen.flow(trainX, trainY, batch_size=64)
+test_iterator = datagen.flow(testX, testY, batch_size=64)
+print('Batches train=%d, test=%d' % (len(train_iterator), len(test_iterator)))
+# define model
+model = Sequential()
+model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(width, height, channels)))
+model.add(MaxPooling2D((2, 2)))
+model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(MaxPooling2D((2, 2)))
+model.add(Flatten())
+model.add(Dense(64, activation='relu'))
+model.add(Dense(10, activation='softmax'))
+# compile model
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+# fit model with generator
+model.fit_generator(train_iterator, steps_per_epoch=len(train_iterator), epochs=5)
+# evaluate model
+_, acc = model.evaluate_generator(test_iterator, steps=len(test_iterator), verbose=0)
+print('Test Accuracy: %.3f' % (acc * 100))
+Batches train=938, test=157
+Epoch 1/5
+938/938 [==============================] - 12s 13ms/step - loss: 12.8824 - acc: 0.2001
+Epoch 2/5
+938/938 [==============================] - 12s 13ms/step - loss: 6.1425 - acc: 0.5958
+Epoch 3/5
+938/938 [==============================] - 12s 13ms/step - loss: 0.0678 - acc: 0.9796
+Epoch 4/5
+938/938 [==============================] - 12s 13ms/step - loss: 0.0464 - acc: 0.9857
+Epoch 5/5
+938/938 [==============================] - 12s 13ms/step - loss: 0.0373 - acc: 0.9880
+Test Accuracy: 98.540
+# feature-wise generator
+datagen = ImageDataGenerator(featurewise_center=True, featurewise_std_normalization=True)
+# calculate mean and standard deviation on the training dataset
+datagen.fit(trainX)
+# sample-wise standardization
+datagen = ImageDataGenerator(samplewise_center=True, samplewise_std_normalization=True)
+# example of standardizing a image dataset
+from keras.datasets import mnist
+from keras.preprocessing.image import ImageDataGenerator
+# load dataset
+(trainX, trainy), (testX, testy) = mnist.load_data()
+# reshape dataset to have a single channel
+width, height, channels = trainX.shape[1], trainX.shape[2], 1
+trainX = trainX.reshape((trainX.shape[0], width, height, channels))
+testX = testX.reshape((testX.shape[0], width, height, channels))
+# report pixel means and standard deviations
+print('Statistics train=%.3f (%.3f), test=%.3f (%.3f)' % (trainX.mean(), trainX.std(), testX.mean(), testX.std()))
+# create generator that centers pixel values
+datagen = ImageDataGenerator(featurewise_center=True, featurewise_std_normalization=True)
+# calculate the mean on the training dataset
+datagen.fit(trainX)
+print('Data Generator mean=%.3f, std=%.3f' % (datagen.mean, datagen.std))
+# demonstrate effect on a single batch of samples
+iterator = datagen.flow(trainX, trainy, batch_size=64)
+# get a batch
+batchX, batchy = iterator.next()
+# pixel stats in the batch
+print(batchX.shape, batchX.mean(), batchX.std())
+# demonstrate effect on entire training dataset
+iterator = datagen.flow(trainX, trainy, batch_size=len(trainX), shuffle=False)
+# get a batch
+batchX, batchy = iterator.next()
+# pixel stats in the batch
+print(batchX.shape, batchX.mean(), batchX.std())
+Statistics train=33.318 (78.567), test=33.791 (79.172)
+Data Generator mean=33.318, std=78.567
+(64, 28, 28, 1) 0.010656365 1.0107679
+(60000, 28, 28, 1) -3.4560264e-07 0.9999998
+# example of using ImageDataGenerator to standardize images
+from keras.datasets import mnist
+from keras.utils import to_categorical
+from keras.models import Sequential
+from keras.layers import Conv2D
+from keras.layers import MaxPooling2D
+from keras.layers import Dense
+from keras.layers import Flatten
+from keras.preprocessing.image import ImageDataGenerator
+# load dataset
+(trainX, trainY), (testX, testY) = mnist.load_data()
+# reshape dataset to have a single channel
+width, height, channels = trainX.shape[1], trainX.shape[2], 1
+trainX = trainX.reshape((trainX.shape[0], width, height, channels))
+testX = testX.reshape((testX.shape[0], width, height, channels))
+# one hot encode target values
+trainY = to_categorical(trainY)
+testY = to_categorical(testY)
+# create generator to standardize images
+datagen = ImageDataGenerator(featurewise_center=True, featurewise_std_normalization=True)
+# calculate mean on training dataset
+datagen.fit(trainX)
+# prepare an iterators to scale images
+train_iterator = datagen.flow(trainX, trainY, batch_size=64)
+test_iterator = datagen.flow(testX, testY, batch_size=64)
+print('Batches train=%d, test=%d' % (len(train_iterator), len(test_iterator)))
+# define model
+model = Sequential()
+model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(width, height, channels)))
+model.add(MaxPooling2D((2, 2)))
+model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(MaxPooling2D((2, 2)))
+model.add(Flatten())
+model.add(Dense(64, activation='relu'))
+model.add(Dense(10, activation='softmax'))
+# compile model
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+# fit model with generator
+model.fit_generator(train_iterator, steps_per_epoch=len(train_iterator), epochs=5)
+# evaluate model
+_, acc = model.evaluate_generator(test_iterator, steps=len(test_iterator), verbose=0)
+print('Test Accuracy: %.3f' % (acc * 100))
+Epoch 1/5
+938/938 [==============================] - 12s 13ms/step - loss: 0.1342 - acc: 0.9592
+Epoch 2/5
+938/938 [==============================] - 12s 13ms/step - loss: 0.0451 - acc: 0.9859
+Epoch 3/5
+938/938 [==============================] - 12s 13ms/step - loss: 0.0309 - acc: 0.9906
+Epoch 4/5
+938/938 [==============================] - 13s 13ms/step - loss: 0.0230 - acc: 0.9924
+Epoch 5/5
+938/938 [==============================] - 13s 14ms/step - loss: 0.0182 - acc: 0.9941
+Test Accuracy: 99.120
+'''

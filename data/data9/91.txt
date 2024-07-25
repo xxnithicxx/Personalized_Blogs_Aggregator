@@ -1,0 +1,73 @@
+Market Basket Analysis with Association Rule Learning
+https://machinelearningmastery.com/market-basket-analysis-with-association-rule-learning/
+2014-03-16
+The promise of Data Mining was that algorithms would crunch data and find interesting patterns that you could exploit in your business.
+The exemplar of this promise is market basket analysis (Wikipedia calls it affinity analysis). Given a pile of transactional records, discover interesting purchasing patterns that could be exploited in the store, such as offers and product layout.
+In this post you will work through a market basket analysis tutorial using association rule learning in Weka. If you follow along the step-by-step instructions, you will run a market basket analysis on point of sale data in under 5 minutes.
+Kick-start your project with my new book Machine Learning Mastery With Weka, including step-by-step tutorials and clear screenshots for all examples.
+Let’s get started.
+Market Basket AnalysisPhoto by HealthGauge, some rights reserved.
+# Association Rule Learning
+I once did some consulting work for a start-up looking into customer behavior in a SaaS app. We were interested in patterns of behavior that indicated churn or conversion from free to paid accounts.
+I spent weeks pouring over the data, looking at correlations and plots. I came up with a bunch of rules that indicated outcomes and presented ideas for possible interventions to influence those outcomes.
+I came up with rules like: “User Creates x widgets in y days and logged in n times then they will convert“. I ascribed numbers to the rules such as support (the number of records that match the rule out of all record) and lift (the % increase in predictive accuracy in using the rule to predict a conversion).
+It was only after I delivered and presented the report that I released what a colossal mistake I made. I had performed Association Rule Learning by hand, when there are off-the-shelf algorithms that could have done the work for me.
+I’m sharing this story so that it sticks in your mind. If you are sifting large datasets for interesting patterns, association rule learning is a suite of methods should be using.
+
+
+
+
+# 1. Start the Weka Explorer
+In previous tutorials, we have looked at running a classifier, designing and running an experiment, algorithm tuning and ensemble methods. If you need help downloading and installing Weka, please refer to these previous posts.
+Weka GUI Chooser
+Start the Weka Explorer.
+# 2. Load the Supermarket Datasets
+Weka comes with a number of real datasets in the “data” directory of the Weka installation. This is very handy because you can explore and experiment on these well known problems and learn about the various methods in Weka at your disposal.
+Load the Supermarket dataset (data/supermarket.arff). This is a dataset of point of sale information. The data is nominal and each instance represents a customer transaction at a supermarket, the products purchased and the departments involved. There is not much information about this dataset online, although you can see this comment (“question of using supermarket.arff for academic research”) from the personal that collected the data.
+Supermarket dataset loaded in the Weka Explorer
+The data contains 4,627 instances and 217 attributes. The data is denormalized. Each attribute is binary and either has a value (“t” for true) or no value (“?” for missing). There is a nominal class attribute called “total” that indicates whether the transaction was less than \$100 (low) or greater than \$100 (high).
+We are not interested in creating a predictive model for total. Instead we are interested in what items were purchased together. We are interested in finding useful patterns in this data that may or may not be related to the predicted attributed.
+# 3. Discover Association Rules
+Click the “Associate” tab in the Weka Explorer. The “Apriori” algorithm will already be selected. This is the most well known association rule learning method because it may have been the first (Agrawal and Srikant in 1994) and it is very efficient.
+In principle the algorithm is quite simple. It builds up attribute-value (item) sets that maximize the number of instances that can be explained (coverage of the dataset). The search through item space is very much similar to the problem faced with attribute selection and subset search.
+Click the “Start” button to run Apriori on the dataset.
+# 4. Analyze Results
+The real work for association rule learning is in the interpretation of results.
+Results for the Apriori Association Rule Learning in Weka
+From looking at the “Associator output” window, you can see that the algorithm presented 10 rules learned from the supermarket dataset. The algorithm is configured to stop at 10 rules by default, you can click on the algorithm name and configure it to find and report more rules if you like by changing the “numRules” value.
+The rules discovered where:
+- biscuits=t frozen foods=t fruit=t total=high 788 ==> bread and cake=t 723 conf:(0.92)
+- baking needs=t biscuits=t fruit=t total=high 760 ==> bread and cake=t 696 conf:(0.92)
+- baking needs=t frozen foods=t fruit=t total=high 770 ==> bread and cake=t 705 conf:(0.92)
+- biscuits=t fruit=t vegetables=t total=high 815 ==> bread and cake=t 746 conf:(0.92)
+- party snack foods=t fruit=t total=high 854 ==> bread and cake=t 779 conf:(0.91)
+- biscuits=t frozen foods=t vegetables=t total=high 797 ==> bread and cake=t 725 conf:(0.91)
+- baking needs=t biscuits=t vegetables=t total=high 772 ==> bread and cake=t 701 conf:(0.91)
+- biscuits=t fruit=t total=high 954 ==> bread and cake=t 866 conf:(0.91)
+- frozen foods=t fruit=t vegetables=t total=high 834 ==> bread and cake=t 757 conf:(0.91)
+- frozen foods=t fruit=t total=high 969 ==> bread and cake=t 877 conf:(0.91)
+Very cool, right!
+You can see rules are presented in antecedent => consequent format. The number associated with the antecedent is the absolute coverage in the dataset (in this case a number out of a possible total of 4,627). The number next to the consequent is the absolute number of instances that match the antecedent and the consequent. The number in brackets on the end is the support for the rule (number of antecedent divided by the number of matching consequents). You can see that a cutoff of 91% was used in selecting rules, mentioned in the “Associator output” window and indicated in that no rule has a coverage less than 0.91.
+I don’t want to go through all 10 rules, it would be too onerous. Here are few observations:
+- We can see that all presented rules have a consequent of “bread and cake”.
+- All presented rules indicate a high total transaction amount.
+- “biscuits” an “frozen foods” appear in many of the presented rules.
+You have to be very careful about interpreting association rules. They are associations (think correlations), not necessary causally related. Also, short antecedent are likely more robust than long antecedent that are more likely to be fragile.
+Increase Basket SizePhoto by goosmurf, some rights reserved.
+If we are interested in total for example, we might want to convince people that buy biscuits, frozen foods and fruit to buy bread and cake so that they result in a high total transaction amount (Rule #1). This may sound plausible, but is flawed reasoning. The product combination does not cause a high total, it is only associated with a high total. Those 723 transactions may have a vast assortment of random items in addition to those in the rule.
+What might be interesting to test is to model the path through the store required to collect associated items and seeing if changes to that path (shorter, longer, displayed offers, etc) have an effect on transaction size or basket size.
+# Summary
+In this post you discovered the power of automatically learning association rules from large datasets. You learned that it is much more efficient approach to use an algorithm like Apriori rather than deducing rules by hand.
+You performed your first market basket analysis in Weka and learned that the real work is in the analysis of results. You discovered the careful attention to detail required when interpreting rules and that association (correlation) is not the same as causation.
+# Discover Machine Learning Without The Code!
+...with just a few a few clicks
+Discover how in my new Ebook:
+Machine Learning Mastery With Weka
+Covers self-study tutorials and end-to-end projects like:
+Loading data, visualization, build models, tuning, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+
+'''

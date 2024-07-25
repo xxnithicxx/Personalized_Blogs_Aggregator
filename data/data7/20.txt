@@ -1,0 +1,125 @@
+Automate Machine Learning Workflows with Pipelines in Python and scikit-learn
+https://machinelearningmastery.com/automate-machine-learning-workflows-pipelines-python-scikit-learn/
+2016-06-05
+There are standard workflows in a machine learning project that can be automated.
+In Python scikit-learn, Pipelines help to to clearly define and automate these workflows.
+In this post you will discover Pipelines in scikit-learn and how you can automate common machine learning workflows.
+Kick-start your project with my new book Machine Learning Mastery With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Update Jan/2017: Updated to reflect changes to the scikit-learn API in version 0.18.
+- Update March/2018: Added alternate link to download the dataset as the original appears to have been taken down.
+Automate Machine Learning Workflows with Pipelines in Python and scikit-learnPhoto by Brian Cantoni, some rights reserved.
+# Pipelines for Automating Machine Learning Workflows
+There are standard workflows in applied machine learning. Standard because they overcome common problems like data leakage in your test harness.
+Python scikit-learn provides a Pipeline utility to help automate machine learning workflows.
+Pipelines work by allowing for a linear sequence of data transforms to be chained together culminating in a modeling process that can be evaluated.
+The goal is to ensure that all of the steps in the pipeline are constrained to the data available for the evaluation, such as the training dataset or each fold of the cross validation procedure.
+You can learn more about Pipelines in scikit-learn by reading the Pipeline section of the user guide. You can also review the API documentation for the Pipeline and FeatureUnion classes in the pipeline module.
+
+
+
+
+# Pipeline 1: Data Preparation and Modeling
+An easy trap to fall into in applied machine learning is leaking data from your training dataset to your test dataset.
+To avoid this trap you need a robust test harness with strong separation of training and testing. This includes data preparation.
+Data preparation is one easy way to leak knowledge of the whole training dataset to the algorithm. For example, preparing your data using normalization or standardization on the entire training dataset before learning would not be a valid test because the training dataset would have been influenced by the scale of the data in the test set.
+Pipelines help you prevent data leakage in your test harness by ensuring that data preparation like standardization is constrained to each fold of your cross validation procedure.
+The example below demonstrates this important data preparation and model evaluation workflow. The pipeline is defined with two steps:
+- Standardize the data.
+- Learn a Linear Discriminant Analysis model.
+The pipeline is then evaluated using 10-fold cross validation.
+
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+
+Running the example provides a summary of accuracy of the setup on the dataset.
+
+# Pipeline 2: Feature Extraction and Modeling
+Feature extraction is another procedure that is susceptible to data leakage.
+Like data preparation, feature extraction procedures must be restricted to the data in your training dataset.
+The pipeline provides a handy tool called the FeatureUnion which allows the results of multiple feature selection and extraction procedures to be combined into a larger dataset on which a model can be trained. Importantly, all the feature extraction and the feature union occurs within each fold of the cross validation procedure.
+The example below demonstrates the pipeline defined with four steps:
+- Feature Extraction with Principal Component Analysis (3 features)
+- Feature Extraction with Statistical Selection (6 features)
+- Feature Union
+- Learn a Logistic Regression Model
+The pipeline is then evaluated using 10-fold cross validation.
+
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+
+Running the example provides a summary of accuracy of the pipeline on the dataset.
+
+# Summary
+In this post you discovered the difficulties of data leakage in applied machine learning.
+You discovered the Pipeline utilities in Python scikit-learn and how they can be used to automate standard applied machine learning workflows.
+You learned how to use Pipelines in two important use cases:
+- Data preparation and modeling constrained to each fold of the cross validation procedure.
+- Feature extraction and feature union constrained to each fold of the cross validation procedure.
+Do you have any questions about data leakage, Pipelines or this post? Ask your questions in the comments and I will do my best to answer.
+# Discover Fast Machine Learning in Python!
+...with just a few lines of scikit-learn code
+Learn how in my new Ebook:
+Machine Learning Mastery With Python
+Covers self-study tutorials and end-to-end projects like:
+Loading data, visualization, modeling, tuning, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+# Create a pipeline that standardizes the data then creates a model
+from pandas import read_csv
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+# load data
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv"
+names = ['preg', 'plas', 'pres', 'skin', 'test', 'mass', 'pedi', 'age', 'class']
+dataframe = read_csv(url, names=names)
+array = dataframe.values
+X = array[:,0:8]
+Y = array[:,8]
+# create pipeline
+estimators = []
+estimators.append(('standardize', StandardScaler()))
+estimators.append(('lda', LinearDiscriminantAnalysis()))
+model = Pipeline(estimators)
+# evaluate pipeline
+seed = 7
+kfold = KFold(n_splits=10, random_state=seed)
+results = cross_val_score(model, X, Y, cv=kfold)
+print(results.mean())
+0.773462064252
+# Create a pipeline that extracts features from the data then creates a model
+from pandas import read_csv
+from sklearn.model_selection import KFold
+from sklearn.model_selection import cross_val_score
+from sklearn.pipeline import Pipeline
+from sklearn.pipeline import FeatureUnion
+from sklearn.linear_model import LogisticRegression
+from sklearn.decomposition import PCA
+from sklearn.feature_selection import SelectKBest
+# load data
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/pima-indians-diabetes.data.csv"
+names = ['preg', 'plas', 'pres', 'skin', 'test', 'mass', 'pedi', 'age', 'class']
+dataframe = read_csv(url, names=names)
+array = dataframe.values
+X = array[:,0:8]
+Y = array[:,8]
+# create feature union
+features = []
+features.append(('pca', PCA(n_components=3)))
+features.append(('select_best', SelectKBest(k=6)))
+feature_union = FeatureUnion(features)
+# create pipeline
+estimators = []
+estimators.append(('feature_union', feature_union))
+estimators.append(('logistic', LogisticRegression()))
+model = Pipeline(estimators)
+# evaluate pipeline
+seed = 7
+kfold = KFold(n_splits=10, random_state=seed)
+results = cross_val_score(model, X, Y, cv=kfold)
+print(results.mean())
+0.776042378674
+'''

@@ -1,0 +1,206 @@
+A Gentle Introduction to Particle Swarm Optimization
+https://machinelearningmastery.com/a-gentle-introduction-to-particle-swarm-optimization/
+2021-09-15
+Particle swarm optimization (PSO) is one of the bio-inspired algorithms and it is a simple one to search for an optimal solution in the solution space. It is different from other optimization algorithms in such a way that only the objective function is needed and it is not dependent on the gradient or any differential form of the objective. It also has very few hyperparameters.
+In this tutorial, you will learn the rationale of PSO and its algorithm with an example. After competing this tutorial, you will know:
+- What is a particle swarm and their behavior under the PSO algorithm
+- What kind of optimization problems can be solved by PSO
+- How to solve a problem using particle swarm optimization
+- What are the variations of the PSO algorithm
+
+Kick-start your project with my new book Optimization for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+
+# Particle Swarms
+Particle Swarm Optimization was proposed by Kennedy and Eberhart in 1995. As mentioned in the original paper, sociobiologists believe a school of fish or a flock of birds that moves in a group “can profit from the experience of all other members”. In other words, while a bird flying and searching randomly for food, for instance, all birds in the flock can share their discovery and help the entire flock get the best hunt.
+Particle Swarm Optimizsation.Photo by Don DeBold, some rights reserved.
+While we can simulate the movement of a flock of birds, we can also imagine each bird is to help us find the optimal solution in a high-dimensional solution space and the best solution found by the flock is the best solution in the space. This is a heuristic solution because we can never prove the real global optimal solution can be found and it is usually not. However, we often find that the solution found by PSO is quite close to the global optimal.
+# Example Optimization Problem
+PSO is best used to find the maximum or minimum of a function defined on a multidimensional vector space. Assume we have a function f(X) that produces a real value from a vector parameter X (such as coordinate (x,y) in a plane) and X can take on virtually any value in the space (for example, f(X) is the altitude and we can find one for any point on the plane), then we can apply PSO. The PSO algorithm will return the parameter X it found that produces the minimum f(X).
+Let’s start with the following function
+f(x,y)=(x−3.14)2+(y−2.72)2+sin⁡(3x+1.41)+sin⁡(4y−1.73)
+Plot of f(x,y)
+As we can see from the plot above, this function looks like a curved egg carton. It is not a convex function and therefore it is hard to find its minimum because a local minimum found is not necessarily the global minimum.
+So how can we find the minimum point in this function? For sure, we can resort to exhaustive search: If we check the value of f(x,y) for every point on the plane, we can find the minimum point. Or we can just randomly find some sample points on the plane and see which one gives the lowest value on f(x,y) if we think it is too expensive to search every point. However, we also note from the shape of f(x,y) that if we have found a point with a smaller value of f(x,y), it is easier to find an even smaller value around its proximity.
+This is how a particle swarm optimization does. Similar to the flock of birds looking for food, we start with a number of random points on the plane (call them particles) and let them look for the minimum point in random directions. At each step, every particle should search around the minimum point it ever found as well as around the minimum point found by the entire swarm of particles. After certain iterations, we consider the minimum point of the function as the minimum point ever explored by this swarm of particles.
+# Algorithm Details
+Assume we have P particles and we denote the position of particle i at iteration t as Xi(t), which in the example of above, we have it as a coordinate Xi(t)=(xi(t),yi(t)). Besides the position, we also have a velocity for each particle, denoted as Vi(t)=(vxi(t),vyi(t)). At the next iteration, the position of each particle would be updated as
+Xi(t+1)=Xi(t)+Vi(t+1)
+or, equivalently,
+xi(t+1)=xi(t)+vxi(t+1)yi(t+1)=yi(t)+vyi(t+1)
+and at the same time, the velocities are also updated by the rule
+Vi(t+1)=wVi(t)+c1r1(pbesti–Xi(t))+c2r2(gbest–Xi(t))
+where r1 and r2 are random numbers between 0 and 1, constants w, c1, and c2 are parameters to the PSO algorithm, and pbesti is the position that gives the best f(X) value ever explored by particle i and gbest is that explored by all the particles in the swarm.
+Note that pbesti and Xi(t) are two position vectors and the difference pbesti–Xi(t) is a vector subtraction. Adding this subtraction to the original velocity Vi(t) is to bring the particle back to the position pbesti. Similar are for the difference gbest–Xi(t).
+Vector subtraction.Diagram by Benjamin D. Esham, public domain.
+We call the parameter w the inertia weight constant. It is between 0 and 1 and determines how much should the particle keep on with its previous velocity (i.e., speed and direction of the search). The parameters c1 and c2 are called the cognitive and the social coefficients respectively. They controls how much weight should be given between refining the search result of the particle itself and recognizing the search result of the swarm. We can consider these parameters controls the trade off between exploration and exploitation.
+The positions pbesti and gbest are updated in each iteration to reflect the best position ever found thus far.
+One interesting property of this algorithm that distinguishs it from other optimization algorithms is that it does not depend on the gradient of the objective function. In gradient descent, for example, we look for the minimum of a function f(X) by moving X to the direction of −∇f(X) as it is where the function going down the fastest. For any particle at the position X at the moment, how it moves does not depend on which direction is the “down hill” but only on where are pbest and gbest. This makes PSO particularly suitable if differentiating f(X) is difficult.
+Another property of PSO is that it can be parallelized easily. As we are manipulating multiple particles to find the optimal solution, each particles can be updated in parallel and we only need to collect the updated value of gbest once per iteration. This makes map-reduce architecture a perfect candidate to implement PSO.
+# Implementation
+Here we show how we can implement PSO to find the optimal solution.
+For the same function as we showed above, we can first define it as a Python function and show it in a contour plot:
+
+Contour plot of f(x,y)
+
+Here we plotted the function f(x,y) in the region of 0≤x,y≤5. We can create 20 particles at random locations in this region, together with random velocities sampled over a normal distribution with mean 0 and standard deviation 0.1, as follows:
+which we can show their position on the same contour plot:
+Initial position of particles
+From this, we can already find the gbest as the best position ever found by all the particles. Since the particles did not explore at all, their current position is their pbesti as well:
+The vector pbest_obj is the best value of the objective function found by each particle. Similarly, gbest_obj is the best scalar value of the objective function ever found by the swarm. We are using min() and argmin() functions here because we set it as a minimization problem. The position of gbest is marked as a star below
+Position of gbest is marked as a star
+Let’s set c1=c2=0.1 and w=0.8. Then we can update the positions and velocities according to the formula we mentioned above, and then update pbesti and gbest afterwards:
+The following is the position after the first iteration. We mark the best position of each particle with a black dot to distinguish from their current position, which are set in blue.
+Positions of particles after one iteration
+We can repeat the above code segment for multiple times and see how the particles explore. This is the result after the second iteration:
+Positions of particles after two iterations
+and this is after the 5th iteration, note that the position of gbest as denoted by the star changed:
+Positions of particles after 5 iterations
+and after 20th iteration, we already very close to the optimal:
+Positions of particles after 20 iterations
+This is the animation showing how we find the optimal solution as the algorithm progressed. See if you may find some resemblance to the movement of a flock of birds:
+Animation of particle movements
+So how close is our solution? In this particular example, the global minimum we found by exhaustive search is at the coordinate (3.182,3.131) and the one found by PSO algorithm above is at (3.185,3.130).
+# Variations
+All PSO algorithms are mostly the same as we mentioned above. In the above example, we set the PSO to run in a fixed number of iterations. It is trivial to set the number of iterations to run dynamically in response to the progress. For example, we can make it stop once we cannot see any update to the global best solution gbest in a number of iterations.
+Research on PSO were mostly on how to determine the hyperparameters w, c1, and c2 or varying their values as the algorithm progressed. For example, there are proposals making the inertia weight linear decreasing. There are also proposals trying to make the cognitive coefficient c1 decreasing while the social coefficient c2 increasing to bring more exploration at the beginning and more exploitation at the end. See, for example, Shi and Eberhart (1998) and Eberhart and Shi (2000).
+# Complete Example
+It should be easy to see how we can change the above code to solve a higher dimensional objective function, or switching from minimization to maximization. The following is the complete example of finding the minimum point of the function f(x,y) proposed above, together with the code to generate the plot animation:
+
+# Further Reading
+These are the original papers that proposed the particle swarm optimization, and the early research on refining its hyperparameters:
+- Kennedy J. and Eberhart R. C. Particle swarm optimization. In Proceedings of the International Conference on Neural Networks; Institute of Electrical and Electronics Engineers. Vol. 4. 1995. pp. 1942–1948. DOI: 10.1109/ICNN.1995.488968
+- Eberhart R. C. and Shi Y. Comparing inertia weights and constriction factors in particle swarm optimization. In Proceedings of the 2000 Congress on Evolutionary Computation (CEC ‘00). Vol. 1. 2000. pp. 84–88. DOI: 10.1109/CEC.2000.870279
+- Shi Y. and Eberhart R. A modified particle swarm optimizer. In Proceedings of the IEEE International Conferences on Evolutionary Computation, 1998. pp. 69–73. DOI: 10.1109/ICEC.1998.699146
+# Summary
+In this tutorial we learned:
+- How particle swarm optimization works
+- How to implement the PSO algorithm
+- Some possible variations in the algorithm
+As particle swarm optimization does not have a lot of hyper-parameters and very permissive on the objective function, it can be used to solve a wide range of problems.
+# Get a Handle on Modern Optimization Algorithms!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Optimization for Machine Learning
+It provides self-study tutorials with full working code on:
+Gradient Descent, Genetic Algorithms, Hill Climbing, Curve Fitting, RMSProp, Adam,
+and much more...
+See What's Inside
+
+'''
+import numpy as np
+import matplotlib.pyplot as plt
+
+def f(x,y):
+    "Objective function"
+    return (x-3.14)**2 + (y-2.72)**2 + np.sin(3*x+1.41) + np.sin(4*y-1.73)
+
+# Contour plot: With the global minimum showed as "X" on the plot
+x, y = np.array(np.meshgrid(np.linspace(0,5,100), np.linspace(0,5,100)))
+z = f(x, y)
+x_min = x.ravel()[z.argmin()]
+y_min = y.ravel()[z.argmin()]
+plt.figure(figsize=(8,6))
+plt.imshow(z, extent=[0, 5, 0, 5], origin='lower', cmap='viridis', alpha=0.5)
+plt.colorbar()
+plt.plot([x_min], [y_min], marker='x', markersize=5, color="white")
+contours = plt.contour(x, y, z, 10, colors='black', alpha=0.4)
+plt.clabel(contours, inline=True, fontsize=8, fmt="%.0f")
+plt.show()
+n_particles = 20
+X = np.random.rand(2, n_particles) * 5
+V = np.random.randn(2, n_particles) * 0.1
+pbest = X
+pbest_obj = f(X[0], X[1])
+gbest = pbest[:, pbest_obj.argmin()]
+gbest_obj = pbest_obj.min()
+c1 = c2 = 0.1
+w = 0.8
+# One iteration
+r = np.random.rand(2)
+V = w * V + c1*r[0]*(pbest - X) + c2*r[1]*(gbest.reshape(-1,1)-X)
+X = X + V
+obj = f(X[0], X[1])
+pbest[:, (pbest_obj >= obj)] = X[:, (pbest_obj >= obj)]
+pbest_obj = np.array([pbest_obj, obj]).max(axis=0)
+gbest = pbest[:, pbest_obj.argmin()]
+gbest_obj = pbest_obj.min()
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+
+def f(x,y):
+    "Objective function"
+    return (x-3.14)**2 + (y-2.72)**2 + np.sin(3*x+1.41) + np.sin(4*y-1.73)
+    
+# Compute and plot the function in 3D within [0,5]x[0,5]
+x, y = np.array(np.meshgrid(np.linspace(0,5,100), np.linspace(0,5,100)))
+z = f(x, y)
+
+# Find the global minimum
+x_min = x.ravel()[z.argmin()]
+y_min = y.ravel()[z.argmin()]
+
+# Hyper-parameter of the algorithm
+c1 = c2 = 0.1
+w = 0.8
+
+# Create particles
+n_particles = 20
+np.random.seed(100)
+X = np.random.rand(2, n_particles) * 5
+V = np.random.randn(2, n_particles) * 0.1
+
+# Initialize data
+pbest = X
+pbest_obj = f(X[0], X[1])
+gbest = pbest[:, pbest_obj.argmin()]
+gbest_obj = pbest_obj.min()
+
+def update():
+    "Function to do one iteration of particle swarm optimization"
+    global V, X, pbest, pbest_obj, gbest, gbest_obj
+    # Update params
+    r1, r2 = np.random.rand(2)
+    V = w * V + c1*r1*(pbest - X) + c2*r2*(gbest.reshape(-1,1)-X)
+    X = X + V
+    obj = f(X[0], X[1])
+    pbest[:, (pbest_obj >= obj)] = X[:, (pbest_obj >= obj)]
+    pbest_obj = np.array([pbest_obj, obj]).min(axis=0)
+    gbest = pbest[:, pbest_obj.argmin()]
+    gbest_obj = pbest_obj.min()
+
+# Set up base figure: The contour map
+fig, ax = plt.subplots(figsize=(8,6))
+fig.set_tight_layout(True)
+img = ax.imshow(z, extent=[0, 5, 0, 5], origin='lower', cmap='viridis', alpha=0.5)
+fig.colorbar(img, ax=ax)
+ax.plot([x_min], [y_min], marker='x', markersize=5, color="white")
+contours = ax.contour(x, y, z, 10, colors='black', alpha=0.4)
+ax.clabel(contours, inline=True, fontsize=8, fmt="%.0f")
+pbest_plot = ax.scatter(pbest[0], pbest[1], marker='o', color='black', alpha=0.5)
+p_plot = ax.scatter(X[0], X[1], marker='o', color='blue', alpha=0.5)
+p_arrow = ax.quiver(X[0], X[1], V[0], V[1], color='blue', width=0.005, angles='xy', scale_units='xy', scale=1)
+gbest_plot = plt.scatter([gbest[0]], [gbest[1]], marker='*', s=100, color='black', alpha=0.4)
+ax.set_xlim([0,5])
+ax.set_ylim([0,5])
+
+def animate(i):
+    "Steps of PSO: algorithm update and show in plot"
+    title = 'Iteration {:02d}'.format(i)
+    # Update params
+    update()
+    # Set picture
+    ax.set_title(title)
+    pbest_plot.set_offsets(pbest.T)
+    p_plot.set_offsets(X.T)
+    p_arrow.set_offsets(X.T)
+    p_arrow.set_UVC(V[0], V[1])
+    gbest_plot.set_offsets(gbest.reshape(1,-1))
+    return ax, pbest_plot, p_plot, p_arrow, gbest_plot
+
+anim = FuncAnimation(fig, animate, frames=list(range(1,50)), interval=500, blit=False, repeat=True)
+anim.save("PSO.gif", dpi=120, writer="imagemagick")
+
+print("PSO found best solution at f({})={}".format(gbest, gbest_obj))
+print("Global optimal at f({})={}".format([x_min,y_min], f(x_min,y_min)))
+'''

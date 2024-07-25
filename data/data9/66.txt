@@ -1,0 +1,582 @@
+How to Develop a Weighted Average Ensemble With Python
+https://machinelearningmastery.com/weighted-average-ensemble-with-python/
+2021-05-04
+Weighted average ensembles assume that some models in the ensemble have more skill than others and give them more contribution when making predictions.
+The weighted average or weighted sum ensemble is an extension over voting ensembles that assume all models are equally skillful and make the same proportional contribution to predictions made by the ensemble.
+Each model is assigned a fixed weight that is multiplied by the prediction made by the model and used in the sum or average prediction calculation. The challenge of this type of ensemble is how to calculate, assign, or search for model weights that result in performance that is better than any contributing model and an ensemble that uses equal model weights.
+In this tutorial, you will discover how to develop Weighted Average Ensembles for classification and regression.
+After completing this tutorial, you will know:
+- Weighted Average Ensembles are an extension to voting ensembles where model votes are proportional to model performance.
+- How to develop weighted average ensembles using the voting ensemble from scikit-learn.
+- How to evaluate the Weighted Average Ensembles for classification and regression and confirm the models are skillful.
+Kick-start your project with my new book Ensemble Learning Algorithms With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Updated May/2021: Fixed definition of weighted average.
+How to Develop a Weighted Average Ensemble With PythonPhoto by Alaina McDavid, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into four parts; they are:
+- Weighted Average Ensemble
+- Develop a Weighted Average Ensemble
+- Weighted Average Ensemble for Classification
+- Weighted Average Ensemble for Regression
+# Weighted Average Ensemble
+Weighted average or weighted sum ensemble is an ensemble machine learning approach that combines the predictions from multiple models, where the contribution of each model is weighted proportionally to its capability or skill.
+The weighted average ensemble is related to the voting ensemble.
+Voting ensembles are composed of multiple machine learning models where the predictions from each model are averaged directly. For regression, this involves calculating the arithmetic mean of the predictions made by ensemble members. For classification, this may involve calculating the statistical mode (most common class label) or similar voting scheme or summing the probabilities predicted for each class and selecting the class with the largest summed probability.
+For more on voting ensembles, see the tutorial:
+- How to Develop Voting Ensembles With Python
+A limitation of the voting ensemble technique is that it assumes that all models in the ensemble are equally effective. This may not be the case as some models may be better than others, especially if different machine learning algorithms are used to train each model ensemble member.
+An alternative to voting is to assume that ensemble members are not all equally capable and instead some models are better than others and should be given more votes or more of a seat when making a prediction. This provides the motivation for the weighted sum or weighted average ensemble method.
+In regression, an average prediction is calculated using the arithmetic mean, such as the sum of the predictions divided by the total predictions made. For example, if an ensemble had three ensemble members, the reductions may be:
+- Model 1: 97.2
+- Model 2: 100.0
+- Model 3: 95.8
+The mean prediction would be calculated as follows:
+- yhat = (97.2 + 100.0 + 95.8) / 3
+- yhat = 293 / 3
+- yhat = 97.666
+A weighted average prediction involves first assigning a fixed weight coefficient to each ensemble member. This could be a floating-point value between 0 and 1, representing a percentage of the weight. It could also be an integer starting at 1, representing the number of votes to give each model.
+For example, we may have the fixed weights of 0.84, 0.87, 0.75 for the ensemble member. These weights can be used to calculate the weighted average by multiplying each prediction by the model’s weight to give a weighted sum, then dividing the value by the sum of the weights. For example:
+- yhat = ((97.2 * 0.84) + (100.0 * 0.87) + (95.8 * 0.75)) / (0.84 + 0.87 + 0.75)
+- yhat = (81.648 + 87 + 71.85) / (0.84 + 0.87 + 0.75)
+- yhat = 240.498 / 2.46
+- yhat = 97.763
+We can see that as long as the scores have the same scale, and the weights have the same scale and are maximizing (meaning that larger weights are better), the weighted sum results in a sensible value, and in turn, the weighted average is also sensible, meaning the scale of the outcome matches the scale of the scores.
+This same approach can be used to calculate the weighted sum of votes for each crisp class label or the weighted sum of probabilities for each class label on a classification problem.
+The challenging aspect of using a weighted average ensemble is how to choose the relative weighting for each ensemble member.
+There are many approaches that can be used. For example, the weights may be chosen based on the skill of each model, such as the classification accuracy or negative error, where large weights mean a better-performing model. Performance may be calculated on the dataset used for training or a holdout dataset, the latter of which may be more relevant.
+The scores of each model can be used directly or converted into a different value, such as the relative ranking for each model. Another approach might be to use a search algorithm to test different combinations of weights.
+Now that we are familiar with the weighted average ensemble method, let’s look at how to develop and evaluate them.
+# Develop a Weighted Average Ensemble
+In this section, we will develop, evaluate, and use weighted average or weighted sum ensemble models.
+We can implement weighted average ensembles manually, although this is not required as we can use the voting ensemble in the scikit-learn library to achieve the desired effect. Specifically, the VotingRegressor and VotingClassifier classes can be used for regression and classification respectively and both provide a “weights” argument that specifies the relative contribution of each ensemble member when making a prediction.
+A list of base-models is provided via the “estimators” argument. This is a Python list where each element in the list is a tuple with the name of the model and the configured model instance. Each model in the list must have a unique name.
+For example, we can define a weighted average ensemble for classification with two ensemble members as follows:
+Additionally, the voting ensemble for classification provides the “voting” argument that supports both hard voting (‘hard‘) for combining crisp class labels and soft voting (‘soft‘) for combining class probabilities when calculating the weighted sum for prediction; for example:
+Soft voting is generally preferred if the contributing models support predicting class probabilities, as it often results in better performance. The same holds for the weighted sum of predicted probabilities.
+Now that we are familiar with how to use the voting ensemble API to develop weighted average ensembles, let’s look at some worked examples.
+# Weighted Average Ensemble for Classification
+In this section, we will look at using Weighted Average Ensemble for a classification problem.
+First, we can use the make_classification() function to create a synthetic binary classification problem with 10,000 examples and 20 input features.
+The complete example is listed below.
+Running the example creates the dataset and summarizes the shape of the input and output components.
+Next, we can evaluate a Weighted Average Ensemble algorithm on this dataset.
+First, we will split the dataset into train and test sets with a 50-50 split. We will then split the full training set into a subset for training the models and a subset for validation.
+Next, we will define a function to create a list of models to use in the ensemble. In this case, we will use a diverse collection of classification models, including logistic regression, a decision tree, and naive Bayes.
+Next, we need to weigh each ensemble member.
+In this case, we will use the performance of each ensemble model on the training dataset as the relative weighting of the model when making predictions. Performance will be calculated using classification accuracy as a percentage of correct predictions between 0 and 1, with larger values meaning a better model, and in turn, more contribution to the prediction.
+Each ensemble model will first be fit on the training set, then evaluated on the validation set. The accuracy on the validation set will be used as the model weighting.
+The evaluate_models() function below implements this, returning the performance of each model.
+We can then call this function to get the scores and use them as a weighting for the ensemble.
+We can then fit the ensemble on the full training dataset and evaluate it on the holdout test set.
+Tying this together, the complete example is listed below.
+Running the example first evaluates each standalone model and reports the accuracy scores that will be used as model weights. Finally, the weighted average ensemble is fit and evaluated on the test reporting the performance.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the voting ensemble achieved a classification accuracy of about 90.960 percent.
+Our expectation is that the ensemble will perform better than any of the contributing ensemble members. The problem is the accuracy scores for the models used as weightings cannot be directly compared to the performance of the ensemble because the members were evaluated on a subset of training and the ensemble was evaluated on the test dataset.
+We can update the example and add an evaluation of each standalone model for comparison.
+We also expect the weighted average ensemble to perform better than an equally weighted voting ensemble.
+This can also be checked by explicitly evaluating the voting ensemble.
+Tying this together, the complete example is listed below.
+Running the example first prepares and evaluates the weighted average ensemble as before, then reports the performance of each contributing model evaluated in isolation, and finally the voting ensemble that uses an equal weighting for the contributing models.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the weighted average ensemble performs better than any contributing ensemble member.
+We can also see that an equal weighting ensemble (voting) achieved an accuracy of about 90.620, which is less than the weighted ensemble that achieved the slightly higher 90.760 percent accuracy.
+Next, let’s take a look at how to develop and evaluate a weighted average ensemble for regression.
+# Weighted Average Ensemble for Regression
+In this section, we will look at using Weighted Average Ensemble for a regression problem.
+First, we can use the make_regression() function to create a synthetic regression problem with 1,000 examples and 20 input features.
+The complete example is listed below.
+Running the example creates the dataset and summarizes the shape of the input and output components.
+Next, we can evaluate a Weighted Average Ensemble model on this dataset.
+First, we can split the dataset into train and test sets, then further split the training set into train and validation sets so that we can estimate the performance of each contributing model.
+We can define the list of models to use in the ensemble. In this case, we will use k-nearest neighbors, decision tree, and support vector regression.
+Next, we can update the evaluate_models() function to calculate the mean absolute error (MAE) for each ensemble member on a hold out validation dataset.
+We will use the negative MAE scores as a weight where large error values closer to zero indicate a better performing model.
+We can then call this function to get the scores and use them to define the weighted average ensemble for regression.
+We can then fit the ensemble on the entire training dataset and evaluate the performance on the holdout test dataset.
+We expect the ensemble to perform better than any contributing ensemble member, and this can be checked directly by evaluating each member model on the full train and test sets independently.
+Finally, we also expect the weighted average ensemble to perform better than the same ensemble with an equal weighting. This too can be confirmed.
+Tying this together, the complete example of evaluating a weighted average ensemble for regression is listed below.
+Running the example first reports the negative MAE of each ensemble member that will be used as scores, followed by the performance of the weighted average ensemble. Finally, the performance of each independent model is reported along with the performance of an ensemble with equal weight.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the weighted average ensemble achieved a mean absolute error of about 105.158, which is worse (large error) than the standalone kNN model that achieved an error of about 100.169. We can also see that the voting ensemble that assumes an equal weight for each model also performs better than the weighted average ensemble with an error of about 102.706.
+The worse-than-expected performance for the weighted average ensemble might be related to the choice of how models were weighted.
+An alternate strategy for weighting is to use a ranking to indicate the number of votes that each ensemble has in the weighted average.
+For example, the worst-performing model has 1 vote the second-worst 2 votes and the best model 3 votes, in the case of three ensemble members.
+This can be achieved using the argsort() numpy function.
+The argsort function returns the indexes of the values in an array if they were sorted. So, if we had the array [300, 100, 200], the index of the smallest value is 1, the index of the next largest value is 2, and the index of the next largest value is 0.
+Therefore, the argsort of [300, 100, 200] is [1, 2, 0].
+We can then argsort the result of the argsort to give a ranking of the data in the original array. To see how, an argsort of [1, 2, 0] would indicate that index 2 is the smallest value, followed by index 0 and ending with index 1.
+Therefore, the argsort of [1, 2, 0] is [2, 0, 1]. Put another way, the argsort of the argsort of [300, 100, 200] is [2, 0, 1], which is the relative ranking of each value in the array if values were sorted in ascending order. That is:
+- 300: Has rank 2
+- 100: Has rank 0
+- 200: Has rank 1
+We can make this clear with a small example, listed below.
+Running the example first reports the raw data, then the argsort of the raw data and the argsort of the argsort of the raw data.
+The results match our manual calculation.
+We can use the argsort of the argsort of the model scores to calculate a relative ranking of each ensemble member. If negative mean absolute errors are sorted in ascending order, then the best model would have the largest negative error, and in turn, the highest rank. The worst performing model would have the smallest negative error, and in turn, the lowest rank.
+Again, we can confirm this with a worked example.
+Running the example, we can see that the first model has the best score (-10) and the second model has the worst score (-100).
+The argsort of the argsort of the scores shows that the best model gets the highest rank (most votes) with a value of 2 and the worst model gets the lowest rank (least votes) with a value of 0.
+In practice, we don’t want any model to have zero votes because it would be excluded from the ensemble. Therefore, we can add 1 to all rankings.
+After calculating the scores, we can calculate the argsort of the argsort of the model scores to give the rankings. Then use the model rankings as the model weights for the weighted average ensemble.
+Tying this together, the complete example of a weighted average ensemble for regression with model ranking used as model weighs is listed below.
+Running the example first scores each model, then converts the scores into rankings. The weighted average ensemble using ranking is then evaluated and compared to the performance of each standalone model and the ensemble with equally weighted models.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the ranking was performed as expected, with the best-performing member kNN with a score of 101 is assigned the rank of 3, and the other models are ranked accordingly. We can see that the weighted average ensemble achieved the MAE of about 96.692, which is better than any individual model and the unweighted voting ensemble.
+This highlights the importance of exploring alternative approaches for selecting model weights in the ensemble.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- How to Develop a Weighted Average Ensemble for Deep Learning Neural Networks
+- How to Develop Voting Ensembles With Python
+- numpy.argsort API.
+- sklearn.ensemble.VotingClassifier API.
+- sklearn.ensemble.VotingRegressor API.
+- Weighted arithmetic mean, Wikipedia.
+- Ensemble averaging (machine learning), Wikipedia.
+# Summary
+In this tutorial, you discovered how to develop Weighted Average Ensembles for classification and regression.
+Specifically, you learned:
+- Weighted Average Ensembles are an extension to voting ensembles where model votes are proportional to model performance.
+- How to develop weighted average ensembles using the voting ensemble from scikit-learn.
+- How to evaluate the Weighted Average Ensembles for classification and regression and confirm the models are skillful.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Modern Ensemble Learning!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Ensemble Learning Algorithms With Python
+It provides self-study tutorials with full working code on:
+Stacking, Voting, Boosting, Bagging, Blending, Super Learner,
+and much more...
+See What's Inside
+
+'''
+
+# define the models in the ensemble
+models = [('lr',LogisticRegression()),('svm',SVC())]
+# define the weight of each model in the ensemble
+weights = [0.7, 0.9]
+# create a weighted sum ensemble
+ensemble = VotingClassifier(estimators=models, weights=weights)
+
+# define the models in the ensemble
+models = [('lr',LogisticRegression()),('svm',SVC())]
+# define the weight of each model in the ensemble
+weights = [0.7, 0.9]
+# create a weighted sum ensemble
+ensemble = VotingClassifier(estimators=models, weights=weights, voting='soft')
+# test classification dataset
+from sklearn.datasets import make_classification
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=20, n_informative=15, n_redundant=5, random_state=7)
+# summarize the dataset
+print(X.shape, y.shape)
+(10000, 20) (10000,)
+
+# split dataset into train and test sets
+X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.50, random_state=1)
+# split the full train set into train and validation sets
+X_train, X_val, y_train, y_val = train_test_split(X_train_full, y_train_full, test_size=0.33, random_state=1)
+# get a list of base models
+def get_models():
+	models = list()
+	models.append(('lr', LogisticRegression()))
+	models.append(('cart', DecisionTreeClassifier()))
+	models.append(('bayes', GaussianNB()))
+	return models
+# evaluate each base model
+def evaluate_models(models, X_train, X_val, y_train, y_val):
+	# fit and evaluate the models
+	scores = list()
+	for name, model in models:
+		# fit the model
+		model.fit(X_train, y_train)
+		# evaluate the model
+		yhat = model.predict(X_val)
+		acc = accuracy_score(y_val, yhat)
+		# store the performance
+		scores.append(acc)
+		# report model performance
+	return scores
+
+# fit and evaluate each model
+scores = evaluate_models(models, X_train, X_val, y_train, y_val)
+# create the ensemble
+ensemble = VotingClassifier(estimators=models, voting='soft', weights=scores)
+
+# fit the ensemble on the training dataset
+ensemble.fit(X_train, y_train)
+# make predictions on test set
+yhat = ensemble.predict(X_test)
+# evaluate predictions
+score = accuracy_score(y_test, yhat)
+print('Weighted Avg Accuracy: %.3f' % (score*100))
+# evaluate a weighted average ensemble for classification
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import VotingClassifier
+
+# get a list of base models
+def get_models():
+	models = list()
+	models.append(('lr', LogisticRegression()))
+	models.append(('cart', DecisionTreeClassifier()))
+	models.append(('bayes', GaussianNB()))
+	return models
+
+# evaluate each base model
+def evaluate_models(models, X_train, X_val, y_train, y_val):
+	# fit and evaluate the models
+	scores = list()
+	for name, model in models:
+		# fit the model
+		model.fit(X_train, y_train)
+		# evaluate the model
+		yhat = model.predict(X_val)
+		acc = accuracy_score(y_val, yhat)
+		# store the performance
+		scores.append(acc)
+		# report model performance
+	return scores
+
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=20, n_informative=15, n_redundant=5, random_state=7)
+# split dataset into train and test sets
+X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.50, random_state=1)
+# split the full train set into train and validation sets
+X_train, X_val, y_train, y_val = train_test_split(X_train_full, y_train_full, test_size=0.33, random_state=1)
+# create the base models
+models = get_models()
+# fit and evaluate each model
+scores = evaluate_models(models, X_train, X_val, y_train, y_val)
+print(scores)
+# create the ensemble
+ensemble = VotingClassifier(estimators=models, voting='soft', weights=scores)
+# fit the ensemble on the training dataset
+ensemble.fit(X_train_full, y_train_full)
+# make predictions on test set
+yhat = ensemble.predict(X_test)
+# evaluate predictions
+score = accuracy_score(y_test, yhat)
+print('Weighted Avg Accuracy: %.3f' % (score*100))
+[0.8896969696969697, 0.8575757575757575, 0.8812121212121212]
+Weighted Avg Accuracy: 90.960
+
+# evaluate each standalone model
+scores = evaluate_models(models, X_train_full, X_test, y_train_full, y_test)
+for i in range(len(models)):
+	print('>%s: %.3f' % (models[i][0], scores[i]*100))
+
+# evaluate equal weighting
+ensemble = VotingClassifier(estimators=models, voting='soft')
+ensemble.fit(X_train_full, y_train_full)
+yhat = ensemble.predict(X_test)
+score = accuracy_score(y_test, yhat)
+print('Voting Accuracy: %.3f' % (score*100))
+# evaluate a weighted average ensemble for classification compared to base model
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import VotingClassifier
+
+# get a list of base models
+def get_models():
+	models = list()
+	models.append(('lr', LogisticRegression()))
+	models.append(('cart', DecisionTreeClassifier()))
+	models.append(('bayes', GaussianNB()))
+	return models
+
+# evaluate each base model
+def evaluate_models(models, X_train, X_val, y_train, y_val):
+	# fit and evaluate the models
+	scores = list()
+	for name, model in models:
+		# fit the model
+		model.fit(X_train, y_train)
+		# evaluate the model
+		yhat = model.predict(X_val)
+		acc = accuracy_score(y_val, yhat)
+		# store the performance
+		scores.append(acc)
+		# report model performance
+	return scores
+
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=20, n_informative=15, n_redundant=5, random_state=7)
+# split dataset into train and test sets
+X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.50, random_state=1)
+# split the full train set into train and validation sets
+X_train, X_val, y_train, y_val = train_test_split(X_train_full, y_train_full, test_size=0.33, random_state=1)
+# create the base models
+models = get_models()
+# fit and evaluate each model
+scores = evaluate_models(models, X_train, X_val, y_train, y_val)
+print(scores)
+# create the ensemble
+ensemble = VotingClassifier(estimators=models, voting='soft', weights=scores)
+# fit the ensemble on the training dataset
+ensemble.fit(X_train_full, y_train_full)
+# make predictions on test set
+yhat = ensemble.predict(X_test)
+# evaluate predictions
+score = accuracy_score(y_test, yhat)
+print('Weighted Avg Accuracy: %.3f' % (score*100))
+# evaluate each standalone model
+scores = evaluate_models(models, X_train_full, X_test, y_train_full, y_test)
+for i in range(len(models)):
+	print('>%s: %.3f' % (models[i][0], scores[i]*100))
+# evaluate equal weighting
+ensemble = VotingClassifier(estimators=models, voting='soft')
+ensemble.fit(X_train_full, y_train_full)
+yhat = ensemble.predict(X_test)
+score = accuracy_score(y_test, yhat)
+print('Voting Accuracy: %.3f' % (score*100))
+[0.8896969696969697, 0.8703030303030304, 0.8812121212121212]
+Weighted Avg Accuracy: 90.760
+>lr: 87.800
+>cart: 88.180
+>bayes: 87.300
+Voting Accuracy: 90.620
+# test regression dataset
+from sklearn.datasets import make_regression
+# define dataset
+X, y = make_regression(n_samples=10000, n_features=20, n_informative=10, noise=0.3, random_state=7)
+# summarize the dataset
+print(X.shape, y.shape)
+(10000, 20) (10000,)
+
+# split dataset into train and test sets
+X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.50, random_state=1)
+# split the full train set into train and validation sets
+X_train, X_val, y_train, y_val = train_test_split(X_train_full, y_train_full, test_size=0.33, random_state=1)
+# get a list of base models
+def get_models():
+	models = list()
+	models.append(('knn', KNeighborsRegressor()))
+	models.append(('cart', DecisionTreeRegressor()))
+	models.append(('svm', SVR()))
+	return models
+# evaluate each base model
+def evaluate_models(models, X_train, X_val, y_train, y_val):
+	# fit and evaluate the models
+	scores = list()
+	for name, model in models:
+		# fit the model
+		model.fit(X_train, y_train)
+		# evaluate the model
+		yhat = model.predict(X_val)
+		mae = mean_absolute_error(y_val, yhat)
+		# store the performance
+		scores.append(-mae)
+		# report model performance
+	return scores
+
+# fit and evaluate each model
+scores = evaluate_models(models, X_train, X_val, y_train, y_val)
+print(scores)
+# create the ensemble
+ensemble = VotingRegressor(estimators=models, weights=scores)
+
+# fit the ensemble on the training dataset
+ensemble.fit(X_train_full, y_train_full)
+# make predictions on test set
+yhat = ensemble.predict(X_test)
+# evaluate predictions
+score = mean_absolute_error(y_test, yhat)
+print('Weighted Avg MAE: %.3f' % (score))
+
+# evaluate each standalone model
+scores = evaluate_models(models, X_train_full, X_test, y_train_full, y_test)
+for i in range(len(models)):
+	print('>%s: %.3f' % (models[i][0], scores[i]))
+
+# evaluate equal weighting
+ensemble = VotingRegressor(estimators=models)
+ensemble.fit(X_train_full, y_train_full)
+yhat = ensemble.predict(X_test)
+score = mean_absolute_error(y_test, yhat)
+print('Voting MAE: %.3f' % (score))
+# evaluate a weighted average ensemble for regression
+from sklearn.datasets import make_regression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.svm import SVR
+from sklearn.ensemble import VotingRegressor
+
+# get a list of base models
+def get_models():
+	models = list()
+	models.append(('knn', KNeighborsRegressor()))
+	models.append(('cart', DecisionTreeRegressor()))
+	models.append(('svm', SVR()))
+	return models
+
+# evaluate each base model
+def evaluate_models(models, X_train, X_val, y_train, y_val):
+	# fit and evaluate the models
+	scores = list()
+	for name, model in models:
+		# fit the model
+		model.fit(X_train, y_train)
+		# evaluate the model
+		yhat = model.predict(X_val)
+		mae = mean_absolute_error(y_val, yhat)
+		# store the performance
+		scores.append(-mae)
+		# report model performance
+	return scores
+
+# define dataset
+X, y = make_regression(n_samples=10000, n_features=20, n_informative=10, noise=0.3, random_state=7)
+# split dataset into train and test sets
+X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.50, random_state=1)
+# split the full train set into train and validation sets
+X_train, X_val, y_train, y_val = train_test_split(X_train_full, y_train_full, test_size=0.33, random_state=1)
+# create the base models
+models = get_models()
+# fit and evaluate each model
+scores = evaluate_models(models, X_train, X_val, y_train, y_val)
+print(scores)
+# create the ensemble
+ensemble = VotingRegressor(estimators=models, weights=scores)
+# fit the ensemble on the training dataset
+ensemble.fit(X_train_full, y_train_full)
+# make predictions on test set
+yhat = ensemble.predict(X_test)
+# evaluate predictions
+score = mean_absolute_error(y_test, yhat)
+print('Weighted Avg MAE: %.3f' % (score))
+# evaluate each standalone model
+scores = evaluate_models(models, X_train_full, X_test, y_train_full, y_test)
+for i in range(len(models)):
+	print('>%s: %.3f' % (models[i][0], scores[i]))
+# evaluate equal weighting
+ensemble = VotingRegressor(estimators=models)
+ensemble.fit(X_train_full, y_train_full)
+yhat = ensemble.predict(X_test)
+score = mean_absolute_error(y_test, yhat)
+print('Voting MAE: %.3f' % (score))
+[-101.97000126284476, -142.26014983127837, -153.9765827528269]
+Weighted Avg MAE: 105.158
+>knn: -100.169
+>cart: -134.487
+>svm: -138.195
+Voting MAE: 102.706
+# demonstrate argsort
+from numpy import argsort
+# data
+x = [300, 100, 200]
+print(x)
+# argsort of data
+print(argsort(x))
+# arg sort of argsort of data
+print(argsort(argsort(x)))
+[300, 100, 200]
+[1 2 0]
+[2 0 1]
+# demonstrate argsort with negative scores
+from numpy import argsort
+# data
+x = [-10, -100, -80]
+print(x)
+# argsort of data
+print(argsort(x))
+# arg sort of argsort of data
+print(argsort(argsort(x)))
+[-10, -100, -80]
+[1 2 0]
+[2 0 1]
+
+# fit and evaluate each model
+scores = evaluate_models(models, X_train, X_val, y_train, y_val)
+print(scores)
+ranking = 1 + argsort(argsort(scores))
+print(ranking)
+# create the ensemble
+ensemble = VotingRegressor(estimators=models, weights=ranking)
+# evaluate a weighted average ensemble for regression with rankings for model weights
+from numpy import argsort
+from sklearn.datasets import make_regression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.svm import SVR
+from sklearn.ensemble import VotingRegressor
+
+# get a list of base models
+def get_models():
+	models = list()
+	models.append(('knn', KNeighborsRegressor()))
+	models.append(('cart', DecisionTreeRegressor()))
+	models.append(('svm', SVR()))
+	return models
+
+# evaluate each base model
+def evaluate_models(models, X_train, X_val, y_train, y_val):
+	# fit and evaluate the models
+	scores = list()
+	for name, model in models:
+		# fit the model
+		model.fit(X_train, y_train)
+		# evaluate the model
+		yhat = model.predict(X_val)
+		mae = mean_absolute_error(y_val, yhat)
+		# store the performance
+		scores.append(-mae)
+		# report model performance
+	return scores
+
+# define dataset
+X, y = make_regression(n_samples=10000, n_features=20, n_informative=10, noise=0.3, random_state=7)
+# split dataset into train and test sets
+X_train_full, X_test, y_train_full, y_test = train_test_split(X, y, test_size=0.50, random_state=1)
+# split the full train set into train and validation sets
+X_train, X_val, y_train, y_val = train_test_split(X_train_full, y_train_full, test_size=0.33, random_state=1)
+# create the base models
+models = get_models()
+# fit and evaluate each model
+scores = evaluate_models(models, X_train, X_val, y_train, y_val)
+print(scores)
+ranking = 1 + argsort(argsort(scores))
+print(ranking)
+# create the ensemble
+ensemble = VotingRegressor(estimators=models, weights=ranking)
+# fit the ensemble on the training dataset
+ensemble.fit(X_train_full, y_train_full)
+# make predictions on test set
+yhat = ensemble.predict(X_test)
+# evaluate predictions
+score = mean_absolute_error(y_test, yhat)
+print('Weighted Avg MAE: %.3f' % (score))
+# evaluate each standalone model
+scores = evaluate_models(models, X_train_full, X_test, y_train_full, y_test)
+for i in range(len(models)):
+	print('>%s: %.3f' % (models[i][0], scores[i]))
+# evaluate equal weighting
+ensemble = VotingRegressor(estimators=models)
+ensemble.fit(X_train_full, y_train_full)
+yhat = ensemble.predict(X_test)
+score = mean_absolute_error(y_test, yhat)
+print('Voting MAE: %.3f' % (score))
+[-101.97000126284476, -141.51998518020065, -153.9765827528269]
+[3 2 1]
+Weighted Avg MAE: 96.692
+>knn: -100.169
+>cart: -132.976
+>svm: -138.195
+Voting MAE: 102.832
+'''

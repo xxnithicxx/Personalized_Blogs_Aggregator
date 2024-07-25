@@ -1,0 +1,186 @@
+How to Implement a Beam Search Decoder for Natural Language Processing
+https://machinelearningmastery.com/beam-search-decoder-natural-language-processing/
+2018-01-04
+Natural language processing tasks, such as caption generation and machine translation, involve generating sequences of words.
+Models developed for these problems often operate by generating probability distributions across the vocabulary of output words and it is up to decoding algorithms to sample the probability distributions to generate the most likely sequences of words.
+In this tutorial, you will discover the greedy search and beam search decoding algorithms that can be used on text generation problems.
+After completing this tutorial, you will know:
+- The problem of decoding on text generation problems.
+- The greedy search decoder algorithm and how to implement it in Python.
+- The beam search decoder algorithm and how to implement it in Python.
+Kick-start your project with my new book Deep Learning for Natural Language Processing, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Update May/2020: Fixed bug in the beam search implementation (thanks everyone who pointed it out, and Constantin Weisser for his clean fix)
+How to Implement Beam Search Decoder for Natural Language ProcessingPhoto by See1,Do1,Teach1, some rights reserved.
+# Decoder for Text Generation
+In natural language processing tasks such as caption generation, text summarization, and machine translation, the prediction required is a sequence of words.
+It is common for models developed for these types of problems to output a probability distribution over each word in the vocabulary for each word in the output sequence. It is then left to a decoder process to transform the probabilities into a final sequence of words.
+You are likely to encounter this when working with recurrent neural networks on natural language processing tasks where text is generated as an output. The final layer in the neural network model has one neuron for each word in the output vocabulary and a softmax activation function is used to output a likelihood of each word in the vocabulary being the next word in the sequence.
+Decoding the most likely output sequence involves searching through all the possible output sequences based on their likelihood. The size of the vocabulary is often tens or hundreds of thousands of words, or even millions of words. Therefore, the search problem is exponential in the length of the output sequence and is intractable (NP-complete) to search completely.
+In practice, heuristic search methods are used to return one or more approximate or “good enough” decoded output sequences for a given prediction.
+As the size of the search graph is exponential in the source sentence length, we have to use approximations to find a solution efficiently.
+— Page 272, Handbook of Natural Language Processing and Machine Translation, 2011.
+Candidate sequences of words are scored based on their likelihood. It is common to use a greedy search or a beam search to locate candidate sequences of text. We will look at both of these decoding algorithms in this post.
+Each individual prediction has an associated score (or probability) and we are interested in output sequence with maximal score (or maximal probability) […] One popular approximate technique is using greedy prediction, taking the highest scoring item at each stage. While this approach is often effective, it is obviously non-optimal. Indeed, using beam search as an approximate search often works far better than the greedy approach.
+— Page 227, Neural Network Methods in Natural Language Processing, 2017.
+
+
+
+
+# Greedy Search Decoder
+A simple approximation is to use a greedy search that selects the most likely word at each step in the output sequence.
+This approach has the benefit that it is very fast, but the quality of the final output sequences may be far from optimal.
+We can demonstrate the greedy search approach to decoding with a small contrived example in Python.
+We can start off with a prediction problem that involves a sequence of 10 words. Each word is predicted as a probability distribution over a vocabulary of 5 words.
+We will assume that the words have been integer encoded, such that the column index can be used to look-up the associated word in the vocabulary. Therefore, the task of decoding becomes the task of selecting a sequence of integers from the probability distributions.
+The argmax() mathematical function can be used to select the index of an array that has the largest value. We can use this function to select the word index that is most likely at each step in the sequence. This function is provided directly in numpy.
+The greedy_decoder() function below implements this decoder strategy using the argmax function.
+Putting this all together, the complete example demonstrating the greedy decoder is listed below.
+Running the example outputs a sequence of integers that could then be mapped back to words in the vocabulary.
+
+# Beam Search Decoder
+Another popular heuristic is the beam search that expands upon the greedy search and returns a list of most likely output sequences.
+Instead of greedily choosing the most likely next step as the sequence is constructed, the beam search expands all possible next steps and keeps the k most likely, where k is a user-specified parameter and controls the number of beams or parallel searches through the sequence of probabilities.
+The local beam search algorithm keeps track of k states rather than just one. It begins with k randomly generated states. At each step, all the successors of all k states are generated. If any one is a goal, the algorithm halts. Otherwise, it selects the k best successors from the complete list and repeats.
+— Pages 125-126, Artificial Intelligence: A Modern Approach (3rd Edition), 2009.
+We do not need to start with random states; instead, we start with the k most likely words as the first step in the sequence.
+Common beam width values are 1 for a greedy search and values of 5 or 10 for common benchmark problems in machine translation. Larger beam widths result in better performance of a model as the multiple candidate sequences increase the likelihood of better matching a target sequence. This increased performance results in a decrease in decoding speed.
+In NMT, new sentences are translated by a simple beam search decoder that finds a translation that approximately maximizes the conditional probability of a trained NMT model. The beam search strategy generates the translation word by word from left-to-right while keeping a fixed number (beam) of active candidates at each time step. By increasing the beam size, the translation performance can increase at the expense of significantly reducing the decoder speed.
+— Beam Search Strategies for Neural Machine Translation, 2017.
+The search process can halt for each candidate separately either by reaching a maximum length, by reaching an end-of-sequence token, or by reaching a threshold likelihood.
+Let’s make this concrete with an example.
+We can define a function to perform the beam search for a given sequence of probabilities and beam width parameter k. At each step, each candidate sequence is expanded with all possible next steps. Each candidate step is scored by multiplying the probabilities together. The k sequences with the most likely probabilities are selected and all other candidates are pruned. The process then repeats until the end of the sequence.
+Probabilities are small numbers and multiplying small numbers together creates very small numbers. To avoid underflowing the floating point numbers, the natural logarithm of the probabilities are added together, which keeps the numbers larger and manageable. Further, it is also common to perform the search by minimizing the score. This final tweak means that we can sort all candidate sequences in ascending order by their score and select the first k as the most likely candidate sequences.
+The beam_search_decoder() function below implements the beam search decoder.
+We can tie this together with the sample data from the previous section and this time return the 3 most likely sequences.
+Running the example prints both the integer sequences and their log likelihood.
+Experiment with different k values.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Argmax on Wikipedia
+- Numpy argmax API
+- Beam search on Wikipedia
+- Beam Search Strategies for Neural Machine Translation, 2017.
+- Artificial Intelligence: A Modern Approach (3rd Edition), 2009.
+- Neural Network Methods in Natural Language Processing, 2017.
+- Handbook of Natural Language Processing and Machine Translation, 2011.
+- Pharaoh: a beam search decoder for phrase-based statistical machine translation models, 2004.
+# Summary
+In this tutorial, you discovered the greedy search and beam search decoding algorithms that can be used on text generation problems.
+Specifically, you learned:
+- The problem of decoding on text generation problems.
+- The greedy search decoder algorithm and how to implement it in Python.
+- The beam search decoder algorithm and how to implement it in Python.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop Deep Learning models for Text Data Today!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Deep Learning for Natural Language Processing
+It provides self-study tutorials on topics like:
+Bag-of-Words, Word Embedding, Language Models, Caption Generation, Text Translation and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+# define a sequence of 10 words over a vocab of 5 words
+data = [[0.1, 0.2, 0.3, 0.4, 0.5],
+		[0.5, 0.4, 0.3, 0.2, 0.1],
+		[0.1, 0.2, 0.3, 0.4, 0.5],
+		[0.5, 0.4, 0.3, 0.2, 0.1],
+		[0.1, 0.2, 0.3, 0.4, 0.5],
+		[0.5, 0.4, 0.3, 0.2, 0.1],
+		[0.1, 0.2, 0.3, 0.4, 0.5],
+		[0.5, 0.4, 0.3, 0.2, 0.1],
+		[0.1, 0.2, 0.3, 0.4, 0.5],
+		[0.5, 0.4, 0.3, 0.2, 0.1]]
+data = array(data)
+# greedy decoder
+def greedy_decoder(data):
+	# index for largest probability each row
+	return [argmax(s) for s in data]
+from numpy import array
+from numpy import argmax
+
+# greedy decoder
+def greedy_decoder(data):
+	# index for largest probability each row
+	return [argmax(s) for s in data]
+
+# define a sequence of 10 words over a vocab of 5 words
+data = [[0.1, 0.2, 0.3, 0.4, 0.5],
+		[0.5, 0.4, 0.3, 0.2, 0.1],
+		[0.1, 0.2, 0.3, 0.4, 0.5],
+		[0.5, 0.4, 0.3, 0.2, 0.1],
+		[0.1, 0.2, 0.3, 0.4, 0.5],
+		[0.5, 0.4, 0.3, 0.2, 0.1],
+		[0.1, 0.2, 0.3, 0.4, 0.5],
+		[0.5, 0.4, 0.3, 0.2, 0.1],
+		[0.1, 0.2, 0.3, 0.4, 0.5],
+		[0.5, 0.4, 0.3, 0.2, 0.1]]
+data = array(data)
+# decode sequence
+result = greedy_decoder(data)
+print(result)
+[4, 0, 4, 0, 4, 0, 4, 0, 4, 0]
+# beam search
+def beam_search_decoder(data, k):
+	sequences = [[list(), 0.0]]
+	# walk over each step in sequence
+	for row in data:
+		all_candidates = list()
+		# expand each current candidate
+		for i in range(len(sequences)):
+			seq, score = sequences[i]
+			for j in range(len(row)):
+				candidate = [seq + [j], score - log(row[j])]
+				all_candidates.append(candidate)
+		# order all candidates by score
+		ordered = sorted(all_candidates, key=lambda tup:tup[1])
+		# select k best
+		sequences = ordered[:k]
+	return sequences
+from math import log
+from numpy import array
+from numpy import argmax
+
+# beam search
+def beam_search_decoder(data, k):
+	sequences = [[list(), 0.0]]
+	# walk over each step in sequence
+	for row in data:
+		all_candidates = list()
+		# expand each current candidate
+		for i in range(len(sequences)):
+			seq, score = sequences[i]
+			for j in range(len(row)):
+				candidate = [seq + [j], score - log(row[j])]
+				all_candidates.append(candidate)
+		# order all candidates by score
+		ordered = sorted(all_candidates, key=lambda tup:tup[1])
+		# select k best
+		sequences = ordered[:k]
+	return sequences
+
+# define a sequence of 10 words over a vocab of 5 words
+data = [[0.1, 0.2, 0.3, 0.4, 0.5],
+		[0.5, 0.4, 0.3, 0.2, 0.1],
+		[0.1, 0.2, 0.3, 0.4, 0.5],
+		[0.5, 0.4, 0.3, 0.2, 0.1],
+		[0.1, 0.2, 0.3, 0.4, 0.5],
+		[0.5, 0.4, 0.3, 0.2, 0.1],
+		[0.1, 0.2, 0.3, 0.4, 0.5],
+		[0.5, 0.4, 0.3, 0.2, 0.1],
+		[0.1, 0.2, 0.3, 0.4, 0.5],
+		[0.5, 0.4, 0.3, 0.2, 0.1]]
+data = array(data)
+# decode sequence
+result = beam_search_decoder(data, 3)
+# print result
+for seq in result:
+	print(seq)
+[[4, 0, 4, 0, 4, 0, 4, 0, 4, 0], 6.931471805599453]
+[[4, 0, 4, 0, 4, 0, 4, 0, 4, 1], 7.154615356913663]
+[[4, 0, 4, 0, 4, 0, 4, 0, 3, 0], 7.154615356913663]
+'''

@@ -1,0 +1,121 @@
+10 Command Line Recipes for Deep Learning on Amazon Web Services
+https://machinelearningmastery.com/command-line-recipes-deep-learning-amazon-web-services/
+2017-08-06
+Running large deep learning processes on Amazon Web Services EC2 is a cheap and effective way to learn and develop models.
+For just a few dollars you can get access to tens of gigabytes of RAM, tens of CPU cores, and multiple GPUs. I highly recommend it.
+If you are new to EC2 or the Linux command line, there are a suite of commands that you will find invaluable when running your deep learning scripts in the cloud.
+In this tutorial, you will discover my private list of the 10 commands I use every time I use EC2 to fit large deep learning models.
+After reading this post, you will know:
+- How to copy your data to and from your EC2 instances.
+- How to set up your scripts to run for days, weeks, or months safely.
+- How to monitor processes, the system, and GPU performance.
+Kick-start your project with my new book Deep Learning With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+Note: All commands executed from your workstation assume you are running a Linux-type environment (e.g. Linux, OS X or cygwin).
+Do you have any other tips, tricks, or favorite commands for running models on EC2?
+Let me know in the comments below.
+10 Command Line Recipes for Deep Learning on Amazon Web ServicesPhoto by chascar, some rights reserved.
+# Overview
+The commands presented in this post assume that your AWS EC2 instance is already running.
+For consistency, a few other assumptions are made:
+- Your server IP address is 54.218.86.47; change this to the IP address of your server instance.
+- Your username is ec2-user; change this to your user name on your instance.
+- Your SSH key is located in ~/.ssh/ and has the filename aws-keypair.pem; change this to your SSH key location and filename.
+- You are working with Python scripts.
+If you need help setting up and running a GPU-based AWS EC2 instance for deep learning, see the tutorial:
+- How To Develop and Evaluate Large Deep Learning Models with Keras on Amazon Web Services
+# 1. Log in from Your Workstation to the Server
+You must log into the server before you can do anything useful.
+You can log in easily using the SSH secure shell.
+I recommend storing your SSH key in your ~/.ssh/ directory with a useful name. I use the name aws-keypair.pem. Remember: the file must have the permissions 600.
+The following command will log you into your server instance. Remember to change the username and IP address to your relevant username and server instance IP address.
+
+# 2. Copy Files from Your Workstation to the Server
+You copy files from your workstation to your server instance using secure copy (scp).
+The example below, run on your workstation, will copy the script.py Python script in the local directory on your workstation to your server instance.
+
+# 3. Run Script as Background Process on the Server
+You can run your Python script as a background process.
+Further, you can run it in such a way that it will ignore signals from other processes, ignore any standard input (stdin), and forward all output and errors to a log file.
+In my experience, all of this is required for long-running scripts for fitting large deep learning models.
+This assumes you are running the script.py Python script located in the /home/ec2-user/ directory and that you want the output of this script forwarded to the file script.py.log located in the same directory.
+Tune for your needs.
+If this is your first experience with nohup, you can learn more here:
+- nohup on Wikipedia
+If this is your first experience with redirecting standard input (stdin), standard output (stout), and standard error (sterr), you can learn more here:
+- Redirection on Wikipedia
+# 4. Run Script on a Specific GPU on the Server
+I recommend running multiple scripts at the same time, if your AWS EC2 instance can handle it for your problem.
+For example, your chosen EC2 instance may have 4 GPUs, and you could choose to run one script on each.
+With CUDA, you can specify which GPU device to use with the environment variable CUDA_VISIBLE_DEVICES.
+We can use the same command above to run the script and specify the specific GPU device to use as follows:
+If you have 4 GPU devices on your instance, you can specify CUDA_VISIBLE_DEVICES=0 to CUDA_VISIBLE_DEVICES=3.
+I expect this would work for the Theano backend, but I have only tested it with the TensorFlow backend for Keras.
+You can learn more about CUDA_VISIBLE_DEVICES in the post:
+- CUDA Pro Tip: Control GPU Visibility with CUDA_VISIBLE_DEVICES
+# 5. Monitor Script Output on the Server
+You can monitor the output of your script while it is running.
+This may be useful if you output a score each epoch or after each algorithm run.
+This example will list the last few lines of your script log file and update the output as new lines are added to the script.
+Amazon may aggressively close your terminal if the screen does not get new output in a while.
+An alternative is to use the watch command. I have found Amazon will keep this terminal open:
+I have found that standard out (stout) from python scripts does not appear to be updated frequently.
+I don’t know if this is an EC2 thing or a Python thing. This means you may not see the output in the log updated often. It seems to be buffered and output when the buffer hits fixed sizes or at the end of a run.
+Do you know more about this?
+Let me know in the comments below.
+# 6. Monitor System and Process Performance on the Server
+It is a good idea to monitor the EC2 system performance. Especially the amount of RAM you are using and have left.
+You can do this using the top command that will update every few seconds.
+You can also monitor the system and just your process, if you know its process identifier (PID).
+
+# 7. Monitor GPU Performance on the Server
+It is a good idea to keep an eye on your GPU performance.
+Again, keep an eye on GPU utilization, on which GPUs are running, if you plan on running multiple scripts in parallel and in GPU RAM usage.
+You can use the nvidia-smi command to keep an eye on GPU usage. I like to use the watch command that keeps the terminal open and clears the screen for each new result.
+
+# 8. Check What Scripts Are Still Running on the Server
+It is also important to keep an eye on which scripts are still running.
+You can do this with the ps command.
+Again, I like to use the watch command to keep the terminal open.
+
+# 9. Edit a File on Server
+I recommend not editing files on the server unless you really have to.
+Nevertheless, you can edit a file in place using the vi editor.
+The example below will open your script in vi.
+Of course, you can use your favorite command line editor, like emacs; this note is really for you if you are new to the Unix command line.
+If this is your first exposure to vi, you can learn more here:
+- vi on Wikipedia
+# 10. From Your Workstation Download Files from the Server
+I recommend saving your model and any results and graphs explicitly to new and separate files as part of your script.
+You can download these files from your server instance to your workstation using secure copy (scp).
+The example below is run from your workstation and will copy all PNG files from your home directory to your workstation.
+
+# Additional Tips and Tricks
+This section lists some additional tips when working heavily on AWS EC2.
+- Run multiple scripts at a time. I recommend selecting hardware that has multiple GPUs and running multiple scripts at a time to make full use of the platform.
+- Write and edit scripts on your workstation only. Treat EC2 as a pseudo-production environment and only ever copy scripts and data there to run. Do all development on your workstation and write small tests of your code to ensure it will work as expected.
+- Save script outputs explicitly to a file. Save results, graphs, and models to files that can be downloaded later to your workstation for analysis and application.
+- Use the watch command. Amazon aggressively kills terminal sessions that have no activity. You can keep an eye on things using the watch command that send data frequently enough to keep the terminal open.
+- Run commands from your workstation. Any of the commands listed above intended to be run on the server can also be run from your workstation by prefixing the command with “ssh –i ~/.ssh/aws-keypair.pem ec2-user@54.218.86.47” and quoting the command you want to run. This can be useful to check in on processes throughout the day.
+# Summary
+In this tutorial, you discovered the 10 commands that I use every time I am training large deep learning models on AWS EC2 instances with GPUs.
+Specifically, you learned:
+- How to copy your data to and from your EC2 instances.
+- How to set up your scripts to run for days, weeks, or months safely.
+- How to monitor processes, the system, and GPU performance.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+'''
+ssh -i ~/.ssh/aws-keypair.pem ec2-user@54.218.86.47
+scp -i ~/.ssh/aws-keypair.pem script.py ec2-user@54.218.86.47:~/
+nohup python /home/ec2-user/script.py >/home/ec2-user/script.py.log </dev/null 2>&1 &
+CUDA_VISIBLE_DEVICES=0 nohup python /home/ec2-user/script.py >/home/ec2-user/script.py.log </dev/null 2>&1 &
+tail -f script.py.log
+watch "tail script.py.log"
+top -M
+top -p PID -M
+watch "nvidia-smi"
+watch "ps -ef | grep python"
+vi ~/script.py
+scp -i ~/.ssh/aws-keypair.pem ec2-user@54.218.86.47:~/*.png .
+'''

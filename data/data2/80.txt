@@ -1,0 +1,214 @@
+How to Get Reproducible Results with Keras
+https://machinelearningmastery.com/reproducible-results-neural-networks-keras/
+2017-06-13
+Neural network algorithms are stochastic.
+This means they make use of randomness, such as initializing to random weights, and in turn the same network trained on the same data can produce different results.
+This can be confusing to beginners as the algorithm appears unstable, and in fact they are by design. The random initialization allows the network to learn a good approximation for the function being learned.
+Nevertheless, there are times when you need the exact same result every time the same network is trained on the same data. Such as for a tutorial, or perhaps operationally.
+In this tutorial, you will discover how you can seed the random number generator so that you can get the same results from the same network on the same data, every time.
+Kick-start your project with my new book Deep Learning With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Get Reproducible Results from Neural Networks with KerasPhoto by Samuel John, some rights reserved.
+# Tutorial Overview
+This tutorial is broken down into 6 parts. They are:
+- Why do I Get Different Results Every Time?
+- Demonstration of Different Results
+- The Solutions
+- Seed Random Numbers with the Theano Backend
+- Seed Random Numbers with the TensorFlow Backend
+- What if I Am Still Getting Different Results?
+This tutorial assumes you have a Python SciPy environment installed. You can use either Python 2 or 3 with this example.
+This tutorial assumes you have Keras (v2.0.3+) installed with either the TensorFlow (v1.1.0+) or Theano (v0.9+) backend.
+This tutorial also assumes you have scikit-learn, Pandas, NumPy, and Matplotlib installed.
+If you need help setting up your Python environment, see this post:
+- How to Setup a Python Environment for Machine Learning and Deep Learning with Anaconda
+# Why do I Get Different Results Every Time?
+This is a common question I see from beginners to the field of neural networks and deep learning.
+This misunderstanding may also come in the form of questions like:
+- How do I get stable results?
+- How do I get repeatable results?
+- What seed should I use?
+Neural networks use randomness by design to ensure they effectively learn the function being approximated for the problem. Randomness is used because this class of machine learning algorithm performs better with it than without.
+The most common form of randomness used in neural networks is the random initialization of the network weights. Although randomness can be used in other areas, here is just a short list:
+- Randomness in Initialization, such as weights.
+- Randomness in Regularization, such as dropout.
+- Randomness in Layers, such as word embedding.
+- Randomness in Optimization, such as stochastic optimization.
+These sources of randomness, and more, mean that when you run the exact same neural network algorithm on the exact same data, you are guaranteed to get different results.
+For more on the why behind stochastic algorithms, see the post:
+- Embrace Randomness in Machine Learning
+# Demonstration of Different Results
+We can demonstrate the stochastic nature of neural networks with a small example.
+In this section, we will develop a Multilayer Perceptron model to learn a short sequence of numbers increasing by 0.1 from 0.0 to 0.9. Given 0.0, the model must predict 0.1; given 0.1, the model must output 0.2; and so on.
+The code to prepare the data is listed below.
+We will use a network with 1 input, 10 neurons in the hidden layer, and 1 output. The network will use a mean squared error loss function and will be trained using the efficient ADAM algorithm.
+The network needs about 1,000 epochs to solve this problem effectively, but we will only train it for 100 epochs. This is to ensure we get a model that makes errors when making predictions.
+After the network is trained, we will make predictions on the dataset and print the mean squared error.
+The code for the network is listed below.
+In the example, we will create the network 10 times and print 10 different network scores.
+The complete code listing is provided below.
+Running the example will print a different accuracy in each line.
+Your specific results will differ. A sample output is provided below.
+
+# The Solutions
+The are two main solutions.
+The traditional and practical way to address this problem is to run your network many times (30+) and use statistics to summarize the performance of your model, and compare your model to other models.
+I strongly recommend this approach, but it is not always possible due to the very long training times of some models.
+For more on this approach, see:
+- How to Evaluate the Skill of Deep Learning Models
+Alternately, another solution is to use a fixed seed for the random number generator.
+Random numbers are generated using a pseudo-random number generator. A random number generator is a mathematical function that will generate a long sequence of numbers that are random enough for general purpose use, such as in machine learning algorithms.
+Random number generators require a seed to kick off the process, and it is common to use the current time in milliseconds as the default in most implementations. This is to ensure different sequences of random numbers are generated each time the code is run, by default.
+This seed can also be specified with a specific number, such as “1”, to ensure that the same sequence of random numbers is generated each time the code is run.
+The specific seed value does not matter as long as it stays the same for each run of your code.
+The specific way to set the random number generator differs depending on the backend, and we will look at how to do this in Theano and TensorFlow.
+# Seed Random Numbers with the Theano Backend
+Generally, Keras gets its source of randomness from the NumPy random number generator.
+For the most part, so does the Theano backend.
+We can seed the NumPy random number generator by calling the seed() function from the random module, as follows:
+The importing and calling of the seed function is best done at the top of your code file.
+This is a best practice because it is possible that some randomness is used when various Keras or Theano (or other) libraries are imported as part of their initialization, even before they are directly used.
+We can add the two lines to the top of our example above and run it two times.
+You should see the same list of mean squared error values each time you run the code (perhaps with some minor variation due to precision on different machines), as follows:
+Your results should match mine (ignoring minor differences of precision).
+# Seed Random Numbers with the TensorFlow Backend
+Keras does get its source of randomness from the NumPy random number generator, so this must be seeded regardless of whether you are using a Theano or TensorFlow backend.
+It must be seeded by calling the seed() function at the top of the file before any other imports or other code.
+In addition, TensorFlow has its own random number generator that must also be seeded by calling the set_random_seed() function immediately after the NumPy random number generator, as follows:
+To be crystal clear, the top of your code file must have the following 4 lines before any others;
+You can use the same seed for both, or different seeds. I don’t think it makes much difference as the sources of randomness feed into different processes.
+Adding these 4 lines to the above example will allow the code to produce the same results every time it is run. You should see the same mean squared error values as those listed below (perhaps with some minor variation due to precision on different machines):
+Your results should match mine (ignoring minor differences of precision).
+# What if I Am Still Getting Different Results?
+To re-iterate, the most robust way to report results and compare models is to repeat your experiment many times (30+) and use summary statistics.
+If this is not possible, you can get 100% repeatable results by seeding the random number generators used by your code. The solutions above should cover most situations, but not all.
+What if you have followed the above instructions and still get different results from the same algorithm on the same data?
+It is possible that there are other sources of randomness that you have not accounted for.
+Perhaps your code is using an additional library that uses a different random number generator that too must be seeded.
+Try cutting your code back to the minimum required (e.g. one data sample, one training epoch, etc.) and carefully read the API documentation in an effort to narrow down additional third-party libraries introducing randomness.
+All of the above examples assume the code was run on a CPU.
+It is possible that when using the GPU to train your models, the backend may be configured to use a sophisticated stack of GPU libraries, and that some of these may introduce their own source of randomness that you may or may not be able to account for.
+For example, there is some evidence that if you are using Nvidia cuDNN in your stack, that this may introduce additional sources of randomness and prevent the exact reproducibility of your results.
+It is possible that because of the sophistication of your model and the parallel nature of training, that you are getting unreproducible results.
+This is very likely caused by efficiencies made by the backend library and perhaps the inability to use the sequence of random numbers across cores.
+I have not seen this myself, but see signs in some GitHub issues and StackOverflow questions.
+You can try to reduce the complexity of your model to see if this affects the reproducibility of results, if only to narrow down the cause.
+I would suggest reading up on how your backend uses randomness and see if there are any options open to you.
+In Theano, see:
+- Random Numbers
+- Friendly random numbers
+- Using Random Numbers
+In TensorFlow, see:
+- Constants, Sequences, and Random Values
+- tf.set_random_seed
+Also, consider searching for other people with the same issue for further insight. Some great places to search include:
+- Keras Issues on GitHub
+- Theano Issues on Github
+- TensorFlow Issues on GitHub
+- StackOverflow general programming Q&A
+- CrossValidated machine learning Q&A
+# Summary
+In this tutorial, you discovered how to get reproducible results for neural network models in Keras.
+Specifically, you learned:
+- That neural networks are stochastic by design and that the source of randomness can be fixed to make results reproducible.
+- That you can seed the random number generators in NumPy and TensorFlow and this will make most Keras code 100% reproducible.
+- That there are some cases where there are additional sources of randomness and you have ideas on how to seek them out and perhaps fix them too.
+Did this tutorial help?
+Share your experience in the comments.
+Are you still getting unreproducible results with Keras?
+Share your experience; perhaps someone else here can help.
+'''
+# create sequence
+length = 10
+sequence = [i/float(length) for i in range(length)]
+# create X/y pairs
+df = DataFrame(sequence)
+df = concat([df.shift(1), df], axis=1)
+df.dropna(inplace=True)
+# convert to MLPfriendly format
+values = df.values
+X, y = values[:,0], values[:,1]
+# design network
+model = Sequential()
+model.add(Dense(10, input_dim=1))
+model.add(Dense(1))
+model.compile(loss='mean_squared_error', optimizer='adam')
+# fit network
+model.fit(X, y, epochs=100, batch_size=len(X), verbose=0)
+# forecast
+yhat = model.predict(X, verbose=0)
+print(mean_squared_error(y, yhat[:,0]))
+from pandas import DataFrame
+from pandas import concat
+from keras.models import Sequential
+from keras.layers import Dense
+from sklearn.metrics import mean_squared_error
+
+# fit MLP to dataset and print error
+def fit_model(X, y):
+	# design network
+	model = Sequential()
+	model.add(Dense(10, input_dim=1))
+	model.add(Dense(1))
+	model.compile(loss='mean_squared_error', optimizer='adam')
+	# fit network
+	model.fit(X, y, epochs=100, batch_size=len(X), verbose=0)
+	# forecast
+	yhat = model.predict(X, verbose=0)
+	print(mean_squared_error(y, yhat[:,0]))
+
+# create sequence
+length = 10
+sequence = [i/float(length) for i in range(length)]
+# create X/y pairs
+df = DataFrame(sequence)
+df = concat([df.shift(1), df], axis=1)
+df.dropna(inplace=True)
+# convert to MLP friendly format
+values = df.values
+X, y = values[:,0], values[:,1]
+# repeat experiment
+repeats = 10
+for _ in range(repeats):
+	fit_model(X, y)
+0.0282584265697
+0.0457025913022
+0.145698137198
+0.0873461454407
+0.0309397604521
+0.046649185173
+0.0958450337178
+0.0130660263779
+0.00625176026631
+0.00296055161492
+from numpy.random import seed
+seed(1)
+0.169326527063
+2.75750621228e-05
+0.0183287291562
+1.93553737255e-07
+0.0549871087449
+0.0906326807824
+0.00337575114075
+0.00414857518259
+8.14587362008e-08
+0.0522927019639
+from numpy.random import seed
+seed(1)
+from tensorflow import set_random_seed
+set_random_seed(2)
+from numpy.random import seed
+seed(1)
+from tensorflow import set_random_seed
+set_random_seed(2)
+0.224045112999
+0.00154879478823
+0.00387589994044
+0.0292376881968
+0.00945528404353
+0.013305765525
+0.0206255228201
+0.0359538356108
+0.00441943512128
+0.298706569397
+'''

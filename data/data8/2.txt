@@ -1,0 +1,289 @@
+HyperOpt for Automated Machine Learning With Scikit-Learn
+https://machinelearningmastery.com/hyperopt-for-automated-machine-learning-with-scikit-learn/
+2020-09-10
+Automated Machine Learning (AutoML) refers to techniques for automatically discovering well-performing models for predictive modeling tasks with very little user involvement.
+HyperOpt is an open-source library for large scale AutoML and HyperOpt-Sklearn is a wrapper for HyperOpt that supports AutoML with HyperOpt for the popular Scikit-Learn machine learning library, including the suite of data preparation transforms and classification and regression algorithms.
+In this tutorial, you will discover how to use HyperOpt for automatic machine learning with Scikit-Learn in Python.
+After completing this tutorial, you will know:
+- Hyperopt-Sklearn is an open-source library for AutoML with scikit-learn data preparation and machine learning models.
+- How to use Hyperopt-Sklearn to automatically discover top-performing models for classification tasks.
+- How to use Hyperopt-Sklearn to automatically discover top-performing models for regression tasks.
+Let’s get started.
+HyperOpt for Automated Machine Learning With Scikit-LearnPhoto by Neil Williamson, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into four parts; they are:
+- HyperOpt and HyperOpt-Sklearn
+- How to Install and Use HyperOpt-Sklearn
+- HyperOpt-Sklearn for Classification
+- HyperOpt-Sklearn for Regression
+# HyperOpt and HyperOpt-Sklearn
+HyperOpt is an open-source Python library for Bayesian optimization developed by James Bergstra.
+It is designed for large-scale optimization for models with hundreds of parameters and allows the optimization procedure to be scaled across multiple cores and multiple machines.
+The library was explicitly used to optimize machine learning pipelines, including data preparation, model selection, and model hyperparameters.
+Our approach is to expose the underlying expression graph of how a performance metric (e.g. classification accuracy on validation examples) is computed from hyperparameters that govern not only how individual processing steps are applied, but even which processing steps are included.
+— Making a Science of Model Search: Hyperparameter Optimization in Hundreds of Dimensions for Vision Architectures, 2013.
+HyperOpt is challenging to use directly, requiring the optimization procedure and search space to be carefully specified.
+An extension to HyperOpt was created called HyperOpt-Sklearn that allows the HyperOpt procedure to be applied to data preparation and machine learning models provided by the popular Scikit-Learn open-source machine learning library.
+HyperOpt-Sklearn wraps the HyperOpt library and allows for the automatic search of data preparation methods, machine learning algorithms, and model hyperparameters for classification and regression tasks.
+… we introduce Hyperopt-Sklearn: a project that brings the benefits of automatic algorithm configuration to users of Python and scikit-learn. Hyperopt-Sklearn uses Hyperopt to describe a search space over possible configurations of Scikit-Learn components, including preprocessing and classification modules.
+— Hyperopt-Sklearn: Automatic Hyperparameter Configuration for Scikit-Learn, 2014.
+Now that we are familiar with HyperOpt and HyperOpt-Sklearn, let’s look at how to use HyperOpt-Sklearn.
+# How to Install and Use HyperOpt-Sklearn
+The first step is to install the HyperOpt library.
+This can be achieved using the pip package manager as follows:
+Once installed, we can confirm that the installation was successful and check the version of the library by typing the following command:
+This will summarize the installed version of HyperOpt, confirming that a modern version is being used.
+Next, we must install the HyperOpt-Sklearn library.
+This too can be installed using pip, although we must perform this operation manually by cloning the repository and running the installation from the local files, as follows:
+Again, we can confirm that the installation was successful by checking the version number with the following command:
+This will summarize the installed version of HyperOpt-Sklearn, confirming that a modern version is being used.
+Now that the required libraries are installed, we can review the HyperOpt-Sklearn API.
+Using HyperOpt-Sklearn is straightforward. The search process is defined by creating and configuring an instance of the HyperoptEstimator class.
+The algorithm used for the search can be specified via the “algo” argument, the number of evaluations performed in the search is specified via the “max_evals” argument, and a limit can be imposed on evaluating each pipeline via the “trial_timeout” argument.
+Many different optimization algorithms are available, including:
+- Random Search
+- Tree of Parzen Estimators
+- Annealing
+- Tree
+- Gaussian Process Tree
+The “Tree of Parzen Estimators” is a good default, and you can learn more about the types of algorithms in the paper “Algorithms for Hyper-Parameter Optimization. [PDF]”
+For classification tasks, the “classifier” argument specifies the search space of models, and for regression, the “regressor” argument specifies the search space of models, both of which can be set to use predefined lists of models provided by the library, e.g. “any_classifier” and “any_regressor“.
+Similarly, the search space of data preparation is specified via the “preprocessing” argument and can also use a pre-defined list of preprocessing steps via “any_preprocessing.
+For more on the other arguments to the search, you can review the source code for the class directly:
+- Arguments to the HyperoptEstimator Class
+Once the search is defined, it can be executed by calling the fit() function.
+At the end of the run, the best-performing model can be evaluated on new data by calling the score() function.
+Finally, we can retrieve the Pipeline of transforms, models, and model configurations that performed the best on the training dataset via the best_model() function.
+Now that we are familiar with the API, let’s look at some worked examples.
+# HyperOpt-Sklearn for Classification
+In this section, we will use HyperOpt-Sklearn to discover a model for the sonar dataset.
+The sonar dataset is a standard machine learning dataset comprised of 208 rows of data with 60 numerical input variables and a target variable with two class values, e.g. binary classification.
+Using a test harness of repeated stratified 10-fold cross-validation with three repeats, a naive model can achieve an accuracy of about 53 percent. A top-performing model can achieve accuracy on this same test harness of about 88 percent. This provides the bounds of expected performance on this dataset.
+The dataset involves predicting whether sonar returns indicate a rock or simulated mine.
+- Sonar Dataset (sonar.csv)
+- Sonar Dataset Description (sonar.names)
+No need to download the dataset; we will download it automatically as part of our worked examples.
+The example below downloads the dataset and summarizes its shape.
+Running the example downloads the dataset and splits it into input and output elements. As expected, we can see that there are 208 rows of data with 60 input variables.
+Next, let’s use HyperOpt-Sklearn to find a good model for the sonar dataset.
+We can perform some basic data preparation, including converting the target string to class labels, then split the dataset into train and test sets.
+Next, we can define the search procedure. We will explore all classification algorithms and all data transforms available to the library and use the TPE, or Tree of Parzen Estimators, search algorithm, described in “Algorithms for Hyper-Parameter Optimization.”
+The search will evaluate 50 pipelines and limit each evaluation to 30 seconds.
+We then start the search.
+At the end of the run, we will report the performance of the model on the holdout dataset and summarize the best performing pipeline.
+Tying this together, the complete example is listed below.
+Running the example may take a few minutes.
+The progress of the search will be reported and you will see some warnings that you can safely ignore.
+At the end of the run, the best-performing model is evaluated on the holdout dataset and the Pipeline discovered is printed for later use.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the chosen model achieved an accuracy of about 85.5 percent on the holdout test set. The Pipeline involves a gradient boosting model with no pre-processing.
+The printed model can then be used directly, e.g. the code copy-pasted into another project.
+Next, let’s take a look at using HyperOpt-Sklearn for a regression predictive modeling problem.
+# HyperOpt-Sklearn for Regression
+In this section, we will use HyperOpt-Sklearn to discover a model for the housing dataset.
+The housing dataset is a standard machine learning dataset comprised of 506 rows of data with 13 numerical input variables and a numerical target variable.
+Using a test harness of repeated stratified 10-fold cross-validation with three repeats, a naive model can achieve a mean absolute error (MAE) of about 6.6. A top-performing model can achieve a MAE on this same test harness of about 1.9. This provides the bounds of expected performance on this dataset.
+The dataset involves predicting the house price given details of the house suburb in the American city of Boston.
+- Housing Dataset (housing.csv)
+- Housing Description (housing.names)
+No need to download the dataset; we will download it automatically as part of our worked examples.
+The example below downloads the dataset and summarizes its shape.
+Running the example downloads the dataset and splits it into input and output elements. As expected, we can see that there are 63 rows of data with one input variable.
+Next, we can use HyperOpt-Sklearn to find a good model for the auto insurance dataset.
+Using HyperOpt-Sklearn for regression is the same as using it for classification, except the “regressor” argument must be specified.
+In this case, we want to optimize the MAE, therefore, we will set the “loss_fn” argument to the mean_absolute_error() function provided by the scikit-learn library.
+Tying this together, the complete example is listed below.
+Running the example may take a few minutes.
+The progress of the search will be reported and you will see some warnings that you can safely ignore.
+At the end of the run, the best performing model is evaluated on the holdout dataset and the Pipeline discovered is printed for later use.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the chosen model achieved a MAE of about 0.883 on the holdout test set, which appears skillful. The Pipeline involves an XGBRegressor model with no pre-processing.
+Note: for the search to use XGBoost, you must have the XGBoost library installed.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Making a Science of Model Search: Hyperparameter Optimization in Hundreds of Dimensions for Vision Architectures, 2013.
+- Hyperopt GitHub Project.
+- Hyperopt Homepage.
+- Hyperopt-Sklearn GitHub Project.
+- Hyperopt-Sklearn Homepage.
+- Hyperopt-Sklearn: Automatic Hyperparameter Configuration for Scikit-Learn, 2014.
+# Summary
+In this tutorial, you discovered how to use HyperOpt for automatic machine learning with Scikit-Learn in Python.
+Specifically, you learned:
+- Hyperopt-Sklearn is an open-source library for AutoML with scikit-learn data preparation and machine learning models.
+- How to use Hyperopt-Sklearn to automatically discover top-performing models for classification tasks.
+- How to use Hyperopt-Sklearn to automatically discover top-performing models for regression tasks.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Discover Fast Machine Learning in Python!
+...with just a few lines of scikit-learn code
+Learn how in my new Ebook:
+Machine Learning Mastery With Python
+Covers self-study tutorials and end-to-end projects like:
+Loading data, visualization, modeling, tuning, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+sudo pip install hyperopt
+sudo pip show hyperopt
+Name: hyperopt
+Version: 0.2.3
+Summary: Distributed Asynchronous Hyperparameter Optimization
+Home-page: http://hyperopt.github.com/hyperopt/
+Author: James Bergstra
+Author-email: james.bergstra@gmail.com
+License: BSD
+Location: ...
+Requires: tqdm, six, networkx, future, scipy, cloudpickle, numpy
+Required-by:
+git clone git@github.com:hyperopt/hyperopt-sklearn.git
+cd hyperopt-sklearn
+sudo pip install .
+cd ..
+sudo pip show hpsklearn
+Name: hpsklearn
+Version: 0.0.3
+Summary: Hyperparameter Optimization for sklearn
+Home-page: http://hyperopt.github.com/hyperopt-sklearn/
+Author: James Bergstra
+Author-email: anon@anon.com
+License: BSD
+Location: ...
+Requires: nose, scikit-learn, numpy, scipy, hyperopt
+Required-by:
+
+# define search
+model = HyperoptEstimator(..., algo=tpe.suggest, max_evals=50, trial_timeout=120)
+
+# define search
+model = HyperoptEstimator(classifier=any_classifier('cla'), preprocessing=any_preprocessing('pre'), ...)
+
+# perform the search
+model.fit(X_train, y_train)
+
+# summarize performance
+acc = model.score(X_test, y_test)
+print("Accuracy: %.3f" % acc)
+
+# summarize the best model
+print(model.best_model())
+# summarize the sonar dataset
+from pandas import read_csv
+# load dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/sonar.csv'
+dataframe = read_csv(url, header=None)
+# split into input and output elements
+data = dataframe.values
+X, y = data[:, :-1], data[:, -1]
+print(X.shape, y.shape)
+(208, 60) (208,)
+
+# minimally prepare dataset
+X = X.astype('float32')
+y = LabelEncoder().fit_transform(y.astype('str'))
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+
+# define search
+model = HyperoptEstimator(classifier=any_classifier('cla'), preprocessing=any_preprocessing('pre'), algo=tpe.suggest, max_evals=50, trial_timeout=30)
+
+# perform the search
+model.fit(X_train, y_train)
+
+# summarize performance
+acc = model.score(X_test, y_test)
+print("Accuracy: %.3f" % acc)
+# summarize the best model
+print(model.best_model())
+# example of hyperopt-sklearn for the sonar classification dataset
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from hpsklearn import HyperoptEstimator
+from hpsklearn import any_classifier
+from hpsklearn import any_preprocessing
+from hyperopt import tpe
+# load dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/sonar.csv'
+dataframe = read_csv(url, header=None)
+# split into input and output elements
+data = dataframe.values
+X, y = data[:, :-1], data[:, -1]
+# minimally prepare dataset
+X = X.astype('float32')
+y = LabelEncoder().fit_transform(y.astype('str'))
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# define search
+model = HyperoptEstimator(classifier=any_classifier('cla'), preprocessing=any_preprocessing('pre'), algo=tpe.suggest, max_evals=50, trial_timeout=30)
+# perform the search
+model.fit(X_train, y_train)
+# summarize performance
+acc = model.score(X_test, y_test)
+print("Accuracy: %.3f" % acc)
+# summarize the best model
+print(model.best_model())
+Accuracy: 0.855
+{'learner': GradientBoostingClassifier(ccp_alpha=0.0, criterion='friedman_mse', init=None,
+                           learning_rate=0.009132299586303643, loss='deviance',
+                           max_depth=None, max_features='sqrt',
+                           max_leaf_nodes=None, min_impurity_decrease=0.0,
+                           min_impurity_split=None, min_samples_leaf=1,
+                           min_samples_split=2, min_weight_fraction_leaf=0.0,
+                           n_estimators=342, n_iter_no_change=None,
+                           presort='auto', random_state=2,
+                           subsample=0.6844206624548879, tol=0.0001,
+                           validation_fraction=0.1, verbose=0,
+                           warm_start=False), 'preprocs': (), 'ex_preprocs': ()}
+# summarize the auto insurance dataset
+from pandas import read_csv
+# load dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+dataframe = read_csv(url, header=None)
+# split into input and output elements
+data = dataframe.values
+X, y = data[:, :-1], data[:, -1]
+print(X.shape, y.shape)
+(208, 60), (208,)
+
+# define search
+model = HyperoptEstimator(regressor=any_regressor('reg'), preprocessing=any_preprocessing('pre'), loss_fn=mean_absolute_error, algo=tpe.suggest, max_evals=50, trial_timeout=30)
+# example of hyperopt-sklearn for the housing regression dataset
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
+from hpsklearn import HyperoptEstimator
+from hpsklearn import any_regressor
+from hpsklearn import any_preprocessing
+from hyperopt import tpe
+# load dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+dataframe = read_csv(url, header=None)
+# split into input and output elements
+data = dataframe.values
+data = data.astype('float32')
+X, y = data[:, :-1], data[:, -1]
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# define search
+model = HyperoptEstimator(regressor=any_regressor('reg'), preprocessing=any_preprocessing('pre'), loss_fn=mean_absolute_error, algo=tpe.suggest, max_evals=50, trial_timeout=30)
+# perform the search
+model.fit(X_train, y_train)
+# summarize performance
+mae = model.score(X_test, y_test)
+print("MAE: %.3f" % mae)
+# summarize the best model
+print(model.best_model())
+MAE: 0.883
+{'learner': XGBRegressor(base_score=0.5, booster='gbtree',
+             colsample_bylevel=0.5843250948679669, colsample_bynode=1,
+             colsample_bytree=0.6635160670570662, gamma=6.923399395303031e-05,
+             importance_type='gain', learning_rate=0.07021104887683309,
+             max_delta_step=0, max_depth=3, min_child_weight=5, missing=nan,
+             n_estimators=4000, n_jobs=1, nthread=None, objective='reg:linear',
+             random_state=0, reg_alpha=0.5690202874759704,
+             reg_lambda=3.3098341637038, scale_pos_weight=1, seed=1,
+             silent=None, subsample=0.7194797262656784, verbosity=1), 'preprocs': (), 'ex_preprocs': ()}
+'''

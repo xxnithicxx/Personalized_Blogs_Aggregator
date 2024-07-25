@@ -1,0 +1,68 @@
+How to Run Deep Learning Experiments on a Linux Server
+https://machinelearningmastery.com/run-deep-learning-experiments-linux-server/
+2018-01-21
+After you write your code, you must run your deep learning experiments on large computers with lots of RAM, CPU, and GPU resources, often a Linux server in the cloud.
+Recently, I was asked the question:
+“How do you run your deep learning experiments?”
+This is a good nuts-and-bolts question that I love answering.
+In this post, you will discover the approach, commands, and scripts that I use to run deep learning experiments on Linux.
+After reading this post, you will know:
+- How to design modeling experiments to save models to file.
+- How to run a single Python experiment script.
+- How to run multiple Python experiments sequentially from a shell script.
+Kick-start your project with my new book Deep Learning With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Run Deep Learning Experiments on a Linux ServerPhoto by Patrik Nygren, some rights reserved.
+# 1. Linux Server
+I write all modeling code on my workstation and run all code on a remote Linux server.
+At the moment, my preference is to use the Amazon Deep Learning AMI on EC2. For help setting up this server for your own experiments, see the post:
+- How To Develop and Evaluate Large Deep Learning Models with Keras on Amazon Web Services
+# 2. Modeling Code
+I write code so that there is one experiment per python file.
+Mostly, I’m working with large models on large-ish data, such as image captioning, text summarization, and machine translation.
+Each experiment will fit a model and save the whole model or just the weights to an HDF5 file, for later reuse if needed.
+For more about saving your model to file, see these posts:
+- Save and Load Your Keras Deep Learning Models
+- How to Check-Point Deep Learning Models in Keras
+I try to prepare a suite of experiments (often 10 or more) to run in a single batch. I also try to separate data preparation steps into scripts that run first and create pickled versions of training datasets ready to load and use where possible.
+# 3. Running an Experiment
+Each experiment may output some diagnostics during training, therefore, the output from each script is redirected to an experiment-specific log file. I also redirect standard error in case things fail.
+While running, the Python interpreter may not flush output often, especially if the system is under load. We can force output to be flushed to the log using the -u flag on the Python interpreter.
+Running a single script (myscript.py) looks as follows:
+I may create a “models” and a “results” directory and update the model files and log files to be saved to those directories to keep the code directory clear.
+# 4. Running Batch Experiments
+Each Python script is run sequentially.
+A shell script is created that lists multiple experiments sequentially. For example:
+This file would be saved as “run.sh”, placed in the same directory as the code files and run on the server.
+For example, if all code and the run.sh script were in the “experiments” directory of the “ec2-user” home directory, the script would be run as follows:
+The script is run as a background process that cannot be easily interrupted. I also capture the results of this script, just in case.
+You can learn more about running scripts on Linux in this post:
+- 10 Command Line Recipes for Deep Learning on Amazon Web Services
+And that’s it.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Deep Learning AMI with Source Code (CUDA 8, Amazon Linux)
+- Save and Load Your Keras Deep Learning Models
+- How to Check-Point Deep Learning Models in Keras
+- 10 Command Line Recipes for Deep Learning on Amazon Web Services
+- How To Develop and Evaluate Large Deep Learning Models with Keras on Amazon Web Services
+# Summary
+In this post, you discovered the approach, commands, and scripts that I use to run deep learning experiments on Linux.
+Specifically, you learned:
+- How to design modeling experiments to save models to file.
+- How to run a single Python experiment script.
+- How to run multiple Python experiments sequentially from a shell script.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+'''
+python -u myscript.py >myscript.py.log 2>&1
+#!/bin/sh
+
+# run experiments
+python -u myscript1.py >myscript1.py.log 2>&1
+python -u myscript2.py >myscript2.py.log 2>&1
+python -u myscript3.py >myscript3.py.log 2>&1
+python -u myscript4.py >myscript4.py.log 2>&1
+python -u myscript5.py >myscript5.py.log 2>&1
+nohup /home/ec2-user/experiments/run.sh > /home/ec2-user/experiments/run.sh.log </dev/null 2>&1 &
+'''

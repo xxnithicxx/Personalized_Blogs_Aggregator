@@ -1,0 +1,469 @@
+Simulated Annealing From Scratch in Python
+https://machinelearningmastery.com/simulated-annealing-from-scratch-in-python/
+2021-02-18
+Simulated Annealing is a stochastic global search optimization algorithm.
+This means that it makes use of randomness as part of the search process. This makes the algorithm appropriate for nonlinear objective functions where other local search algorithms do not operate well.
+Like the stochastic hill climbing local search algorithm, it modifies a single solution and searches the relatively local area of the search space until the local optima is located. Unlike the hill climbing algorithm, it may accept worse solutions as the current working solution.
+The likelihood of accepting worse solutions starts high at the beginning of the search and decreases with the progress of the search, giving the algorithm the opportunity to first locate the region for the global optima, escaping local optima, then hill climb to the optima itself.
+In this tutorial, you will discover the simulated annealing optimization algorithm for function optimization.
+After completing this tutorial, you will know:
+- Simulated annealing is a stochastic global search algorithm for function optimization.
+- How to implement the simulated annealing algorithm from scratch in Python.
+- How to use the simulated annealing algorithm and inspect the results of the algorithm.
+Let’s get started.
+Simulated Annealing From Scratch in PythonPhoto by Susanne Nilsson, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Simulated Annealing
+- Implement Simulated Annealing
+- Simulated Annealing Worked Example
+# Simulated Annealing
+Simulated Annealing is a stochastic global search optimization algorithm.
+The algorithm is inspired by annealing in metallurgy where metal is heated to a high temperature quickly, then cooled slowly, which increases its strength and makes it easier to work with.
+The annealing process works by first exciting the atoms in the material at a high temperature, allowing the atoms to move around a lot, then decreasing their excitement slowly, allowing the atoms to fall into a new, more stable configuration.
+When hot, the atoms in the material are more free to move around, and, through random motion, tend to settle into better positions. A slow cooling brings the material to an ordered, crystalline state.
+— Page 128, Algorithms for Optimization, 2019.
+The simulated annealing optimization algorithm can be thought of as a modified version of stochastic hill climbing.
+Stochastic hill climbing maintains a single candidate solution and takes steps of a random but constrained size from the candidate in the search space. If the new point is better than the current point, then the current point is replaced with the new point. This process continues for a fixed number of iterations.
+Simulated annealing executes the search in the same way. The main difference is that new points that are not as good as the current point (worse points) are accepted sometimes.
+A worse point is accepted probabilistically where the likelihood of accepting a solution worse than the current solution is a function of the temperature of the search and how much worse the solution is than the current solution.
+The algorithm varies from Hill-Climbing in its decision of when to replace S, the original candidate solution, with R, its newly tweaked child. Specifically: if R is better than S, we’ll always replace S with R as usual. But if R is worse than S, we may still replace S with R with a certain probability
+— Page 23, Essentials of Metaheuristics, 2011.
+The initial temperature for the search is provided as a hyperparameter and decreases with the progress of the search. A number of different schemes (annealing schedules) may be used to decrease the temperature during the search from the initial value to a very low value, although it is common to calculate temperature as a function of the iteration number.
+A popular example for calculating temperature is the so-called “fast simulated annealing,” calculated as follows
+- temperature = initial_temperature / (iteration_number + 1)
+We add one to the iteration number in the case that iteration numbers start at zero, to avoid a divide by zero error.
+The acceptance of worse solutions uses the temperature as well as the difference between the objective function evaluation of the worse solution and the current solution. A value is calculated between 0 and 1 using this information, indicating the likelihood of accepting the worse solution. This distribution is then sampled using a random number, which, if less than the value, means the worse solution is accepted.
+It is this acceptance probability, known as the Metropolis criterion, that allows the algorithm to escape from local minima when the temperature is high.
+— Page 128, Algorithms for Optimization, 2019.
+This is called the metropolis acceptance criterion and for minimization is calculated as follows:
+- criterion = exp( -(objective(new) – objective(current)) / temperature)
+Where exp() is e (the mathematical constant) raised to a power of the provided argument, and objective(new), and objective(current) are the objective function evaluation of the new (worse) and current candidate solutions.
+The effect is that poor solutions have more chances of being accepted early in the search and less likely of being accepted later in the search. The intent is that the high temperature at the beginning of the search will help the search locate the basin for the global optima and the low temperature later in the search will help the algorithm hone in on the global optima.
+The temperature starts high, allowing the process to freely move about the search space, with the hope that in this phase the process will find a good region with the best local minimum. The temperature is then slowly brought down, reducing the stochasticity and forcing the search to converge to a minimum
+— Page 128, Algorithms for Optimization, 2019.
+Now that we are familiar with the simulated annealing algorithm, let’s look at how to implement it from scratch.
+# Implement Simulated Annealing
+In this section, we will explore how we might implement the simulated annealing optimization algorithm from scratch.
+First, we must define our objective function and the bounds on each input variable to the objective function. The objective function is just a Python function we will name objective(). The bounds will be a 2D array with one dimension for each input variable that defines the minimum and maximum for the variable.
+For example, a one-dimensional objective function and bounds would be defined as follows:
+Next, we can generate our initial point as a random point within the bounds of the problem, then evaluate it using the objective function.
+We need to maintain the “current” solution that is the focus of the search and that may be replaced with better solutions.
+Now we can loop over a predefined number of iterations of the algorithm defined as “n_iterations“, such as 100 or 1,000.
+The first step of the algorithm iteration is to generate a new candidate solution from the current working solution, e.g. take a step.
+This requires a predefined “step_size” parameter, which is relative to the bounds of the search space. We will take a random step with a Gaussian distribution where the mean is our current point and the standard deviation is defined by the “step_size“. That means that about 99 percent of the steps taken will be within 3 * step_size of the current point.
+We don’t have to take steps in this way. You may wish to use a uniform distribution between 0 and the step size. For example:
+Next, we need to evaluate it.
+We then need to check if the evaluation of this new point is as good as or better than the current best point, and if it is, replace our current best point with this new point.
+This is separate from the current working solution that is the focus of the search.
+Next, we need to prepare to replace the current working solution.
+The first step is to calculate the difference between the objective function evaluation of the current solution and the current working solution.
+Next, we need to calculate the current temperature, using the fast annealing schedule, where “temp” is the initial temperature provided as an argument.
+We can then calculate the likelihood of accepting a solution with worse performance than our current working solution.
+Finally, we can accept the new point as the current working solution if it has a better objective function evaluation (the difference is negative) or if the objective function is worse, but we probabilistically decide to accept it.
+And that’s it.
+We can implement this simulated annealing algorithm as a reusable function that takes the name of the objective function, the bounds of each input variable, the total iterations, step size, and initial temperature as arguments, and returns the best solution found and its evaluation.
+Now that we know how to implement the simulated annealing algorithm in Python, let’s look at how we might use it to optimize an objective function.
+# Simulated Annealing Worked Example
+In this section, we will apply the simulated annealing optimization algorithm to an objective function.
+First, let’s define our objective function.
+We will use a simple one-dimensional x^2 objective function with the bounds [-5, 5].
+The example below defines the function, then creates a line plot of the response surface of the function for a grid of input values, and marks the optima at f(0.0) = 0.0 with a red line
+Running the example creates a line plot of the objective function and clearly marks the function optima.
+Line Plot of Objective Function With Optima Marked With a Dashed Red Line
+Before we apply the optimization algorithm to the problem, let’s take a moment to understand the acceptance criterion a little better.
+First, the fast annealing schedule is an exponential function of the number of iterations. We can make this clear by creating a plot of the temperature for each algorithm iteration.
+We will use an initial temperature of 10 and 100 algorithm iterations, both arbitrarily chosen.
+The complete example is listed below.
+Running the example calculates the temperature for each algorithm iteration and creates a plot of algorithm iteration (x-axis) vs. temperature (y-axis).
+We can see that temperature drops rapidly, exponentially, not linearly, such that after 20 iterations it is below 1 and stays low for the remainder of the search.
+Line Plot of Temperature vs. Algorithm Iteration for Fast Annealing
+Next, we can get a better idea of how the metropolis acceptance criterion changes over time with the temperature.
+Recall that the criterion is a function of temperature, but is also a function of how different the objective evaluation of the new point is compared to the current working solution. As such, we will plot the criterion for a few different “differences in objective function value” to see the effect it has on acceptance probability.
+The complete example is listed below.
+Running the example calculates the metropolis acceptance criterion for each algorithm iteration using the temperature shown for each iteration (shown in the previous section).
+The plot has three lines for three differences between the new worse solution and the current working solution.
+We can see that the worse the solution is (the larger the difference), the less likely the model is to accept the worse solution regardless of the algorithm iteration, as we might expect. We can also see that in all cases, the likelihood of accepting worse solutions decreases with algorithm iteration.
+Line Plot of Metropolis Acceptance Criterion vs. Algorithm Iteration for Simulated Annealing
+Now that we are more familiar with the behavior of the temperature and metropolis acceptance criterion over time, let’s apply simulated annealing to our test problem.
+First, we will seed the pseudorandom number generator.
+This is not required in general, but in this case, I want to ensure we get the same results (same sequence of random numbers) each time we run the algorithm so we can plot the results later.
+Next, we can define the configuration of the search.
+In this case, we will search for 1,000 iterations of the algorithm and use a step size of 0.1. Given that we are using a Gaussian function for generating the step, this means that about 99 percent of all steps taken will be within a distance of (0.1 * 3) of a given point, e.g. three standard deviations.
+We will also use an initial temperature of 10.0. The search procedure is more sensitive to the annealing schedule than the initial temperature, as such, initial temperature values are almost arbitrary.
+Next, we can perform the search and report the results.
+Tying this all together, the complete example is listed below.
+Running the example reports the progress of the search including the iteration number, the input to the function, and the response from the objective function each time an improvement was detected.
+At the end of the search, the best solution is found and its evaluation is reported.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see about 20 improvements over the 1,000 iterations of the algorithm and a solution that is very close to the optimal input of 0.0 that evaluates to f(0.0) = 0.0.
+It can be interesting to review the progress of the search as a line plot that shows the change in the evaluation of the best solution each time there is an improvement.
+We can update the simulated_annealing() to keep track of the objective function evaluations each time there is an improvement and return this list of scores.
+We can then create a line plot of these scores to see the relative change in objective function for each improvement found during the search.
+Tying this together, the complete example of performing the search and plotting the objective function scores of the improved solutions during the search is listed below.
+Running the example performs the search and reports the results as before.
+A line plot is created showing the objective function evaluation for each improvement during the hill climbing search. We can see about 20 changes to the objective function evaluation during the search with large changes initially and very small to imperceptible changes towards the end of the search as the algorithm converged on the optima.
+Line Plot of Objective Function Evaluation for Each Improvement During the Simulated Annealing Search
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Optimization by Simulated Annealing, 1983.
+- Algorithms for Optimization, 2019.
+- Essentials of Metaheuristics, 2011.
+- Simulated annealing, Wikipedia.
+- Annealing (metallurgy), Wikipedia.
+# Summary
+In this tutorial, you discovered the simulated annealing optimization algorithm for function optimization.
+Specifically, you learned:
+- Simulated annealing is a stochastic global search algorithm for function optimization.
+- How to implement the simulated annealing algorithm from scratch in Python.
+- How to use the simulated annealing algorithm and inspect the results of the algorithm.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Modern Optimization Algorithms!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Optimization for Machine Learning
+It provides self-study tutorials with full working code on:
+Gradient Descent, Genetic Algorithms, Hill Climbing, Curve Fitting, RMSProp, Adam,
+and much more...
+See What's Inside
+
+'''
+# objective function
+def objective(x):
+	return 0
+
+# define range for input
+bounds = asarray([[-5.0, 5.0]])
+
+# generate an initial point
+best = bounds[:, 0] + rand(len(bounds)) * (bounds[:, 1] - bounds[:, 0])
+# evaluate the initial point
+best_eval = objective(best)
+
+# current working solution
+curr, curr_eval = best, best_eval
+
+# run the algorithm
+for i in range(n_iterations):
+	...
+
+# take a step
+candidate = solution + randn(len(bounds)) * step_size
+
+# take a step
+candidate = solution + rand(len(bounds)) * step_size
+
+# evaluate candidate point
+candidate_eval = objective(candidate)
+
+# check for new best solution
+if candidate_eval < best_eval:
+	# store new best point
+	best, best_eval = candidate, candidate_eval
+	# report progress
+	print('>%d f(%s) = %.5f' % (i, best, best_eval))
+
+# difference between candidate and current point evaluation
+diff = candidate_eval - curr_eval
+
+# calculate temperature for current epoch
+t = temp / float(i + 1)
+
+# calculate metropolis acceptance criterion
+metropolis = exp(-diff / t)
+
+# check if we should keep the new point
+if diff < 0 or rand() < metropolis:
+	# store the new current point
+	curr, curr_eval = candidate, candidate_eval
+# simulated annealing algorithm
+def simulated_annealing(objective, bounds, n_iterations, step_size, temp):
+	# generate an initial point
+	best = bounds[:, 0] + rand(len(bounds)) * (bounds[:, 1] - bounds[:, 0])
+	# evaluate the initial point
+	best_eval = objective(best)
+	# current working solution
+	curr, curr_eval = best, best_eval
+	# run the algorithm
+	for i in range(n_iterations):
+		# take a step
+		candidate = curr + randn(len(bounds)) * step_size
+		# evaluate candidate point
+		candidate_eval = objective(candidate)
+		# check for new best solution
+		if candidate_eval < best_eval:
+			# store new best point
+			best, best_eval = candidate, candidate_eval
+			# report progress
+			print('>%d f(%s) = %.5f' % (i, best, best_eval))
+		# difference between candidate and current point evaluation
+		diff = candidate_eval - curr_eval
+		# calculate temperature for current epoch
+		t = temp / float(i + 1)
+		# calculate metropolis acceptance criterion
+		metropolis = exp(-diff / t)
+		# check if we should keep the new point
+		if diff < 0 or rand() < metropolis:
+			# store the new current point
+			curr, curr_eval = candidate, candidate_eval
+	return [best, best_eval]
+# convex unimodal optimization function
+from numpy import arange
+from matplotlib import pyplot
+
+# objective function
+def objective(x):
+	return x[0]**2.0
+
+# define range for input
+r_min, r_max = -5.0, 5.0
+# sample input range uniformly at 0.1 increments
+inputs = arange(r_min, r_max, 0.1)
+# compute targets
+results = [objective([x]) for x in inputs]
+# create a line plot of input vs result
+pyplot.plot(inputs, results)
+# define optimal input value
+x_optima = 0.0
+# draw a vertical line at the optimal input
+pyplot.axvline(x=x_optima, ls='--', color='red')
+# show the plot
+pyplot.show()
+# explore temperature vs algorithm iteration for simulated annealing
+from matplotlib import pyplot
+# total iterations of algorithm
+iterations = 100
+# initial temperature
+initial_temp = 10
+# array of iterations from 0 to iterations - 1
+iterations = [i for i in range(iterations)]
+# temperatures for each iterations
+temperatures = [initial_temp/float(i + 1) for i in iterations]
+# plot iterations vs temperatures
+pyplot.plot(iterations, temperatures)
+pyplot.xlabel('Iteration')
+pyplot.ylabel('Temperature')
+pyplot.show()
+# explore metropolis acceptance criterion for simulated annealing
+from math import exp
+from matplotlib import pyplot
+# total iterations of algorithm
+iterations = 100
+# initial temperature
+initial_temp = 10
+# array of iterations from 0 to iterations - 1
+iterations = [i for i in range(iterations)]
+# temperatures for each iterations
+temperatures = [initial_temp/float(i + 1) for i in iterations]
+# metropolis acceptance criterion
+differences = [0.01, 0.1, 1.0]
+for d in differences:
+	metropolis = [exp(-d/t) for t in temperatures]
+	# plot iterations vs metropolis
+	label = 'diff=%.2f' % d
+	pyplot.plot(iterations, metropolis, label=label)
+# inalize plot
+pyplot.xlabel('Iteration')
+pyplot.ylabel('Metropolis Criterion')
+pyplot.legend()
+pyplot.show()
+
+# seed the pseudorandom number generator
+seed(1)
+
+n_iterations = 1000
+# define the maximum step size
+step_size = 0.1
+# initial temperature
+temp = 10
+
+# perform the simulated annealing search
+best, score = simulated_annealing(objective, bounds, n_iterations, step_size, temp)
+print('Done!')
+print('f(%s) = %f' % (best, score))
+# simulated annealing search of a one-dimensional objective function
+from numpy import asarray
+from numpy import exp
+from numpy.random import randn
+from numpy.random import rand
+from numpy.random import seed
+
+# objective function
+def objective(x):
+	return x[0]**2.0
+
+# simulated annealing algorithm
+def simulated_annealing(objective, bounds, n_iterations, step_size, temp):
+	# generate an initial point
+	best = bounds[:, 0] + rand(len(bounds)) * (bounds[:, 1] - bounds[:, 0])
+	# evaluate the initial point
+	best_eval = objective(best)
+	# current working solution
+	curr, curr_eval = best, best_eval
+	# run the algorithm
+	for i in range(n_iterations):
+		# take a step
+		candidate = curr + randn(len(bounds)) * step_size
+		# evaluate candidate point
+		candidate_eval = objective(candidate)
+		# check for new best solution
+		if candidate_eval < best_eval:
+			# store new best point
+			best, best_eval = candidate, candidate_eval
+			# report progress
+			print('>%d f(%s) = %.5f' % (i, best, best_eval))
+		# difference between candidate and current point evaluation
+		diff = candidate_eval - curr_eval
+		# calculate temperature for current epoch
+		t = temp / float(i + 1)
+		# calculate metropolis acceptance criterion
+		metropolis = exp(-diff / t)
+		# check if we should keep the new point
+		if diff < 0 or rand() < metropolis:
+			# store the new current point
+			curr, curr_eval = candidate, candidate_eval
+	return [best, best_eval]
+
+# seed the pseudorandom number generator
+seed(1)
+# define range for input
+bounds = asarray([[-5.0, 5.0]])
+# define the total iterations
+n_iterations = 1000
+# define the maximum step size
+step_size = 0.1
+# initial temperature
+temp = 10
+# perform the simulated annealing search
+best, score = simulated_annealing(objective, bounds, n_iterations, step_size, temp)
+print('Done!')
+print('f(%s) = %f' % (best, score))
+>34 f([-0.78753544]) = 0.62021
+>35 f([-0.76914239]) = 0.59158
+>37 f([-0.68574854]) = 0.47025
+>39 f([-0.64797564]) = 0.41987
+>40 f([-0.58914623]) = 0.34709
+>41 f([-0.55446029]) = 0.30743
+>42 f([-0.41775702]) = 0.17452
+>43 f([-0.35038542]) = 0.12277
+>50 f([-0.15799045]) = 0.02496
+>66 f([-0.11089772]) = 0.01230
+>67 f([-0.09238208]) = 0.00853
+>72 f([-0.09145261]) = 0.00836
+>75 f([-0.05129162]) = 0.00263
+>93 f([-0.02854417]) = 0.00081
+>144 f([0.00864136]) = 0.00007
+>149 f([0.00753953]) = 0.00006
+>167 f([-0.00640394]) = 0.00004
+>225 f([-0.00044965]) = 0.00000
+>503 f([-0.00036261]) = 0.00000
+>512 f([0.00013605]) = 0.00000
+Done!
+f([0.00013605]) = 0.000000
+# simulated annealing algorithm
+def simulated_annealing(objective, bounds, n_iterations, step_size, temp):
+	# generate an initial point
+	best = bounds[:, 0] + rand(len(bounds)) * (bounds[:, 1] - bounds[:, 0])
+	# evaluate the initial point
+	best_eval = objective(best)
+	# current working solution
+	curr, curr_eval = best, best_eval
+	# run the algorithm
+	for i in range(n_iterations):
+		# take a step
+		candidate = curr + randn(len(bounds)) * step_size
+		# evaluate candidate point
+		candidate_eval = objective(candidate)
+		# check for new best solution
+		if candidate_eval < best_eval:
+			# store new best point
+			best, best_eval = candidate, candidate_eval
+			# keep track of scores
+			scores.append(best_eval)
+			# report progress
+			print('>%d f(%s) = %.5f' % (i, best, best_eval))
+		# difference between candidate and current point evaluation
+		diff = candidate_eval - curr_eval
+		# calculate temperature for current epoch
+		t = temp / float(i + 1)
+		# calculate metropolis acceptance criterion
+		metropolis = exp(-diff / t)
+		# check if we should keep the new point
+		if diff < 0 or rand() < metropolis:
+			# store the new current point
+			curr, curr_eval = candidate, candidate_eval
+	return [best, best_eval, scores]
+
+# line plot of best scores
+pyplot.plot(scores, '.-')
+pyplot.xlabel('Improvement Number')
+pyplot.ylabel('Evaluation f(x)')
+pyplot.show()
+# simulated annealing search of a one-dimensional objective function
+from numpy import asarray
+from numpy import exp
+from numpy.random import randn
+from numpy.random import rand
+from numpy.random import seed
+from matplotlib import pyplot
+
+# objective function
+def objective(x):
+	return x[0]**2.0
+
+# simulated annealing algorithm
+def simulated_annealing(objective, bounds, n_iterations, step_size, temp):
+	# generate an initial point
+	best = bounds[:, 0] + rand(len(bounds)) * (bounds[:, 1] - bounds[:, 0])
+	# evaluate the initial point
+	best_eval = objective(best)
+	# current working solution
+	curr, curr_eval = best, best_eval
+	scores = list()
+	# run the algorithm
+	for i in range(n_iterations):
+		# take a step
+		candidate = curr + randn(len(bounds)) * step_size
+		# evaluate candidate point
+		candidate_eval = objective(candidate)
+		# check for new best solution
+		if candidate_eval < best_eval:
+			# store new best point
+			best, best_eval = candidate, candidate_eval
+			# keep track of scores
+			scores.append(best_eval)
+			# report progress
+			print('>%d f(%s) = %.5f' % (i, best, best_eval))
+		# difference between candidate and current point evaluation
+		diff = candidate_eval - curr_eval
+		# calculate temperature for current epoch
+		t = temp / float(i + 1)
+		# calculate metropolis acceptance criterion
+		metropolis = exp(-diff / t)
+		# check if we should keep the new point
+		if diff < 0 or rand() < metropolis:
+			# store the new current point
+			curr, curr_eval = candidate, candidate_eval
+	return [best, best_eval, scores]
+
+# seed the pseudorandom number generator
+seed(1)
+# define range for input
+bounds = asarray([[-5.0, 5.0]])
+# define the total iterations
+n_iterations = 1000
+# define the maximum step size
+step_size = 0.1
+# initial temperature
+temp = 10
+# perform the simulated annealing search
+best, score, scores = simulated_annealing(objective, bounds, n_iterations, step_size, temp)
+print('Done!')
+print('f(%s) = %f' % (best, score))
+# line plot of best scores
+pyplot.plot(scores, '.-')
+pyplot.xlabel('Improvement Number')
+pyplot.ylabel('Evaluation f(x)')
+pyplot.show()
+'''

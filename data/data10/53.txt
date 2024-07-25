@@ -1,0 +1,332 @@
+Optimization for Machine Learning Crash Course
+https://machinelearningmastery.com/optimization-for-machine-learning-crash-course/
+2021-10-11
+All machine learning models involve optimization. As a practitioner, we optimize for the most suitable hyperparameters or the subset of features. Decision tree algorithm optimize for the split. Neural network optimize for the weight. Most likely, we use computational algorithms to optimize.
+There are many ways to optimize numerically. SciPy has a number of functions handy for this. We can also try to implement the optimization algorithms on our own.
+In this crash course, you will discover how you can get started and confidently run algorithms to optimize a function with Python in seven days.
+This is a big and important post. You might want to bookmark it.
+Kick-start your project with my new book Optimization for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+Optimization for Machine Learning (7-Day Mini-Course)Photo by Brewster Malevich, some rights reserved.
+# Who Is This Crash-Course For?
+Before we get started, let’s make sure you are in the right place.
+This course is for developers that may know some applied machine learning. Perhaps you have built some models and did some projects end-to-end, or modified from existing example code from popular tools to solve your own problem.
+The lessons in this course do assume a few things about you, such as:
+- You know your way around basic Python for programming.
+- You may know some basic NumPy for array manipulation.
+- You heard about gradient descent, simulated annealing, BFGS, or some other optimization algorithms and want to deepen your understanding.
+You do NOT need to be:
+- A math wiz!
+- A machine learning expert!
+This crash course will take you from a developer who knows a little machine learning to a developer who can effectively and competently apply function optimization algorithms.
+Note: This crash course assumes you have a working Python 3 SciPy environment with at least NumPy installed. If you need help with your environment, you can follow the step-by-step tutorial here:
+- How to Set Up Your Python Environment for Machine Learning With Anaconda
+# Crash-Course Overview
+This crash course is broken down into seven lessons.
+You could complete one lesson per day (recommended) or complete all of the lessons in one day (hardcore). It really depends on the time you have available and your level of enthusiasm.
+Below is a list of the seven lessons that will get you started and productive with optimization in Python:
+- Lesson 01: Why optimize?
+- Lesson 02: Grid search
+- Lesson 03: Optimization algorithms in SciPy
+- Lesson 04: BFGS algorithm
+- Lesson 05: Hill-climbing algorithm
+- Lesson 06: Simulated annealing
+- Lesson 07: Gradient descent
+Each lesson could take you 60 seconds or up to 30 minutes. Take your time and complete the lessons at your own pace. Ask questions, and even post results in the comments below.
+The lessons might expect you to go off and find out how to do things. I will give you hints, but part of the point of each lesson is to force you to learn where to go to look for help with and about the algorithms and the best-of-breed tools in Python. (Hint: I have all of the answers on this blog; use the search box.)
+Post your results in the comments; I’ll cheer you on!
+Hang in there; don’t give up.
+# Lesson 01: Why optimize?
+In this lesson, you will discover why and when we want to do optimization.
+Machine learning is different from other kinds of software projects in the sense that it is less trivial on how we should write the program. A toy example in programming is to write a for loop to print numbers from 1 to 100. You know exactly you need a variable to count, and there should be 100 iterations of the loop to count. A toy example in machine learning is to use neural network for regression, but you have no idea how many iterations you need exactly to train the model. You might set it too few or too many and you don’t have a rule to tell what is the right number. Hence many people consider machine learning models as a black box. The consequence is that, while the model has many variables that we can tune (the hyperparameters, for example) we do not know what should be the correct values until we tested it out.
+In this lesson, you will discover why machine learning practitioners should study optimization to improve their skills and capabilities. Optimization is also called function optimization in mathematics that aimed to locate the maximum or minimum value of certain function. For different nature of the function, different methods can be applied.
+Machine learning is about developing predictive models. Whether one model is better than another, we have some evaluation metrics to measure a model’s performance subject to a particular data set. In this sense, if we consider the parameters that created the model as the input, the inner algorithm of the model and the data set in concern as constants, and the metric that evaluated from the model as the output, then we have a function constructed.
+Take decision tree as an example. We know it is a binary tree because every intermediate node is asking a yes-no question. This is constant and we cannot change it. But how deep this tree should be is a hyperparameter that we can control. What features and how many features from the data we allow the decision tree to use is another. A different value for these hyperparameters will change the decision tree model, which in turn gives a different metric, such as average accuracy from k-fold cross validation in classification problems. Then we have a function defined that takes the hyperparameters as input and the accuracy as output.
+From the perspective of the decision tree library, once you provided the hyperparameters and the training data, it can also consider them as constants and the selection of features and the thresholds for split at every node as input. The metric is still the output here because the decision tree library shared the same goal of making the best prediction. Therefore, the library also has a function defined, but different from the one mentioned above.
+The function here does not mean you need to explicitly define a function in the programming language. A conceptual one is suffice. What we want to do next is to manipulate on the input and check the output until we found the best output is achieved. In case of machine learning, the best can mean
+- Highest accuracy, or precision, or recall
+- Largest AUC of ROC
+- Greatest F1 score in classification or R2 score in regression
+- Least error, or log-loss
+or something else in this line. We can manipulate the input by random methods such as sampling or random perturbation. We can also assume the function has certain properties and try out a sequence of inputs to exploit these properties. Of course, we can also check all possible input and as we exhausted the possibility, we will know the best answer.
+These are the basics of why we want to do optimization, what it is about, and how we can do it. You may not notice it, but training a machine learning model is doing optimization. You may also explicitly perform optimization to select features or fine-tune hyperparameters. As you can see, optimization is useful in machine learning.
+For this lesson, you must find a machine learning model and list three examples that optimization might be used or might help in training and using the model. These may be related to some of the reasons above, or they may be your own personal motivations.
+Post your answer in the comments below. I would love to see what you come up with.
+In the next lesson, you will discover how to perform grid search on an arbitrary function.
+# Lesson 02: Grid searcch
+In this lesson, you will discover grid search for optimization.
+Let’s start with this function:
+f (x, y) = x2 + y2
+This is a function with two-dimensional input (x, y) and one-dimensional output. What can we do to find the minimum of this function? In other words, for what x and y, we can have the least f (x, y)?
+Without looking at what f (x, y) is, we can first assume the x and y are in some bounded region, say, from -5 to +5. Then we can check for every combination of x and y in this range. If we remember the value of f (x, y) and keep track on the least we ever saw, then we can find the minimum of it after exhausting the region. In Python code, it is like this:
+This code scan from the lowerbound of the range -5 to upperbound +5 with each step of increment of 0.1. This range is same for both x and y. This will create a large number of samples of the (x, y) pair. These samples are created out of combinations of x and y over a range. If we draw their coordinate on a graph paper, they form a grid, and hence we call this grid search.
+With the grid of samples, then we evaluate the objective function f (x, y) for every sample of (x, y). We keep track on the value, and remember the least we ever saw. Once we exhausted the samples on the grid, we recall the least value that we found as the result of the optimization.
+For this lesson, you should lookup how to use numpy.meshgrid() function and rewrite the example code. Then you can try to replace the objective function into f (x, y, z) = (x – y + 1)2 + z2, which is a function with 3D input.
+Post your answer in the comments below. I would love to see what you come up with.
+In the next lesson, you will learn how to use scipy to optimize a function.
+# Lesson 03: Optimization algorithms in SciPy
+In this lesson, you will discover how you can make use of SciPy to optimize your function.
+There are a lot of optimization algorithms in the literature. Each has its strengths and weaknesses, and each is good for a different kind of situation. Reusing the same function we introduced in the previous lesson,
+f (x, y) = x2 + y2
+we can make use of some predefined algorithms in SciPy to find its minimum. Probably the easiest is the Nelder-Mead algorithm. This algorithm is based on a series of rules to determine how to explore the surface of the function. Without going into the detail, we can simply call SciPy and apply Nelder-Mead algorithm to find a function’s minimum:
+In the code above, we need to write our function with a single vector argument. Hence virtually the function becomes
+f (x[0], x[1]) = (x[0])2 + (x[1])2
+Nelder-Mead algorithm needs a starting point. We choose a random point in the range of -5 to +5 for that (rand(2) is numpy’s way to generate a random coordinate pair between 0 and 1). The function minimize() returns a OptimizeResult object, which contains information about the result that is accessible via keys. The “message” key provides a human-readable message about the success or failure of the search, and the “nfev” key tells the number of function evaluations performed in the course of optimization. The most important one is “x” key, which specifies the input values that attained the minimum.
+Nelder-Mead algorithm works well for convex functions, which the shape is smooth and like a basin. For more complex function, the algorithm may stuck at a local optimum but fail to find the real global optimum.
+For this lesson, you should replace the objective function in the example code above with the following:
+This defined the Ackley function. The global minimum is at v=[0,0]. However, Nelder-Mead most likely cannot find it because this function has many local minima. Try repeat your code a few times and observe the output. You should get a different output each time you run the program.
+Post your answer in the comments below. I would love to see what you come up with.
+In the next lesson, you will learn how to use the same SciPy function to apply a different optimization algorithm.
+# Lesson 04: BFGS algorithm
+In this lesson, you will discover how you can make use of SciPy to apply BFGS algorithm to optimize your function.
+As we have seen in the previous lesson, we can make use of the minimize() function from scipy.optimize to optimize a function using Nelder-Meadd algorithm. This is the simple “pattern search” algorithm that does not need to know the derivatives of a function.
+First-order derivative means to differentiate the objective function once. Similarly, second-order derivative is to differentiate the first-order derivative one more time. If we have the second-order derivative of the objective function, we can apply the Newton’s method to find its optimum.
+There is another class of optimization algorithm that can approximate the second-order derivative from the first order derivative, and use the approximation to optimize the objective function. They are called the quasi-Newton methods. BFGS is the most famous one of this class.
+Revisiting the same objective function that we used in previous lessons,
+f (x, y) = x2 + y2
+we can tell that the first-order derivative is:
+∇f = [2x, 2y]
+This is a vector of two components, because the function f (x, y) receives a vector value of two components (x, y) and returns a scalar value.
+If we create a new function for the first-order derivative, we can call SciPy and apply the BFGS algorithm:
+The first-order derivative of the objective function is provided to the minimize() function with the “jac” argument. The argument is named after Jacobian matrix, which is how we call the first-order derivative of a function that takes a vector and returns a vector. The BFGS algorithm will make use of the first-order derivative to compute the inverse of the Hessian matrix (i.e., the second-order derivative of a vector function) and use it to find the optima.
+Besides BFGS, there is also L-BFGS-B. It is a version of the former that uses less memory (the “L”) and the domain is bounded to a region (the “B”). To use this variant, we simply replace the name of the method:
+
+For this lesson, you should create a function with much more parameters (i.e., the vector argument to the function is much more than two components) and observe the performance of BFGS and L-BFGS-B. Do you notice the difference in speed? How different are the result from these two methods? What happen if your function is not convex but have many local optima?
+Post your answer in the comments below. I would love to see what you come up with.
+# Lesson 05: Hill-climbing algorithm
+In this lesson, you will discover how to implement hill-climbing algorithm and use it to optimize your function.
+The idea of hill-climbing is to start from a point on the objective function. Then we move the point a bit in a random direction. In case the move allows us to find a better solution, we keep the new position. Otherwise we stay with the old. After enough iterations of doing this, we should be close enough to the optimum of this objective function. The progress is named because it is like we are climbing on a hill, which we keep going up (or down) in any direction whenever we can.
+In Python, we can write the above hill-climbing algorithm for minimization as a function:
+This function allows any objective function to be passed as long as it takes a vector and returns a scalar value. The “bounds” argument should be a numpy array of n×2 dimension, which n is the size of the vector that the objective function expects. It tells the lower- and upper-bound of the range we should look for the minimum. For example, we can set up the bound as follows for the objective function that expects two dimensional vectors (like the one in the previous lesson) and the components of the vector to be between -5 to +5:
+This “hillclimbing” function will randomly pick an initial point within the bound, then test the objective function in iterations. Whenever it can find the objective function yields a less value, the solution is remembered and the next point to test is generated from its neighborhood.
+For this lesson, you should provide your own objective function (such as copy over the one from previous lesson), set up the “n_iterations” and “step_size” and apply the “hillclimbing” function to find the minimum. Observe how the algorithm finds a solution. Try with different values of “step_size” and compare the number of iterations needed to reach the proximity of the final solution.
+Post your answer in the comments below. I would love to see what you come up with.
+# Lesson 06: Simulated annealing
+In this lesson, you will discover how simulated annealing works and how to use it.
+For the non-convex functions, the algorithms you learned in previous lessons may be trapped easily at local optima and failed to find the global optima. The reason is because of the greedy nature of the algorithm: Whenever a better solution is found, it will not let go. Hence if a even better solution exists but not in the proximity, the algorithm will fail to find it.
+Simulated annealing try to improve on this behavior by making a balance between exploration and exploitation. At the beginning, when the algorithm is not knowing much about the function to optimize, it prefers to explore other solutions rather than stay with the best solution found. At later stage, as more solutions are explored the chance of finding even better solutions is diminished, the algorithm will prefer to remain in the neighborhood of the best solution it found.
+The following is the implementation of simulated annealing as a Python function:
+Similar to the hill-climbing algorithm in the previous lesson, the function starts with a random initial point. Also similar to that in previous lesson, the algorithm runs in loops prescribed by the count “n_iterations”. In each iteration, a random neighborhood point of the current point is picked and the objective function is evaluated on it. The best solution ever found is remembered in the variable “best” and “best_eval”. The difference to the hill-climbing algorithm is that, the current point “curr” in each iteration is not necessarily the best solution. Whether the point is moved to a neighborhood or stay depends on a probability that related to the number of iterations we did and how much improvement the neighborhood can make. Because of this stochastic nature, we have a chance to get out of the local minima for a better solution. Finally, regardless where we end up, we always return the best solution ever found among the iterations of the simulated annealing algorithm.
+In fact, most of the hyperparameter tuning or feature selection problems are encountered in machine learning are not convex. Hence simulated annealing should be more suitable then hill-climbing for these optimization problems.
+For this lesson, you should repeat the exercise you did in the previous lesson with the simulated annealing code above. Try with the objective function f (x, y) = x2 + y2, which is a convex one. Do you see simulated annealing or hill climbing takes less iteration? Replace the objective function with the Ackley function introduced in Lesson 03. Do you see the minimum found by simulated annealing or hill climbing is smaller?
+Post your answer in the comments below. I would love to see what you come up with.
+# Lesson 07: Gradient descent
+In this lesson, you will discover how you can implement gradient descent algorithm.
+Gradient descent algorithm is the algorithm used to train a neural network. Although there are many variants, all of them are based on gradient, or the first-order derivative, of the function. The idea lies in the physical meaning of a gradient of a function. If the function takes a vector and returns a scalar value, the gradient of the function at any point will tell you the direction that the function is increased the fastest. Hence if we aimed at finding the minimum of the function, the direction we should explore is the exact opposite of the gradient.
+In mathematical equation, if we are looking for the minimum of f (x), where x is a vector, and the gradient of f (x) is denoted by ∇f (x) (which is also a vector), then we know
+xnew = x – α × ∇f (x)
+will be closer to the minimum than x. Now let’s try to implement this in Python. Reusing the sample objective function and its derivative we learned in Day 4, this is the gradient descent algorithm and its use to find the minimum of the objective function:
+This algorithm depends on not only the objective function but also its derivative. Hence it may not suitable for all kinds of problems. This algorithm also sensitive to the step size, which a too large step size with respect to the objective function may cause the gradient descent algorithm fail to converge. If this happens, we will see the progress is not moving toward lower value.
+There are several variations to make gradient descent algorithm more robust, for example:
+- Add a momentum into the process, which the move is not only following the gradient but also partially the average of gradients in previous iterations.
+- Make the step sizes different for each component of the vector x
+- Make the step size adaptive to the progress
+For this lesson, you should run the example program above with a different “step_size” and “n_iter” and observe the difference in the progress of the algorithm. At what “step_size” you will see the above program not converge? Then try to add a new parameter β to the gradient_descent() function as the momentum weight, which the update rule now becomes
+xnew = x – α × ∇f (x) – β × g
+where g is the average of ∇f (x) in, for example, five previous iterations. Do you see any improvement to this optimization? Is it a suitable example for using momentum?
+Post your answer in the comments below. I would love to see what you come up with.
+This was the final lesson.
+# The End!
+(Look How Far You Have Come)
+You made it. Well done!
+Take a moment and look back at how far you have come.
+You discovered:
+- The importance of optimization in applied machine learning.
+- How to do grid search to optimize by exhausting all possible solutions.
+- How to use SciPy to optimize your own function.
+- How to implement hill-climbing algorithm for optimization.
+- How to use simulated annealing algorithm for optimization.
+- What is gradient descent, how to use it, and some variation of this algorithm.
+# Summary
+How did you do with the mini-course?
+Did you enjoy this crash course?
+Do you have any questions? Were there any sticking points?
+Let me know. Leave a comment below.
+# Get a Handle on Modern Optimization Algorithms!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Optimization for Machine Learning
+It provides self-study tutorials with full working code on:
+Gradient Descent, Genetic Algorithms, Hill Climbing, Curve Fitting, RMSProp, Adam,
+and much more...
+See What's Inside
+
+'''
+from numpy import arange, inf
+
+# objective function
+def objective(x, y):
+    return x**2.0 + y**2.0
+
+# define range for input
+r_min, r_max = -5.0, 5.0
+# generate a grid sample from the domain sample = list()
+step = 0.1
+for x in arange(r_min, r_max+step, step):
+    for y in arange(r_min, r_max+step, step):
+        sample.append([x,y])
+# evaluate the sample
+best_eval = inf
+best_x, best_y = None, None
+for x,y in sample:
+    eval = objective(x,y)
+    if eval < best_eval:
+        best_x = x
+        best_y = y
+        best_eval = eval
+# summarize best solution
+print('Best: f(%.5f,%.5f) = %.5f' % (best_x, best_y, best_eval))
+from scipy.optimize import minimize
+from numpy.random import rand
+
+# objective function
+def objective(x):
+	return x[0]**2.0 + x[1]**2.0
+
+# define range for input
+r_min, r_max = -5.0, 5.0
+# define the starting point as a random sample from the domain
+pt = r_min + rand(2) * (r_max - r_min)
+# perform the search
+result = minimize(objective, pt, method='nelder-mead')
+# summarize the result
+print('Status : %s' % result['message'])
+print('Total Evaluations: %d' % result['nfev'])
+# evaluate solution
+solution = result['x']
+evaluation = objective(solution)
+print('Solution: f(%s) = %.5f' % (solution, evaluation))
+from numpy import e, pi, cos, sqrt, exp
+def objective(v):
+    x, y = v
+    return ( -20.0 * exp(-0.2 * sqrt(0.5 * (x**2 + y**2)))
+             - exp(0.5 * (cos(2*pi*x)+cos(2*pi*y))) + e + 20 )
+from scipy.optimize import minimize
+from numpy.random import rand
+
+# objective function
+def objective(x):
+	return x[0]**2.0 + x[1]**2.0
+
+# derivative of the objective function
+def derivative(x):
+	return [x[0] * 2, x[1] * 2]
+
+# define range for input
+r_min, r_max = -5.0, 5.0
+# define the starting point as a random sample from the domain
+pt = r_min + rand(2) * (r_max - r_min)
+# perform the bfgs algorithm search
+result = minimize(objective, pt, method='BFGS', jac=derivative)
+# summarize the result
+print('Status : %s' % result['message'])
+print('Total Evaluations: %d' % result['nfev'])
+# evaluate solution
+solution = result['x']
+evaluation = objective(solution)
+print('Solution: f(%s) = %.5f' % (solution, evaluation))
+
+result = minimize(objective, pt, method='L-BFGS-B', jac=derivative)
+from numpy.random import randn
+
+def in_bounds(point, bounds):
+	# enumerate all dimensions of the point
+	for d in range(len(bounds)):
+		# check if out of bounds for this dimension
+		if point[d] < bounds[d, 0] or point[d] > bounds[d, 1]:
+			return False
+	return True
+
+def hillclimbing(objective, bounds, n_iterations, step_size):
+	# generate an initial point
+	solution = None
+	while solution is None or not in_bounds(solution, bounds):
+		solution = bounds[:, 0] + rand(len(bounds)) * (bounds[:, 1] - bounds[:, 0])
+	# evaluate the initial point
+	solution_eval = objective(solution)
+	# run the hill climb
+	for i in range(n_iterations):
+		# take a step
+		candidate = None
+		while candidate is None or not in_bounds(candidate, bounds):
+			candidate = solution + randn(len(bounds)) * step_size
+		# evaluate candidate point
+		candidte_eval = objective(candidate)
+		# check if we should keep the new point
+		if candidte_eval <= solution_eval:
+			# store the new point
+			solution, solution_eval = candidate, candidte_eval
+			# report progress
+			print('>%d f(%s) = %.5f' % (i, solution, solution_eval))
+	return [solution, solution_eval]
+bounds = np.asarray([[-5.0, 5.0], [-5.0, 5.0]])
+from numpy.random import randn, rand
+
+def simulated_annealing(objective, bounds, n_iterations, step_size, temp):
+	# generate an initial point
+	best = bounds[:, 0] + rand(len(bounds)) * (bounds[:, 1] - bounds[:, 0])
+	# evaluate the initial point
+	best_eval = objective(best)
+	# current working solution
+	curr, curr_eval = best, best_eval
+	# run the algorithm
+	for i in range(n_iterations):
+		# take a step
+		candidate = curr + randn(len(bounds)) * step_size
+		# evaluate candidate point
+		candidate_eval = objective(candidate)
+		# check for new best solution
+		if candidate_eval < best_eval:
+			# store new best point
+			best, best_eval = candidate, candidate_eval
+			# report progress
+			print('>%d f(%s) = %.5f' % (i, best, best_eval))
+		# difference between candidate and current point evaluation
+		diff = candidate_eval - curr_eval
+		# calculate temperature for current epoch
+		t = temp / float(i + 1)
+		# calculate metropolis acceptance criterion
+		metropolis = exp(-diff / t)
+		# check if we should keep the new point
+		if diff < 0 or rand() < metropolis:
+			# store the new current point
+			curr, curr_eval = candidate, candidate_eval
+	return [best, best_eval]
+from numpy import asarray
+from numpy import arange
+from numpy.random import rand
+
+# objective function
+def objective(x):
+	return x[0]**2.0 + x[1]**2.0
+
+# derivative of the objective function
+def derivative(x):
+	return asarray([x[0]*2, x[1]*2])
+
+# gradient descent algorithm
+def gradient_descent(objective, derivative, bounds, n_iter, step_size):
+	# generate an initial point
+	solution = bounds[:, 0] + rand(len(bounds)) * (bounds[:, 1] - bounds[:, 0])
+	# run the gradient descent
+	for i in range(n_iter):
+		# calculate gradient
+		gradient = derivative(solution)
+		# take a step
+		solution = solution - step_size * gradient
+		# evaluate candidate point
+		solution_eval = objective(solution)
+		# report progress
+		print('>%d f(%s) = %.5f' % (i, solution, solution_eval))
+	return [solution, solution_eval]
+
+# define range for input
+bounds = asarray([[-5.0, 5.0], [-5.0, 5.0]])
+# define the total iterations
+n_iter = 40
+# define the step size
+step_size = 0.1
+# perform the gradient descent search
+solution, solution_eval = gradient_descent(objective, derivative, bounds, n_iter, step_size)
+print("Solution: f(%s) = %.5f" % (solution, solution_eval))
+'''

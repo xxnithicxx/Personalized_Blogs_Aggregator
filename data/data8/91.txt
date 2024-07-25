@@ -1,0 +1,425 @@
+How to Develop a Bidirectional LSTM For Sequence Classification in Python with Keras
+https://machinelearningmastery.com/develop-bidirectional-lstm-sequence-classification-python-keras/
+2017-06-15
+Bidirectional LSTMs are an extension of traditional LSTMs that can improve model performance on sequence classification problems.
+In problems where all timesteps of the input sequence are available, Bidirectional LSTMs train two instead of one LSTMs on the input sequence. The first on the input sequence as-is and the second on a reversed copy of the input sequence. This can provide additional context to the network and result in faster and even fuller learning on the problem.
+In this tutorial, you will discover how to develop Bidirectional LSTMs for sequence classification in Python with the Keras deep learning library.
+After completing this tutorial, you will know:
+- How to develop a small contrived and configurable sequence classification problem.
+- How to develop an LSTM and Bidirectional LSTM for sequence classification.
+- How to compare the performance of the merge mode used in Bidirectional LSTMs.
+Kick-start your project with my new book Long Short-Term Memory Networks With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Update Jan/2020: Updated API for Keras 2.3 and TensorFlow 2.0.
+How to Develop a Bidirectional LSTM For Sequence Classification in Python with KerasPhoto by Cristiano Medeiros Dalbem, some rights reserved.
+# Overview
+This tutorial is divided into 6 parts; they are:
+- Bidirectional LSTMs
+- Sequence Classification Problem
+- LSTM For Sequence Classification
+- Bidirectional LSTM For Sequence Classification
+- Compare LSTM to Bidirectional LSTM
+- Comparing Bidirectional LSTM Merge Modes
+This tutorial assumes you have a Python SciPy environment installed. You can use either Python 2 or 3 with this example.
+This tutorial assumes you have Keras (v2.0.4+) installed with either the TensorFlow (v1.1.0+) or Theano (v0.9+) backend.
+This tutorial also assumes you have scikit-learn, Pandas, NumPy, and Matplotlib installed.
+If you need help setting up your Python environment, see this post:
+- How to Setup a Python Environment for Machine Learning and Deep Learning with Anaconda
+# Bidirectional LSTMs
+The idea of Bidirectional Recurrent Neural Networks (RNNs) is straightforward.
+It involves duplicating the first recurrent layer in the network so that there are now two layers side-by-side, then providing the input sequence as-is as input to the first layer and providing a reversed copy of the input sequence to the second.
+To overcome the limitations of a regular RNN […] we propose a bidirectional recurrent neural network (BRNN) that can be trained using all available input information in the past and future of a specific time frame.
+…
+The idea is to split the state neurons of a regular RNN in a part that is responsible for the positive time direction (forward states) and a part for the negative time direction (backward states)
+— Mike Schuster and Kuldip K. Paliwal, Bidirectional Recurrent Neural Networks, 1997
+This approach has been used to great effect with Long Short-Term Memory (LSTM) Recurrent Neural Networks.
+The use of providing the sequence bi-directionally was initially justified in the domain of speech recognition because there is evidence that the context of the whole utterance is used to interpret what is being said rather than a linear interpretation.
+… relying on knowledge of the future seems at first sight to violate causality. How can we base our understanding of what we’ve heard on something that hasn’t been said yet? However, human listeners do exactly that. Sounds, words, and even whole sentences that at first mean nothing are found to make sense in the light of future context. What we must remember is the distinction between tasks that are truly online – requiring an output after every input – and those where outputs are only needed at the end of some input segment.
+— Alex Graves and Jurgen Schmidhuber, Framewise Phoneme Classification with Bidirectional LSTM and Other Neural Network Architectures, 2005
+The use of bidirectional LSTMs may not make sense for all sequence prediction problems, but can offer some benefit in terms of better results to those domains where it is appropriate.
+We have found that bidirectional networks are significantly more effective than unidirectional ones…
+— Alex Graves and Jurgen Schmidhuber, Framewise Phoneme Classification with Bidirectional LSTM and Other Neural Network Architectures, 2005
+To be clear, timesteps in the input sequence are still processed one at a time, it is just the network steps through the input sequence in both directions at the same time.
+Bidirectional LSTMs are supported in Keras via the Bidirectional layer wrapper.
+This wrapper takes a recurrent layer (e.g. the first LSTM layer) as an argument.
+It also allows you to specify the merge mode, that is how the forward and backward outputs should be combined before being passed on to the next layer. The options are:
+- ‘sum‘: The outputs are added together.
+- ‘mul‘: The outputs are multiplied together.
+- ‘concat‘: The outputs are concatenated together (the default), providing double the number of outputs to the next layer.
+- ‘ave‘: The average of the outputs is taken.
+The default mode is to concatenate, and this is the method often used in studies of bidirectional LSTMs.
+# Sequence Classification Problem
+We will define a simple sequence classification problem to explore bidirectional LSTMs.
+The problem is defined as a sequence of random values between 0 and 1. This sequence is taken as input for the problem with each number provided one per timestep.
+A binary label (0 or 1) is associated with each input. The output values are all 0. Once the cumulative sum of the input values in the sequence exceeds a threshold, then the output value flips from 0 to 1.
+A threshold of 1/4 the sequence length is used.
+For example, below is a sequence of 10 input timesteps (X):
+The corresponding classification output (y) would be:
+We can implement this in Python.
+The first step is to generate a sequence of random values. We can use the random() function from the random module.
+We can define the threshold as one-quarter the length of the input sequence.
+The cumulative sum of the input sequence can be calculated using the cumsum() NumPy function. This function returns a sequence of cumulative sum values, e.g.:
+We can then calculate the output sequence as whether each cumulative sum value exceeded the threshold.
+The function below, named get_sequence(), draws all of this together, taking as input the length of the sequence, and returns the X and y components of a new problem case.
+We can test this function with a new 10 timestep sequence as follows:
+Running the example first prints the generated input sequence followed by the matching output sequence.
+
+# LSTM For Sequence Classification
+We can start off by developing a traditional LSTM for the sequence classification problem.
+Firstly, we must update the get_sequence() function to reshape the input and output sequences to be 3-dimensional to meet the expectations of the LSTM. The expected structure has the dimensions [samples, timesteps, features].
+The classification problem has 1 sample (e.g. one sequence), a configurable number of timesteps, and one feature per timestep.
+Therefore, we can reshape the sequences as follows.
+The updated get_sequence() function is listed below.
+We will define the sequences as having 10 timesteps.
+Next, we can define an LSTM for the problem. The input layer will have 10 timesteps with 1 feature a piece, input_shape=(10, 1).
+The first hidden layer will have 20 memory units and the output layer will be a fully connected layer that outputs one value per timestep. A sigmoid activation function is used on the output to predict the binary value.
+A TimeDistributed wrapper layer is used around the output layer so that one value per timestep can be predicted given the full sequence provided as input. This requires that the LSTM hidden layer returns a sequence of values (one per timestep) rather than a single value for the whole input sequence.
+Finally, because this is a binary classification problem, the binary log loss (binary_crossentropy in Keras) is used. The efficient ADAM optimization algorithm is used to find the weights and the accuracy metric is calculated and reported each epoch.
+The LSTM will be trained for 1,000 epochs. A new random input sequence will be generated each epoch for the network to be fit on. This ensures that the model does not memorize a single sequence and instead can generalize a solution to solve all possible random input sequences for this problem.
+Once trained, the network will be evaluated on yet another random sequence. The predictions will be then compared to the expected output sequence to provide a concrete example of the skill of the system.
+The complete example is listed below.
+Running the example prints the log loss and classification accuracy on the random sequences each epoch.
+This provides a clear idea of how well the model has generalized a solution to the sequence classification problem.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+We can see that the model does well, achieving a final accuracy that hovers around 90% and 100% accurate. Not perfect, but good for our purposes.
+The predictions for a new random sequence are compared to the expected values, showing a mostly correct result with a single error.
+
+# Bidirectional LSTM For Sequence Classification
+Now that we know how to develop an LSTM for the sequence classification problem, we can extend the example to demonstrate a Bidirectional LSTM.
+We can do this by wrapping the LSTM hidden layer with a Bidirectional layer, as follows:
+This will create two copies of the hidden layer, one fit in the input sequences as-is and one on a reversed copy of the input sequence. By default, the output values from these LSTMs will be concatenated.
+That means that instead of the TimeDistributed layer receiving 10 timesteps of 20 outputs, it will now receive 10 timesteps of 40 (20 units + 20 units) outputs.
+The complete example is listed below.
+Running the example, we see a similar output as in the previous example.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+The use of bidirectional LSTMs have the effect of allowing the LSTM to learn the problem faster.
+This is not apparent from looking at the skill of the model at the end of the run, but instead, the skill of the model over time.
+
+# Compare LSTM to Bidirectional LSTM
+In this example, we will compare the performance of traditional LSTMs to a Bidirectional LSTM over time while the models are being trained.
+We will adjust the experiment so that the models are only trained for 250 epochs. This is so that we can get a clear idea of how learning unfolds for each model and how the learning behavior differs with bidirectional LSTMs.
+We will compare three different models; specifically:
+- LSTM (as-is)
+- LSTM with reversed input sequences (e.g. you can do this by setting the “go_backwards” argument to he LSTM layer to “True”)
+- Bidirectional LSTM
+This comparison will help to show that bidirectional LSTMs can in fact add something more than simply reversing the input sequence.
+We will define a function to create and return an LSTM with either forward or backward input sequences, as follows:
+We can develop a similar function for bidirectional LSTMs where the merge mode can be specified as an argument. The default of concatenation can be specified by setting the merge mode to the value ‘concat’.
+Finally, we define a function to fit a model and retrieve and store the loss each training epoch, then return a list of the collected loss values after the model is fit. This is so that we can graph the log loss from each model configuration and compare them.
+Putting this all together, the complete example is listed below.
+First a traditional LSTM is created and fit and the log loss values plot. This is repeated with an LSTM with reversed input sequences and finally an LSTM with a concatenated merge.
+Running the example creates a line plot.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+We can see that the LSTM forward (blue) and LSTM backward (orange) show similar log loss over the 250 training epochs.
+We can see that the Bidirectional LSTM log loss is different (green), going down sooner to a lower value and generally staying lower than the other two configurations.
+Line Plot of Log Loss for an LSTM, Reversed LSTM and a Bidirectional LSTM
+# Comparing Bidirectional LSTM Merge Modes
+There a 4 different merge modes that can be used to combine the outcomes of the Bidirectional LSTM layers.
+They are concatenation (default), multiplication, average, and sum.
+We can compare the behavior of different merge modes by updating the example from the previous section as follows:
+Running the example will create a line plot comparing the log loss of each merge mode.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+The different merge modes result in different model performance, and this will vary depending on your specific sequence prediction problem.
+In this case, we can see that perhaps a sum (blue) and concatenation (red) merge mode may result in better performance, or at least lower log loss.
+Line Plot to Compare Merge Modes for Bidirectional LSTMs
+# Summary
+In this tutorial, you discovered how to develop Bidirectional LSTMs for sequence classification in Python with Keras.
+Specifically, you learned:
+- How to develop a contrived sequence classification problem.
+- How to develop an LSTM and Bidirectional LSTM for sequence classification.
+- How to compare merge modes for Bidirectional LSTMs for sequence classification.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop LSTMs for Sequence Prediction Today!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Long Short-Term Memory Networks with Python
+It provides self-study tutorials on topics like:
+CNN LSTMs, Encoder-Decoder LSTMs, generative models, data preparation, making predictions and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+0.63144003 0.29414551 0.91587952 0.95189228 0.32195638 0.60742236 0.83895793 0.18023048 0.84762691 0.29165514
+0 0 0 1 1 1 1 1 1 1
+# create a sequence of random numbers in [0,1]
+X = array([random() for _ in range(10)])
+# calculate cut-off value to change class values
+limit = 10/4.0
+pos1, pos1+pos2, pos1+pos2+pos3, ...
+# determine the class outcome for each item in cumulative sequence
+y = array([0 if x < limit else 1 for x in cumsum(X)])
+from random import random
+from numpy import array
+from numpy import cumsum
+
+# create a sequence classification instance
+def get_sequence(n_timesteps):
+	# create a sequence of random numbers in [0,1]
+	X = array([random() for _ in range(n_timesteps)])
+	# calculate cut-off value to change class values
+	limit = n_timesteps/4.0
+	# determine the class outcome for each item in cumulative sequence
+	y = array([0 if x < limit else 1 for x in cumsum(X)])
+	return X, y
+X, y = get_sequence(10)
+print(X)
+print(y)
+[ 0.22228819 0.26882207 0.069623 0.91477783 0.02095862 0.71322527
+0.90159654 0.65000306 0.88845226 0.4037031 ]
+[0 0 0 0 0 0 1 1 1 1]
+# reshape input and output data to be suitable for LSTMs
+X = X.reshape(1, n_timesteps, 1)
+y = y.reshape(1, n_timesteps, 1)
+# create a sequence classification instance
+def get_sequence(n_timesteps):
+	# create a sequence of random numbers in [0,1]
+	X = array([random() for _ in range(n_timesteps)])
+	# calculate cut-off value to change class values
+	limit = n_timesteps/4.0
+	# determine the class outcome for each item in cumulative sequence
+	y = array([0 if x < limit else 1 for x in cumsum(X)])
+	# reshape input and output data to be suitable for LSTMs
+	X = X.reshape(1, n_timesteps, 1)
+	y = y.reshape(1, n_timesteps, 1)
+	return X, y
+# define LSTM
+model = Sequential()
+model.add(LSTM(20, input_shape=(10, 1), return_sequences=True))
+model.add(TimeDistributed(Dense(1, activation='sigmoid')))
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+# train LSTM
+for epoch in range(1000):
+	# generate new random sequence
+	X,y = get_sequence(n_timesteps)
+	# fit model for one epoch on this sequence
+	model.fit(X, y, epochs=1, batch_size=1, verbose=2)
+# evaluate LSTM
+X,y = get_sequence(n_timesteps)
+yhat = model.predict_classes(X, verbose=0)
+for i in range(n_timesteps):
+	print('Expected:', y[0, i], 'Predicted', yhat[0, i])
+from random import random
+from numpy import array
+from numpy import cumsum
+from keras.models import Sequential
+from keras.layers import LSTM
+from keras.layers import Dense
+from keras.layers import TimeDistributed
+
+# create a sequence classification instance
+def get_sequence(n_timesteps):
+	# create a sequence of random numbers in [0,1]
+	X = array([random() for _ in range(n_timesteps)])
+	# calculate cut-off value to change class values
+	limit = n_timesteps/4.0
+	# determine the class outcome for each item in cumulative sequence
+	y = array([0 if x < limit else 1 for x in cumsum(X)])
+	# reshape input and output data to be suitable for LSTMs
+	X = X.reshape(1, n_timesteps, 1)
+	y = y.reshape(1, n_timesteps, 1)
+	return X, y
+
+# define problem properties
+n_timesteps = 10
+# define LSTM
+model = Sequential()
+model.add(LSTM(20, input_shape=(n_timesteps, 1), return_sequences=True))
+model.add(TimeDistributed(Dense(1, activation='sigmoid')))
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+# train LSTM
+for epoch in range(1000):
+	# generate new random sequence
+	X,y = get_sequence(n_timesteps)
+	# fit model for one epoch on this sequence
+	model.fit(X, y, epochs=1, batch_size=1, verbose=2)
+# evaluate LSTM
+X,y = get_sequence(n_timesteps)
+yhat = model.predict_classes(X, verbose=0)
+for i in range(n_timesteps):
+	print('Expected:', y[0, i], 'Predicted', yhat[0, i])
+
+Epoch 1/1
+0s - loss: 0.2039 - acc: 0.9000
+Epoch 1/1
+0s - loss: 0.2985 - acc: 0.9000
+Epoch 1/1
+0s - loss: 0.1219 - acc: 1.0000
+Epoch 1/1
+0s - loss: 0.2031 - acc: 0.9000
+Epoch 1/1
+0s - loss: 0.1698 - acc: 0.9000
+Expected: [0] Predicted [0]
+Expected: [0] Predicted [0]
+Expected: [0] Predicted [0]
+Expected: [0] Predicted [0]
+Expected: [0] Predicted [0]
+Expected: [0] Predicted [1]
+Expected: [1] Predicted [1]
+Expected: [1] Predicted [1]
+Expected: [1] Predicted [1]
+Expected: [1] Predicted [1]
+model.add(Bidirectional(LSTM(20, return_sequences=True), input_shape=(n_timesteps, 1)))
+from random import random
+from numpy import array
+from numpy import cumsum
+from keras.models import Sequential
+from keras.layers import LSTM
+from keras.layers import Dense
+from keras.layers import TimeDistributed
+from keras.layers import Bidirectional
+
+# create a sequence classification instance
+def get_sequence(n_timesteps):
+	# create a sequence of random numbers in [0,1]
+	X = array([random() for _ in range(n_timesteps)])
+	# calculate cut-off value to change class values
+	limit = n_timesteps/4.0
+	# determine the class outcome for each item in cumulative sequence
+	y = array([0 if x < limit else 1 for x in cumsum(X)])
+	# reshape input and output data to be suitable for LSTMs
+	X = X.reshape(1, n_timesteps, 1)
+	y = y.reshape(1, n_timesteps, 1)
+	return X, y
+
+# define problem properties
+n_timesteps = 10
+# define LSTM
+model = Sequential()
+model.add(Bidirectional(LSTM(20, return_sequences=True), input_shape=(n_timesteps, 1)))
+model.add(TimeDistributed(Dense(1, activation='sigmoid')))
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+# train LSTM
+for epoch in range(1000):
+	# generate new random sequence
+	X,y = get_sequence(n_timesteps)
+	# fit model for one epoch on this sequence
+	model.fit(X, y, epochs=1, batch_size=1, verbose=2)
+# evaluate LSTM
+X,y = get_sequence(n_timesteps)
+yhat = model.predict_classes(X, verbose=0)
+for i in range(n_timesteps):
+	print('Expected:', y[0, i], 'Predicted', yhat[0, i])
+
+Epoch 1/1
+0s - loss: 0.0967 - acc: 0.9000
+Epoch 1/1
+0s - loss: 0.0865 - acc: 1.0000
+Epoch 1/1
+0s - loss: 0.0905 - acc: 0.9000
+Epoch 1/1
+0s - loss: 0.2460 - acc: 0.9000
+Epoch 1/1
+0s - loss: 0.1458 - acc: 0.9000
+Expected: [0] Predicted [0]
+Expected: [0] Predicted [0]
+Expected: [0] Predicted [0]
+Expected: [0] Predicted [0]
+Expected: [0] Predicted [0]
+Expected: [1] Predicted [1]
+Expected: [1] Predicted [1]
+Expected: [1] Predicted [1]
+Expected: [1] Predicted [1]
+Expected: [1] Predicted [1]
+def get_lstm_model(n_timesteps, backwards):
+	model = Sequential()
+	model.add(LSTM(20, input_shape=(n_timesteps, 1), return_sequences=True, go_backwards=backwards))
+	model.add(TimeDistributed(Dense(1, activation='sigmoid')))
+	model.compile(loss='binary_crossentropy', optimizer='adam')
+	return model
+def get_bi_lstm_model(n_timesteps, mode):
+	model = Sequential()
+	model.add(Bidirectional(LSTM(20, return_sequences=True), input_shape=(n_timesteps, 1), merge_mode=mode))
+	model.add(TimeDistributed(Dense(1, activation='sigmoid')))
+	model.compile(loss='binary_crossentropy', optimizer='adam')
+	return model
+def train_model(model, n_timesteps):
+	loss = list()
+	for _ in range(250):
+		# generate new random sequence
+		X,y = get_sequence(n_timesteps)
+		# fit model for one epoch on this sequence
+		hist = model.fit(X, y, epochs=1, batch_size=1, verbose=0)
+		loss.append(hist.history['loss'][0])
+	return loss
+from random import random
+from numpy import array
+from numpy import cumsum
+from matplotlib import pyplot
+from pandas import DataFrame
+from keras.models import Sequential
+from keras.layers import LSTM
+from keras.layers import Dense
+from keras.layers import TimeDistributed
+from keras.layers import Bidirectional
+
+# create a sequence classification instance
+def get_sequence(n_timesteps):
+	# create a sequence of random numbers in [0,1]
+	X = array([random() for _ in range(n_timesteps)])
+	# calculate cut-off value to change class values
+	limit = n_timesteps/4.0
+	# determine the class outcome for each item in cumulative sequence
+	y = array([0 if x < limit else 1 for x in cumsum(X)])
+	# reshape input and output data to be suitable for LSTMs
+	X = X.reshape(1, n_timesteps, 1)
+	y = y.reshape(1, n_timesteps, 1)
+	return X, y
+
+def get_lstm_model(n_timesteps, backwards):
+	model = Sequential()
+	model.add(LSTM(20, input_shape=(n_timesteps, 1), return_sequences=True, go_backwards=backwards))
+	model.add(TimeDistributed(Dense(1, activation='sigmoid')))
+	model.compile(loss='binary_crossentropy', optimizer='adam')
+	return model
+
+def get_bi_lstm_model(n_timesteps, mode):
+	model = Sequential()
+	model.add(Bidirectional(LSTM(20, return_sequences=True), input_shape=(n_timesteps, 1), merge_mode=mode))
+	model.add(TimeDistributed(Dense(1, activation='sigmoid')))
+	model.compile(loss='binary_crossentropy', optimizer='adam')
+	return model
+
+def train_model(model, n_timesteps):
+	loss = list()
+	for _ in range(250):
+		# generate new random sequence
+		X,y = get_sequence(n_timesteps)
+		# fit model for one epoch on this sequence
+		hist = model.fit(X, y, epochs=1, batch_size=1, verbose=0)
+		loss.append(hist.history['loss'][0])
+	return loss
+
+
+n_timesteps = 10
+results = DataFrame()
+# lstm forwards
+model = get_lstm_model(n_timesteps, False)
+results['lstm_forw'] = train_model(model, n_timesteps)
+# lstm backwards
+model = get_lstm_model(n_timesteps, True)
+results['lstm_back'] = train_model(model, n_timesteps)
+# bidirectional concat
+model = get_bi_lstm_model(n_timesteps, 'concat')
+results['bilstm_con'] = train_model(model, n_timesteps)
+# line plot of results
+results.plot()
+pyplot.show()
+n_timesteps = 10
+results = DataFrame()
+# sum merge
+model = get_bi_lstm_model(n_timesteps, 'sum')
+results['bilstm_sum'] = train_model(model, n_timesteps)
+# mul merge
+model = get_bi_lstm_model(n_timesteps, 'mul')
+results['bilstm_mul'] = train_model(model, n_timesteps)
+# avg merge
+model = get_bi_lstm_model(n_timesteps, 'ave')
+results['bilstm_ave'] = train_model(model, n_timesteps)
+# concat merge
+model = get_bi_lstm_model(n_timesteps, 'concat')
+results['bilstm_con'] = train_model(model, n_timesteps)
+# line plot of results
+results.plot()
+pyplot.show()
+'''

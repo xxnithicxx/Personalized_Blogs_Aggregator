@@ -1,0 +1,461 @@
+Ordinal and One-Hot Encodings for Categorical Data
+https://machinelearningmastery.com/one-hot-encoding-for-categorical-data/
+2020-06-11
+Machine learning models require all input and output variables to be numeric.
+This means that if your data contains categorical data, you must encode it to numbers before you can fit and evaluate a model.
+The two most popular techniques are an Ordinal Encoding and a One-Hot Encoding.
+In this tutorial, you will discover how to use encoding schemes for categorical machine learning data.
+After completing this tutorial, you will know:
+- Encoding is a required pre-processing step when working with categorical data for machine learning algorithms.
+- How to use ordinal encoding for categorical variables that have a natural rank ordering.
+- How to use one-hot encoding for categorical variables that do not have a natural rank ordering.
+Kick-start your project with my new book Data Preparation for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+Ordinal and One-Hot Encoding Transforms for Machine LearningPhoto by Felipe Valduga, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into six parts; they are:
+- Nominal and Ordinal Variables
+- Encoding Categorical Data
+
+Ordinal Encoding
+One-Hot Encoding
+Dummy Variable Encoding
+
+
+- Ordinal Encoding
+- One-Hot Encoding
+- Dummy Variable Encoding
+- Breast Cancer Dataset
+- OrdinalEncoder Transform
+- OneHotEncoder Transform
+- Common Questions
+# Nominal and Ordinal Variables
+Numerical data, as its name suggests, involves features that are only composed of numbers, such as integers or floating-point values.
+Categorical data are variables that contain label values rather than numeric values.
+The number of possible values is often limited to a fixed set.
+Categorical variables are often called nominal.
+Some examples include:
+- A “pet” variable with the values: “dog” and “cat“.
+- A “color” variable with the values: “red“, “green“, and “blue“.
+- A “place” variable with the values: “first“, “second“, and “third“.
+Each value represents a different category.
+Some categories may have a natural relationship to each other, such as a natural ordering.
+The “place” variable above does have a natural ordering of values. This type of categorical variable is called an ordinal variable because the values can be ordered or ranked.
+A numerical variable can be converted to an ordinal variable by dividing the range of the numerical variable into bins and assigning values to each bin. For example, a numerical variable between 1 and 10 can be divided into an ordinal variable with 5 labels with an ordinal relationship: 1-2, 3-4, 5-6, 7-8, 9-10. This is called discretization.
+- Nominal Variable (Categorical). Variable comprises a finite set of discrete values with no relationship between values.
+- Ordinal Variable. Variable comprises a finite set of discrete values with a ranked ordering between values.
+Some algorithms can work with categorical data directly.
+For example, a decision tree can be learned directly from categorical data with no data transform required (this depends on the specific implementation).
+Many machine learning algorithms cannot operate on label data directly. They require all input variables and output variables to be numeric.
+In general, this is mostly a constraint of the efficient implementation of machine learning algorithms rather than hard limitations on the algorithms themselves.
+Some implementations of machine learning algorithms require all data to be numerical. For example, scikit-learn has this requirement.
+This means that categorical data must be converted to a numerical form. If the categorical variable is an output variable, you may also want to convert predictions by the model back into a categorical form in order to present them or use them in some application.
+
+
+
+
+# Encoding Categorical Data
+There are three common approaches for converting ordinal and categorical variables to numerical values. They are:
+- Ordinal Encoding
+- One-Hot Encoding
+- Dummy Variable Encoding
+Let’s take a closer look at each in turn.
+In ordinal encoding, each unique category value is assigned an integer value.
+For example, “red” is 1, “green” is 2, and “blue” is 3.
+This is called an ordinal encoding or an integer encoding and is easily reversible. Often, integer values starting at zero are used.
+For some variables, an ordinal encoding may be enough. The integer values have a natural ordered relationship between each other and machine learning algorithms may be able to understand and harness this relationship.
+It is a natural encoding for ordinal variables. For categorical variables, it imposes an ordinal relationship where no such relationship may exist. This can cause problems and a one-hot encoding may be used instead.
+This ordinal encoding transform is available in the scikit-learn Python machine learning library via the OrdinalEncoder class.
+By default, it will assign integers to labels in the order that is observed in the data. If a specific order is desired, it can be specified via the “categories” argument as a list with the rank order of all expected labels.
+We can demonstrate the usage of this class by converting colors categories “red”, “green” and “blue” into integers. First the categories are sorted then numbers are applied. For strings, this means the labels are sorted alphabetically and that blue=0, green=1 and red=2.
+The complete example is listed below.
+Running the example first reports the 3 rows of label data, then the ordinal encoding.
+We can see that the numbers are assigned to the labels as we expected.
+This OrdinalEncoder class is intended for input variables that are organized into rows and columns, e.g. a matrix.
+If a categorical target variable needs to be encoded for a classification predictive modeling problem, then the LabelEncoder class can be used. It does the same thing as the OrdinalEncoder, although it expects a one-dimensional input for the single target variable.
+For categorical variables where no ordinal relationship exists, the integer encoding may not be enough, at best, or misleading to the model at worst.
+Forcing an ordinal relationship via an ordinal encoding and allowing the model to assume a natural ordering between categories may result in poor performance or unexpected results (predictions halfway between categories).
+In this case, a one-hot encoding can be applied to the ordinal representation. This is where the integer encoded variable is removed and one new binary variable is added for each unique integer value in the variable.
+Each bit represents a possible category. If the variable cannot belong to multiple categories at once, then only one bit in the group can be “on.” This is called one-hot encoding …
+— Page 78, Feature Engineering for Machine Learning, 2018.
+In the “color” variable example, there are three categories, and, therefore, three binary variables are needed. A “1” value is placed in the binary variable for the color and “0” values for the other colors.
+This one-hot encoding transform is available in the scikit-learn Python machine learning library via the OneHotEncoder class.
+We can demonstrate the usage of the OneHotEncoder on the color categories. First the categories are sorted, in this case alphabetically because they are strings, then binary variables are created for each category in turn. This means blue will be represented as [1, 0, 0] with a “1” in for the first binary variable, then green, then finally red.
+The complete example is listed below.
+Running the example first lists the three rows of label data, then the one hot encoding matching our expectation of 3 binary variables in the order “blue”, “green” and “red”.
+If you know all of the labels to be expected in the data, they can be specified via the “categories” argument as a list.
+The encoder is fit on the training dataset, which likely contains at least one example of all expected labels for each categorical variable if you do not specify the list of labels. If new data contains categories not seen in the training dataset, the “handle_unknown” argument can be set to “ignore” to not raise an error, which will result in a zero value for each label.
+The one-hot encoding creates one binary variable for each category.
+The problem is that this representation includes redundancy. For example, if we know that [1, 0, 0] represents “blue” and [0, 1, 0] represents “green” we don’t need another binary variable to represent “red“, instead we could use 0 values for both “blue” and “green” alone, e.g. [0, 0].
+This is called a dummy variable encoding, and always represents C categories with C-1 binary variables.
+When there are C possible values of the predictor and only C – 1 dummy variables are used, the matrix inverse can be computed and the contrast method is said to be a full rank parameterization
+— Page 95, Feature Engineering and Selection, 2019.
+In addition to being slightly less redundant, a dummy variable representation is required for some models.
+For example, in the case of a linear regression model (and other regression models that have a bias term), a one hot encoding will case the matrix of input data to become singular, meaning it cannot be inverted and the linear regression coefficients cannot be calculated using linear algebra. For these types of models a dummy variable encoding must be used instead.
+If the model includes an intercept and contains dummy variables […], then the […] columns would add up (row-wise) to the intercept and this linear combination would prevent the matrix inverse from being computed (as it is singular).
+— Page 95, Feature Engineering and Selection, 2019.
+We rarely encounter this problem in practice when evaluating machine learning algorithms, unless we are using linear regression of course.
+… there are occasions when a complete set of dummy variables is useful. For example, the splits in a tree-based model are more interpretable when the dummy variables encode all the information for that predictor. We recommend using the full set if dummy variables when working with tree-based models.
+— Page 56, Applied Predictive Modeling, 2013.
+We can use the OneHotEncoder class to implement a dummy encoding as well as a one hot encoding.
+The “drop” argument can be set to indicate which category will be come the one that is assigned all zero values, called the “baseline“. We can set this to “first” so that the first category is used. When the labels are sorted alphabetically, the first “blue” label will be the first and will become the baseline.
+There will always be one fewer dummy variable than the number of levels. The level with no dummy variable […] is known as the baseline.
+— Page 86, An Introduction to Statistical Learning with Applications in R, 2014.
+We can demonstrate this with our color categories. The complete example is listed below.
+Running the example first lists the three rows for the categorical variable, then the dummy variable encoding, showing that green is “encoded” as [1, 0], “red” is encoded as [0, 1] and “blue” is encoded as [0, 0] as we specified.
+Now that we are familiar with the three approaches for encoding categorical variables, let’s look at a dataset that has categorical variables.
+# Breast Cancer Dataset
+As the basis of this tutorial, we will use the “Breast Cancer” dataset that has been widely studied in machine learning since the 1980s.
+The dataset classifies breast cancer patient data as either a recurrence or no recurrence of cancer. There are 286 examples and nine input variables. It is a binary classification problem.
+A reasonable classification accuracy score on this dataset is between 68 percent and 73 percent. We will aim for this region, but note that the models in this tutorial are not optimized: they are designed to demonstrate encoding schemes.
+No need to download the dataset as we will access it directly from the code examples.
+- Breast Cancer Dataset (breast-cancer.csv)
+- Breast Cancer Dataset Description (breast-cancer.names)
+Looking at the data, we can see that all nine input variables are categorical.
+Specifically, all variables are quoted strings. Some variables show an obvious ordinal relationship for ranges of values (like age ranges), and some do not.
+Note that this dataset has missing values marked with a “nan” value.
+We will leave these values as-is in this tutorial and use the encoding schemes to encode “nan” as just another value. This is one possible and quite reasonable approach to handling missing values for categorical variables.
+We can load this dataset into memory using the Pandas library.
+Once loaded, we can split the columns into input (X) and output (y) for modeling.
+Making use of this function, the complete example of loading and summarizing the raw categorical dataset is listed below.
+Running the example reports the size of the input and output elements of the dataset.
+We can see that we have 286 examples and nine input variables.
+Now that we are familiar with the dataset, let’s look at how we can encode it for modeling.
+# OrdinalEncoder Transform
+An ordinal encoding involves mapping each unique label to an integer value.
+This type of encoding is really only appropriate if there is a known relationship between the categories. This relationship does exist for some of the variables in our dataset, and ideally, this should be harnessed when preparing the data.
+In this case, we will ignore any possible existing ordinal relationship and assume all variables are categorical. It can still be helpful to use an ordinal encoding, at least as a point of reference with other encoding schemes.
+We can use the OrdinalEncoder from scikit-learn to encode each variable to integers. This is a flexible class and does allow the order of the categories to be specified as arguments if any such order is known.
+Note: I will leave it as an exercise for you to update the example below to try specifying the order for those variables that have a natural ordering and see if it has an impact on model performance.
+Once defined, we can call the fit_transform() function and pass it to our dataset to create a quantile transformed version of our dataset.
+We can also prepare the target in the same manner.
+Let’s try it on our breast cancer dataset.
+The complete example of creating an ordinal encoding transform of the breast cancer dataset and summarizing the result is listed below.
+Running the example transforms the dataset and reports the shape of the resulting dataset.
+We would expect the number of rows, and in this case, the number of columns, to be unchanged, except all string values are now integer values.
+As expected, in this case, we can see that the number of variables is unchanged, but all values are now ordinal encoded integers.
+Next, let’s evaluate machine learning on this dataset with this encoding.
+The best practice when encoding variables is to fit the encoding on the training dataset, then apply it to the train and test datasets.
+We will first split the dataset, then prepare the encoding on the training set, and apply it to the test set.
+We can then fit the OrdinalEncoder on the training dataset and use it to transform the train and test datasets.
+The same approach can be used to prepare the target variable. We can then fit a logistic regression algorithm on the training dataset and evaluate it on the test dataset.
+The complete example is listed below.
+Running the example prepares the dataset in the correct manner, then evaluates a model fit on the transformed data.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, the model achieved a classification accuracy of about 75.79 percent, which is a reasonable score.
+Next, let’s take a closer look at the one-hot encoding.
+# OneHotEncoder Transform
+A one-hot encoding is appropriate for categorical data where no relationship exists between categories.
+The scikit-learn library provides the OneHotEncoder class to automatically one hot encode one or more variables.
+By default the OneHotEncoder will output data with a sparse representation, which is efficient given that most values are 0 in the encoded representation. We will disable this feature by setting the “sparse” argument to False so that we can review the effect of the encoding.
+Once defined, we can call the fit_transform() function and pass it to our dataset to create a quantile transformed version of our dataset.
+As before, we must label encode the target variable.
+The complete example of creating a one-hot encoding transform of the breast cancer dataset and summarizing the result is listed below.
+Running the example transforms the dataset and reports the shape of the resulting dataset.
+We would expect the number of rows to remain the same, but the number of columns to dramatically increase.
+As expected, in this case, we can see that the number of variables has leaped up from 9 to 43 and all values are now binary values 0 or 1.
+Next, let’s evaluate machine learning on this dataset with this encoding as we did in the previous section.
+The encoding is fit on the training set then applied to both train and test sets as before.
+Tying this together, the complete example is listed below.
+Running the example prepares the dataset in the correct manner, then evaluates a model fit on the transformed data.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, the model achieved a classification accuracy of about 70.53 percent, which is slightly worse than the ordinal encoding in the previous section.
+
+# Common Questions
+This section lists some common questions and answers when encoding categorical data.
+Q. What if I have a mixture of numeric and categorical data?
+Or, what if I have a mixture of categorical and ordinal data?
+You will need to prepare or encode each variable (column) in your dataset separately, then concatenate all of the prepared variables back together into a single array for fitting or evaluating the model.
+Alternately, you can use the ColumnTransformer to conditionally apply different data transforms to different input variables.
+Q. What if I have hundreds of categories?
+Or, what if I concatenate many one-hot encoded vectors to create a many-thousand-element input vector?
+You can use a one-hot encoding up to thousands and tens of thousands of categories. Also, having large vectors as input sounds intimidating, but the models can generally handle it.
+Q. What encoding technique is the best?
+This is unknowable.
+Test each technique (and more) on your dataset with your chosen model and discover what works best for your case.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- 3 Ways to Encode Categorical Variables for Deep Learning
+- Why One-Hot Encode Data in Machine Learning?
+- How to One Hot Encode Sequence Data in Python
+- Feature Engineering for Machine Learning, 2018.
+- Applied Predictive Modeling, 2013.
+- An Introduction to Statistical Learning with Applications in R, 2014.
+- sklearn.preprocessing.OneHotEncoder API.
+- sklearn.preprocessing.LabelEncoder API.
+- sklearn.preprocessing.OrdinalEncoder API.
+- Categorical variable, Wikipedia.
+- Nominal category, Wikipedia.
+# Summary
+In this tutorial, you discovered how to use encoding schemes for categorical machine learning data.
+Specifically, you learned:
+- Encoding is a required pre-processing step when working with categorical data for machine learning algorithms.
+- How to use ordinal encoding for categorical variables that have a natural rank ordering.
+- How to use one-hot encoding for categorical variables that do not have a natural rank ordering.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Modern Data Preparation!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Data Preparation for Machine Learning
+It provides self-study tutorials with full working code on:
+Feature Selection, RFE, Data Cleaning, Data Transforms, Scaling, Dimensionality Reduction,
+and much more...
+See What's Inside
+
+'''
+# example of a ordinal encoding
+from numpy import asarray
+from sklearn.preprocessing import OrdinalEncoder
+# define data
+data = asarray([['red'], ['green'], ['blue']])
+print(data)
+# define ordinal encoding
+encoder = OrdinalEncoder()
+# transform data
+result = encoder.fit_transform(data)
+print(result)
+[['red']
+ ['green']
+ ['blue']]
+[[2.]
+ [1.]
+ [0.]]
+# example of a one hot encoding
+from numpy import asarray
+from sklearn.preprocessing import OneHotEncoder
+# define data
+data = asarray([['red'], ['green'], ['blue']])
+print(data)
+# define one hot encoding
+encoder = OneHotEncoder(sparse=False)
+# transform data
+onehot = encoder.fit_transform(data)
+print(onehot)
+[['red']
+ ['green']
+ ['blue']]
+[[0. 0. 1.]
+ [0. 1. 0.]
+ [1. 0. 0.]]
+# example of a dummy variable encoding
+from numpy import asarray
+from sklearn.preprocessing import OneHotEncoder
+# define data
+data = asarray([['red'], ['green'], ['blue']])
+print(data)
+# define one hot encoding
+encoder = OneHotEncoder(drop='first', sparse=False)
+# transform data
+onehot = encoder.fit_transform(data)
+print(onehot)
+[['red']
+ ['green']
+ ['blue']]
+[[0. 1.]
+ [1. 0.]
+ [0. 0.]]
+'40-49','premeno','15-19','0-2','yes','3','right','left_up','no','recurrence-events'
+'50-59','ge40','15-19','0-2','no','1','right','central','no','no-recurrence-events'
+'50-59','ge40','35-39','0-2','no','2','left','left_low','no','recurrence-events'
+'40-49','premeno','35-39','0-2','yes','3','right','left_low','yes','no-recurrence-events'
+'40-49','premeno','30-34','3-5','yes','2','left','right_up','no','recurrence-events'
+...
+
+# load the dataset
+dataset = read_csv(url, header=None)
+# retrieve the array of data
+data = dataset.values
+
+# separate into input and output columns
+X = data[:, :-1].astype(str)
+y = data[:, -1].astype(str)
+# load and summarize the dataset
+from pandas import read_csv
+# define the location of the dataset
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/breast-cancer.csv"
+# load the dataset
+dataset = read_csv(url, header=None)
+# retrieve the array of data
+data = dataset.values
+# separate into input and output columns
+X = data[:, :-1].astype(str)
+y = data[:, -1].astype(str)
+# summarize
+print('Input', X.shape)
+print('Output', y.shape)
+Input (286, 9)
+Output (286,)
+
+# ordinal encode input variables
+ordinal = OrdinalEncoder()
+X = ordinal.fit_transform(X)
+
+# ordinal encode target variable
+label_encoder = LabelEncoder()
+y = label_encoder.fit_transform(y)
+# ordinal encode the breast cancer dataset
+from pandas import read_csv
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import OrdinalEncoder
+# define the location of the dataset
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/breast-cancer.csv"
+# load the dataset
+dataset = read_csv(url, header=None)
+# retrieve the array of data
+data = dataset.values
+# separate into input and output columns
+X = data[:, :-1].astype(str)
+y = data[:, -1].astype(str)
+# ordinal encode input variables
+ordinal_encoder = OrdinalEncoder()
+X = ordinal_encoder.fit_transform(X)
+# ordinal encode target variable
+label_encoder = LabelEncoder()
+y = label_encoder.fit_transform(y)
+# summarize the transformed data
+print('Input', X.shape)
+print(X[:5, :])
+print('Output', y.shape)
+print(y[:5])
+Input (286, 9)
+[[2. 2. 2. 0. 1. 2. 1. 2. 0.]
+ [3. 0. 2. 0. 0. 0. 1. 0. 0.]
+ [3. 0. 6. 0. 0. 1. 0. 1. 0.]
+ [2. 2. 6. 0. 1. 2. 1. 1. 1.]
+ [2. 2. 5. 4. 1. 1. 0. 4. 0.]]
+Output (286,)
+[1 0 1 0 1]
+
+# split the dataset into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+
+# ordinal encode input variables
+ordinal_encoder = OrdinalEncoder()
+ordinal_encoder.fit(X_train)
+X_train = ordinal_encoder.transform(X_train)
+X_test = ordinal_encoder.transform(X_test)
+# evaluate logistic regression on the breast cancer dataset with an ordinal encoding
+from numpy import mean
+from numpy import std
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import OrdinalEncoder
+from sklearn.metrics import accuracy_score
+# define the location of the dataset
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/breast-cancer.csv"
+# load the dataset
+dataset = read_csv(url, header=None)
+# retrieve the array of data
+data = dataset.values
+# separate into input and output columns
+X = data[:, :-1].astype(str)
+y = data[:, -1].astype(str)
+# split the dataset into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# ordinal encode input variables
+ordinal_encoder = OrdinalEncoder()
+ordinal_encoder.fit(X_train)
+X_train = ordinal_encoder.transform(X_train)
+X_test = ordinal_encoder.transform(X_test)
+# ordinal encode target variable
+label_encoder = LabelEncoder()
+label_encoder.fit(y_train)
+y_train = label_encoder.transform(y_train)
+y_test = label_encoder.transform(y_test)
+# define the model
+model = LogisticRegression()
+# fit on the training set
+model.fit(X_train, y_train)
+# predict on test set
+yhat = model.predict(X_test)
+# evaluate predictions
+accuracy = accuracy_score(y_test, yhat)
+print('Accuracy: %.2f' % (accuracy*100))
+Accuracy: 75.79
+
+# one hot encode input variables
+onehot_encoder = OneHotEncoder(sparse=False)
+X = onehot_encoder.fit_transform(X)
+# one-hot encode the breast cancer dataset
+from pandas import read_csv
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import OneHotEncoder
+# define the location of the dataset
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/breast-cancer.csv"
+# load the dataset
+dataset = read_csv(url, header=None)
+# retrieve the array of data
+data = dataset.values
+# separate into input and output columns
+X = data[:, :-1].astype(str)
+y = data[:, -1].astype(str)
+# one hot encode input variables
+onehot_encoder = OneHotEncoder(sparse=False)
+X = onehot_encoder.fit_transform(X)
+# ordinal encode target variable
+label_encoder = LabelEncoder()
+y = label_encoder.fit_transform(y)
+# summarize the transformed data
+print('Input', X.shape)
+print(X[:5, :])
+Input (286, 43)
+[[0. 0. 1. 0. 0. 0. 0. 0. 1. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0.
+  0. 0. 0. 0. 1. 0. 0. 0. 1. 0. 1. 0. 0. 1. 0. 0. 0. 1. 0.]
+ [0. 0. 0. 1. 0. 0. 1. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0.
+  0. 0. 0. 1. 0. 0. 1. 0. 0. 0. 1. 1. 0. 0. 0. 0. 0. 1. 0.]
+ [0. 0. 0. 1. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 1. 0. 0. 0.
+  0. 0. 0. 1. 0. 0. 0. 1. 0. 1. 0. 0. 1. 0. 0. 0. 0. 1. 0.]
+ [0. 0. 1. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 1. 0. 0. 0.
+  0. 0. 0. 0. 1. 0. 0. 0. 1. 0. 1. 0. 1. 0. 0. 0. 0. 0. 1.]
+ [0. 0. 1. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 1. 0. 0. 0. 0. 0. 0. 0. 0. 0.
+  1. 0. 0. 0. 1. 0. 0. 1. 0. 1. 0. 0. 0. 0. 0. 1. 0. 1. 0.]]
+
+# one-hot encode input variables
+onehot_encoder = OneHotEncoder()
+onehot_encoder.fit(X_train)
+X_train = onehot_encoder.transform(X_train)
+X_test = onehot_encoder.transform(X_test)
+# evaluate logistic regression on the breast cancer dataset with an one-hot encoding
+from numpy import mean
+from numpy import std
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.metrics import accuracy_score
+# define the location of the dataset
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/breast-cancer.csv"
+# load the dataset
+dataset = read_csv(url, header=None)
+# retrieve the array of data
+data = dataset.values
+# separate into input and output columns
+X = data[:, :-1].astype(str)
+y = data[:, -1].astype(str)
+# split the dataset into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# one-hot encode input variables
+onehot_encoder = OneHotEncoder()
+onehot_encoder.fit(X_train)
+X_train = onehot_encoder.transform(X_train)
+X_test = onehot_encoder.transform(X_test)
+# ordinal encode target variable
+label_encoder = LabelEncoder()
+label_encoder.fit(y_train)
+y_train = label_encoder.transform(y_train)
+y_test = label_encoder.transform(y_test)
+# define the model
+model = LogisticRegression()
+# fit on the training set
+model.fit(X_train, y_train)
+# predict on test set
+yhat = model.predict(X_test)
+# evaluate predictions
+accuracy = accuracy_score(y_test, yhat)
+print('Accuracy: %.2f' % (accuracy*100))
+Accuracy: 70.53
+'''

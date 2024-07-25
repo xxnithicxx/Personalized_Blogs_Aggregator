@@ -1,0 +1,130 @@
+LSTM Model Architecture for Rare Event Time Series Forecasting
+https://machinelearningmastery.com/lstm-model-architecture-for-rare-event-time-series-forecasting/
+2018-11-01
+Time series forecasting with LSTMs directly has shown little success.
+This is surprising as neural networks are known to be able to learn complex non-linear relationships and the LSTM is perhaps the most successful type of recurrent neural network that is capable of directly supporting multivariate sequence prediction problems.
+A recent study performed at Uber AI Labs demonstrates how both the automatic feature learning capabilities of LSTMs and their ability to handle input sequences can be harnessed in an end-to-end model that can be used for drive demand forecasting for rare events like public holidays.
+In this post, you will discover an approach to developing a scalable end-to-end LSTM model for time series forecasting.
+After reading this post, you will know:
+- The challenge of multivariate, multi-step forecasting across multiple sites, in this case cities.
+- An LSTM model architecture for time series forecasting comprised of separate autoencoder and forecasting sub-models.
+- The skill of the proposed LSTM architecture at rare event demand forecasting and the ability to reuse the trained model on unrelated forecasting problems.
+Kick-start your project with my new book Deep Learning for Time Series Forecasting, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+# Overview
+In this post, we will review the 2017 paper titled “Time-series Extreme Event Forecasting with Neural Networks at Uber” by Nikolay Laptev, et al. presented at the Time Series Workshop, ICML 2017.
+This post is divided into four sections; they are:
+- Motivation
+- Datasets
+- Model
+- Findings
+# Motivation
+The goal of the work was to develop an end-to-end forecast model for multi-step time series forecasting that can handle multivariate inputs (e.g. multiple input time series).
+The intent of the model was to forecast driver demand at Uber for ride sharing, specifically to forecast demand on challenging days such as holidays where the uncertainty for classical models was high.
+Generally, this type of demand forecasting for holidays belongs to an area of study called extreme event prediction.
+Extreme event prediction has become a popular topic for estimating peak electricity demand, traffic jam severity and surge pricing for ride sharing and other applications. In fact there is a branch of statistics known as extreme value theory (EVT) that deals directly with this challenge.
+— Time-series Extreme Event Forecasting with Neural Networks at Uber, 2017.
+Two existing approaches were described:
+- Classical Forecasting Methods: Where a model was developed per time series, perhaps fit as needed.
+- Two-Step Approach: Where classical models were used in conjunction with machine learning models.
+The difficulty of these existing models motivated the desire for a single end-to-end model.
+Further, a model was required that could generalize across locales, specifically across data collected for each city. This means a model trained on some or all cities with data available and used to make forecasts across some or all cities.
+We can summarize this as the general need for a model that supports multivariate inputs, makes multi-step forecasts, and generalizes across multiple sites, in this case cities.
+
+
+
+
+# Datasets
+The model was fit in a propitiatory Uber dataset comprised of five years of anonymized ride sharing data across top cities in the US.
+A five year daily history of completed trips across top US cities in terms of population was used to provide forecasts across all major US holidays.
+— Time-series Extreme Event Forecasting with Neural Networks at Uber, 2017.
+The input to each forecast consisted of both the information about each ride, as well as weather, city, and holiday variables.
+To circumvent the lack of data we use additional features including weather information (e.g., precipitation, wind speed, temperature) and city level information (e.g., current trips, current users, local holidays).
+— Time-series Extreme Event Forecasting with Neural Networks at Uber, 2017.
+The figure below taken from the paper provides a sample of six variables for one year.
+Scaled Multivariate Input for ModelTaken from “Time-series Extreme Event Forecasting with Neural Networks at Uber”.
+A training dataset was created by splitting the historical data into sliding windows of input and output variables.
+The specific size of the look-back and forecast horizon used in the experiments were not specified in the paper.
+Sliding Window Approach to Modeling Time SeriesTaken from “Time-series Extreme Event Forecasting with Neural Networks at Uber”.
+Time series data was scaled by normalizing observations per batch of samples and each input series was de-trended, but not deseasonalized.
+Neural networks are sensitive to unscaled data, therefore we normalize every minibatch. Furthermore, we found that de-trending the data, as opposed to de-seasoning, produces better results.
+— Time-series Extreme Event Forecasting with Neural Networks at Uber, 2017.
+# Model
+LSTMs, e.g. Vanilla LSTMs, were evaluated on the problem and show relatively poor performance.
+This is not surprising as it mirrors findings elsewhere.
+Our initial LSTM implementation did not show superior performance relative to the state of the art approach.
+— Time-series Extreme Event Forecasting with Neural Networks at Uber, 2017.
+A more elaborate architecture was used, comprised of two LSTM models:
+- Feature Extractor: Model for distilling an input sequence down to a feature vector that may be used as input for making a forecast.
+- Forecaster: Model that uses the extracted features and other inputs to make a forecast.
+An LSTM autoencoder model was developed for use as the feature extraction model and a Stacked LSTM was used as the forecast model.
+We found that the vanilla LSTM model’s performance is worse than our baseline. Thus, we propose a new architecture, that leverages an autoencoder for feature extraction, achieving superior performance compared to our baseline.
+— Time-series Extreme Event Forecasting with Neural Networks at Uber, 2017.
+When making a forecast, time series data is first provided to the autoencoders, which is compressed to multiple feature vectors that are averaged and concatenated. The feature vectors are then provided as input to the forecast model in order to make a prediction.
+… the model first primes the network by auto feature extraction, which is critical to capture complex time-series dynamics during special events at scale. […] Features vectors are then aggregated via an ensemble technique (e.g., averaging or other methods). The final vector is then concatenated with the new input and fed to LSTM forecaster for prediction.
+— Time-series Extreme Event Forecasting with Neural Networks at Uber, 2017.
+It is not clear what exactly is provided to the autoencoder when making a prediction, although we may guess that it is a multivariate time series for the city being forecasted with observations prior to the interval being forecasted.
+A multivariate time series as input to the autoencoder will result in multiple encoded vectors (one for each series) that could be concatenated. It is not clear what role averaging may take at this point, although we may guess that it is an averaging of multiple models performing the autoencoding process.
+Overview of Feature Extraction Model and Forecast ModelTaken from “Time-series Extreme Event Forecasting with Neural Networks at Uber.”
+The authors comment that it would be possible to make the autoencoder a part of the forecast model, and that this was evaluated, but the separate model resulted in better performance.
+Having a separate auto-encoder module, however, produced better results in our experience.
+— Time-series Extreme Event Forecasting with Neural Networks at Uber, 2017.
+More details of the developed model were made available in the slides used when presenting the paper.
+The input for the autoencoder was 512 LSTM units and the bottleneck in the autoencoder used to create the encoded feature vectors as 32 or 64 LSTM units.
+Details of LSTM Autoencoder for Feature ExtractionTaken from “Time-series Extreme Event Forecasting with Neural Networks at Uber.”
+The encoded feature vectors are provided to the forecast model with ‘new input‘, although it is not specified what this new input is; we could guess that it is a time series, perhaps a multivariate time series of the city being forecasted with observations prior to the forecast interval. Or, features extracted from this series as the blog post on the paper suggests (although I’m skeptical as the paper and slides contradict this).
+The model was trained on a lot of data, which is a general requirement of stacked LSTMs or perhaps LSTMs in general.
+The described production Neural Network Model was trained on thousands of time-series with thousands of data points each.
+— Time-series Extreme Event Forecasting with Neural Networks at Uber, 2017.
+The model is not retrained when making new forecasts.
+An interesting approach to estimating forecast uncertainty was also implemented that used the bootstrap.
+It involved estimating model uncertainty and forecast uncertainty separately, using the autoencoder and the forecast model respectively. Inputs were provided to a given model and dropout of the activations (as commented in the slides) was used. This process was repeated 100 times, and the model and forecast error terms were used in an estimate of the forecast uncertainty.
+Overview of Forecast Uncertainty EstimationTaken from “Time-series Extreme Event Forecasting with Neural Networks at Uber.”
+This approach to forecast uncertainty may be better described in the 2017 paper “Deep and Confident Prediction for Time Series at Uber.”
+# Findings
+The model was evaluated with a special focus on demand forecasting for U.S. holidays by U.S. city.
+The specifics of the model evaluation were not specified.
+The new generalized LSTM forecast model was found to outperform the existing model used at Uber, which may be impressive if we assume that the existing model was well tuned.
+The results presented show a 2%-18% forecast accuracy improvement compared to the current proprietary method comprising a univariate timeseries and machine learned model.
+— Time-series Extreme Event Forecasting with Neural Networks at Uber, 2017.
+The model trained on the Uber dataset was then applied directly to a subset of the M3-Competition dataset comprised of about 1,500 monthly univariate time series forecasting datasets.
+This is a type of transfer learning, a highly-desirable goal that allows the reuse of deep learning models across problem domains.
+Surprisingly, the model performed well, not great compared to the top performing methods, but better than many sophisticated models. The result is suggests that perhaps with fine tuning (e.g. as is done in other transfer learning case studies) the model could be reused and be skillful.
+Performance of LSTM Model Trained on Uber Data and Evaluated on the M3 DatasetsTaken from “Time-series Extreme Event Forecasting with Neural Networks at Uber.”
+Importantly, the authors suggest that perhaps the most beneficial application of deep LSTM models to time series forecasting are situations where:
+- There are a large number of time series.
+- There are a large number of observations for each series.
+- There is a strong correlation between time series.
+From our experience there are three criteria for picking a neural network model for time-series: (a) number of timeseries (b) length of time-series and (c) correlation among the time-series. If (a), (b) and (c) are high then the neural network might be the right choice, otherwise classical timeseries approach may work best.
+— Time-series Extreme Event Forecasting with Neural Networks at Uber, 2017.
+This is summarized well by a slide used in the presentation of the paper.
+Lessons Learned Applying LSTMs for Time Series ForecastingTaken from “Time-series Extreme Event Forecasting with Neural Networks at Uber” Slides.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Time-series Extreme Event Forecasting with Neural Networks at Uber, 2017.
+- Engineering Extreme Event Forecasting at Uber with Recurrent Neural Networks, 2017.
+- Time-Series Modeling with Neural Networks at Uber, Slides, 2017.
+- Time-series Extreme Event Forecasting Case study, Slides 2018.
+- Time Series Workshop, ICML 2017
+- Deep and Confident Prediction for Time Series at Uber, 2017.
+# Summary
+In this post, you discovered a scalable end-to-end LSTM model for time series forecasting.
+Specifically, you learned:
+- The challenge of multivariate, multi-step forecasting across multiple sites, in this case cities.
+- An LSTM model architecture for time series forecasting comprised of separate autoencoder and forecasting sub-models.
+- The skill of the proposed LSTM architecture at rare event demand forecasting and the ability to reuse the trained model on unrelated forecasting problems.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop Deep Learning models for Time Series Today!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Deep Learning for Time Series Forecasting
+It provides self-study tutorials on topics like: 
+CNNs, LSTMs,
+Multivariate Forecasting, Multi-Step Forecasting and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+
+'''

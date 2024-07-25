@@ -1,0 +1,494 @@
+How to use an Encoder-Decoder LSTM to Echo Sequences of Random Integers
+https://machinelearningmastery.com/how-to-use-an-encoder-decoder-lstm-to-echo-sequences-of-random-integers/
+2017-06-11
+A powerful feature of Long Short-Term Memory (LSTM) recurrent neural networks is that they can remember observations over long sequence intervals.
+This can be demonstrated by contriving a simple sequence echo problem where the entire input sequence or partial contiguous blocks of the input sequence are echoed as an output sequence.
+Developing LSTM recurrent neural networks to address the sequence echo problem is both a good demonstration of the power of LSTMs and can be used to demonstrate state-of-the-art recurrent neural network architectures.
+In this post, you will discover how to develop LSTMs to solve the full and partial sequence echo problem in Python using the Keras deep learning library.
+After completing this tutorial, you will know:
+- How to generate random sequences of integers, represent them using a one hot encoding and frame the sequence as a supervised learning problem with input and output pairs.
+- How to develop a sequence-to-sequence LSTM to echo the entire input sequence as an output.
+- How to develop an encoder-decoder LSTM to echo partial sequences with lengths that differ from the input sequence.
+Kick-start your project with my new book Long Short-Term Memory Networks With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Update Jan/2020: Updated API for Keras 2.3 and TensorFlow 2.0.
+How to use an Encoder-Decoder LSTM to Echo Sequences of Random IntegersPhoto by hammy24601, some rights reserved.
+# Overview
+This tutorial is divided into 3 parts; they are:
+- Sequence Echo Problem
+- Echo Whole Sequence (sequence-to-sequence model)
+- Echo Partial Sequence (encoder-decoder model)
+This tutorial assumes you have a Python SciPy environment installed. You can use either Python 2 or 3 with this example.
+This tutorial assumes you have Keras v2.0 or higher installed with either the TensorFlow or Theano backend.
+This tutorial also assumes you have scikit-learn, Pandas, NumPy, and Matplotlib installed.
+If you need help setting up your Python environment, see this post:
+- How to Setup a Python Environment for Machine Learning and Deep Learning with Anaconda
+# Sequence Echo Problem
+The echo sequence problem involves exposing an LSTM to a sequence of observations, one at a time, then asking the network to echo back a partial or full list of contiguous observations observed.
+This forces the network to remember blocks of contiguous observations and is a great demonstration of the learning power of LSTM recurrent neural networks.
+The first step is to write some code to generate a random sequence of integers and encode them for the network.
+This involves 3 steps:
+- Generate Random Sequence
+- One Hot Encode Random Sequence
+- Frame Encoded Sequences for Learning
+We can generate random integers in Python using the randint() function that takes two parameters, indicating the range of integers from which to draw values.
+In this tutorial, we will define the problem as having integer values between 0 and 99 with 100 unique values.
+We can put this in a function called generate_sequence() that will generate a sequence of random integers of the desired length, with the default length set to 25 elements.
+This function is listed below.
+
+Once we have generated sequences of random integers, we need to transform them into a format that is suitable for training an LSTM network.
+One option would be to rescale the integer to the range [0,1]. This would work and would require that the problem be phrased as regression.
+I am interested in predicting the right number, not a number close to the expected value. This means I would prefer to frame the problem as classification rather than regression, where the expected output is a class and there are 100 possible class values.
+In this case, we can use a one hot encoding of the integer values where each value is represented by a 100 elements binary vector that is all “0” values except the index of the integer, which is marked 1.
+The function below called one_hot_encode() defines how to iterate over a sequence of integers and create a binary vector representation for each and returns the result as a 2-dimensional array.
+We also need to decode the encoded values so that we can make use of the predictions, in this case, just review them.
+The one hot encoding can be inverted by using the argmax() NumPy function that returns the index of the value in the vector with the largest value.
+The function below, named one_hot_decode(), will decode an encoded sequence and can be used to later decode predictions from our network.
+
+Once the sequences have been generated and encoded, they must be organized into a framing suitable for learning.
+This involves organizing the linear sequence into input (X) and output (y) pairs.
+For example, the sequence [1, 2, 3, 4, 5] can be framed as a sequence prediction problem with 2 inputs (t and t-1) and 1 output (t-1) as follows:
+Note that the absence of data is marked with a NaN value. These rows can be padded with special characters and masked. Alternatively, and more simply, these rows can be removed from the dataset, at the cost of providing fewer examples from a sequence from which to learn. This latter approach will be the approach used in this example.
+We will use the Pandas shift() function to create shifted versions of the encoded sequence. The rows with missing data are removed with the dropna() function.
+We can then specify the input and output data from the shifted data frame. The data must be 3-dimensional for use with sequence prediction LSTMs. Both input and output require the dimensions [samples, timesteps, features], where samples is the number of rows, timesteps is the number of lag observations from which to learn to make predictions, and features is the number of separate values (e.g. 100 for the one hot encoding).
+The code below defines the to_supervised() function that implements this functionality. It takes two parameters to specify the number of encoded integers to use as input and output. The number of output integers must be less than or equal to the number of inputs and is counted from the oldest observation.
+For example, if 5 and 1 were specified for input and output on the sequence [1, 2, 3, 4, 5], then the function would return a single row in X with [1, 2, 3, 4, 5] and a single row in y with [1].
+For more on converting sequences to supervised learning problems, see the posts:
+- Time Series Forecasting as Supervised Learning
+- How to Convert a Time Series to a Supervised Learning Problem in Python
+We can tie all of this together.
+Below is the complete code listing for generating a sequence of 25 random integers and encoding each integer as a binary vector, separating them into X,y pairs for learning, then printing the decoded pairs for review.
+
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+
+The sequence was split into input sequences of 5 numbers and output sequences of the 3 oldest observations from the input sequences.
+Now that we know how to prepare and represent random sequences of integers, we can look at using LSTMs to learn them.
+# Echo Whole Sequence
+(sequence-to-sequence model)
+In this section, we will develop an LSTM for a simple framing of the problem, that is the prediction or reproduction of the entire input sequence.
+That is, given a fixed input sequence, such as 5 random integers, output the same sequence. This may not sound like a simple framing of the problem, but it is because the network architecture required to address it is straightforward.
+We will generate random sequences of 25 integers and frame them as input-output pairs of 5 values. We will create a convenience function named get_data() that we will use to create encoded X,y pairs of random integers using all of the functionality prepared in the previous section. This function is listed below.
+This function will be called with the parameters 5 and 5 to create 21 samples with 5 timesteps of 100 features as inputs and the same as outputs (21 rather than 25 because some rows with missing values due to the shifting of the sequence are removed).
+We can now develop an LSTM for this problem. We will use a stateful LSTM and explicitly reset the internal state at the end of training for each generated sample. Maintaining internal state within the network across the samples in a sequence may or may not be required as the context required for learning will be provided as timesteps; nevertheless, this additional state may be helpful.
+Let’s start off by defining the expected dimensions of the input data as 5 timesteps of 100 features. Because we are using a stateful LSTM, this will be specified using the batch_input_shape argument instead of the input_shape. The LSTM hidden layer will use 20 memory units, which should be more than sufficient to learn this problem.
+A batch size of 7 will be used. The batch size must be a factor of the number of training samples (in this case 21) and defines the number samples after which the weights in the LSTM are updated. This means weights will be updated 3 times for each random sequence the network is trained on.
+We want the output layer to output one integer at a time, one for each input observed.
+We will define the output layer as a fully connected layer (Dense) with 100 neurons for each of the 100 possible integer values in the one hot encoding. Because we are using a one hot encoding and framing the problem as multi-class classification, we can use the softmax activation function in the Dense layer.
+We need to wrap this output layer in a TimeDistributed layer. This is to ensure that we can use the output layer to predict one integer at a time for each of the items in the input sequence. This is key so that we are implementing a true many-to-many model (e.g. sequence-to-sequence), rather than a many-to-one model where a one-shot vector output is created based on the internal state and value of the last observation in the input sequence (e.g. the output layer outputting 5*100 values at once).
+This requires that the previous LSTM layer returns sequences by setting return_sequences=True (e.g. one output for each observation in the input sequence rather than one output for the entire input sequence). The TimeDistributed layer performs the trick of applying each slice of the sequence from the LSTM layer as inputs to the wrapped Dense layer so that one integer can be predicted at a time.
+We will use the log loss function suitable for multi-class classification problems (categorical_crossentropy) and the efficient ADAM optimization algorithm with default hyperparameters.
+In addition to reporting the log loss each epoch, we will also report the classification accuracy to get an idea of how our model is training.
+To ensure the network does not memorize the problem, and the network learns to generalize a solution for all possible input sequences, we will generate a new random sequence each training epoch. Internal state within the LSTM hidden layer will reset at the end of each epoch. We will fit the model for 500 training epochs.
+Once fit, we will evaluate the model by making a prediction on one new random sequence of integers and compare the decoded expected output sequences to the predicted sequences.
+Putting this all together, the complete code listing is provided below.
+Running the example prints the log loss and accuracy each epoch. The run ends by generating a new random sequence and comparing expected sequences to predicted sequences.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+Given the chosen configuration, the network will converge to 100% accuracy pretty much every time it is run.
+
+# Echo Partial Sequence
+(encoder-decoder model)
+So far, so good, but what if we want the length of the output sequence to differ from the length of the input sequence?
+That is, we want to echo the first 2 observations from the input sequence of 5 observations:
+This is still a sequence-to-sequence prediction problem, but requires a change to the network architecture.
+One way would be to have the output sequence the same length, and use padding to fill out the output sequence to the same length.
+Alternately we can use a more elegant solution. We can implement an encoder-decoder network that allows a variable length output where an encoder learns an internal representation for the input sequence and the decoder reads the internal representation and learns how to create the output sequence of the same or differing length.
+This is a more challenging problem for the network to solve, and in turn requires additional capacity (more memory units) and longer training (more epochs).
+The input, first hidden LSTM layer, and TimeDistributed Dense output layer of the network stay the same, except we will increase the number of memory units from 20 to 150. We will also increase the batch size from 7 to 21 so that weight updates are performed at the end of all samples of a random sequence. This was found to result in faster learning for this network after some experimentation.
+The first hidden layer is the encoder.
+We must add an additional hidden LSTM layer to act as the decoder. Again, we will use 150 memory units in this layer, and as in the previous example, the layer before the TimeDistributed layer will return sequences instead of a single value.
+These two layers do not fit neatly together. The encoder layer will output a 2D array (21, 150) and the decoder expects a 3D array as input (21, ?, 150).
+We address this problem by adding a RepeatVector() layer between the encoder and decoder and ensure that the output of the encoder is repeated a suitable number of times to match the length of the output sequence. In this case, 2 times for the two timesteps in the output sequence.
+The LSTM network is therefore defined as:
+The number of training epochs was increased from 500 to 5,000 to account for the additional capacity of the network.
+The rest of the example is the same.
+Tying this together, the complete code listing is provided below.
+Running the example will display log loss and accuracy on randomly generated sequences each training epoch.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+The chosen configuration will mean that the model will converge to 100% classification accuracy.
+A final randomly generated sequence is generated and expected vs predicted sequences are compared.
+
+# Extensions
+This section lists some possible extensions to the tutorial you may wish to explore.
+- Linear Representation. A categorical (one hot encoding) framing of the problem was used that dramatically increased the number of weights required to model this problem (100 per random integer). Explore using a linear representation (scale integers to values between 0-1) and model the problem as regression. See how this affects the skill of the system, required network size (memory units), and training time (epochs).
+- Mask Missing Values. When the sequence data was framed as a supervised learning problem, the rows with missing data were removed. Explore using a Masking layer or special values (e.g. -1) to allow the network to ignore or learn to ignore these values.
+- Echo Longer Sequences. The partial subsequence that was learned to be echoed was only 2 items long. Explore echoing longer sequences using the encoder-decoder network. Note, you will likely need larger hidden layers (more memory units) trained for longer (more epochs).
+- Ignore State. Care was taken to only clear state at the end of all samples of each random integer sequence and not shuffle samples within a sequence. This may not be needed. Explore and contrast model performance using a stateless LSTM with a batch size of 1 (weight updates and state reset after each sample of each sequence). I expect little to no change.
+- Alternate Network Topologies. Care was taken to use a TimeDistributed wrapper for the output layer to ensure that a many-to-many network was used to model the problem. Explore the sequence echo problem with a one-to-one configuration (timesteps taken as features) or a many-to-one (output taken as a vector of features) and see how this affects the required network size (memory units) and training time (epochs). I would expect it to require a larger network and take longer.
+Did you explore any of these extensions?
+Share your findings in the comments below.
+# Summary
+In this tutorial, you discovered how to develop an LSTM recurrent neural network to echo sequences and partial sequences from randomly generated lists of integers.
+Specifically, you learned:
+- How to generate random sequences of integers, represent them using a one hot encoding, and frame the problem as a supervised learning problem.
+- How to develop a sequence-to-sequence based LSTM network to echo an entire input sequence.
+- How to develop an encoder-decoder based LSTM network to echo partial input sequences with lengths that differ from the length of the input sequence.
+Do you have any questions?
+Post your questions in the comments and I will do my best to answer.
+# Develop LSTMs for Sequence Prediction Today!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Long Short-Term Memory Networks with Python
+It provides self-study tutorials on topics like:
+CNN LSTMs, Encoder-Decoder LSTMs, generative models, data preparation, making predictions and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+randint(0, 99)
+# generate a sequence of random numbers in [0, 99]
+def generate_sequence(length=25):
+	return [randint(0, 99) for _ in range(length)]
+# one hot encode sequence
+def one_hot_encode(sequence, n_unique=100):
+	encoding = list()
+	for value in sequence:
+		vector = [0 for _ in range(n_unique)]
+		vector[value] = 1
+		encoding.append(vector)
+	return array(encoding)
+# decode a one hot encoded string
+def one_hot_decode(encoded_seq):
+	return [argmax(vector) for vector in encoded_seq]
+X,			y
+NaN, 1,		NaN
+1, 2,		1
+2, 3,		2
+3, 4,		3
+4, 5,		4
+5, NaN,		5
+# convert encoded sequence to supervised learning
+def to_supervised(sequence, n_in, n_out):
+	# create lag copies of the sequence
+	df = DataFrame(sequence)
+	df = concat([df.shift(n_in-i-1) for i in range(n_in)], axis=1)
+	# drop rows with missing values
+	df.dropna(inplace=True)
+	# specify columns for input and output pairs
+	values = df.values
+	width = sequence.shape[1]
+	X = values.reshape(len(values), n_in, width)
+	y = values[:, 0:(n_out*width)].reshape(len(values), n_out, width)
+	return X, y
+from random import randint
+from numpy import array
+from numpy import argmax
+from pandas import DataFrame
+from pandas import concat
+
+# generate a sequence of random numbers in [0, 99]
+def generate_sequence(length=25):
+	return [randint(0, 99) for _ in range(length)]
+
+# one hot encode sequence
+def one_hot_encode(sequence, n_unique=100):
+	encoding = list()
+	for value in sequence:
+		vector = [0 for _ in range(n_unique)]
+		vector[value] = 1
+		encoding.append(vector)
+	return array(encoding)
+
+# decode a one hot encoded string
+def one_hot_decode(encoded_seq):
+	return [argmax(vector) for vector in encoded_seq]
+
+# convert encoded sequence to supervised learning
+def to_supervised(sequence, n_in, n_out):
+	# create lag copies of the sequence
+	df = DataFrame(sequence)
+	df = concat([df.shift(n_in-i-1) for i in range(n_in)], axis=1)
+	# drop rows with missing values
+	df.dropna(inplace=True)
+	# specify columns for input and output pairs
+	values = df.values
+	width = sequence.shape[1]
+	X = values.reshape(len(values), n_in, width)
+	y = values[:, 0:(n_out*width)].reshape(len(values), n_out, width)
+	return X, y
+
+# generate random sequence
+sequence = generate_sequence()
+print(sequence)
+# one hot encode
+encoded = one_hot_encode(sequence)
+# convert to X,y pairs
+X,y = to_supervised(encoded, 5, 3)
+# decode all pairs
+for i in range(len(X)):
+	print(one_hot_decode(X[i]), '=>', one_hot_decode(y[i]))
+[86, 81, 88, 1, 23, 78, 64, 7, 99, 23, 2, 36, 73, 26, 27, 33, 24, 51, 73, 64, 13, 13, 53, 40, 64]
+
+[86, 81, 88, 1, 23] => [86, 81, 88]
+[81, 88, 1, 23, 78] => [81, 88, 1]
+[88, 1, 23, 78, 64] => [88, 1, 23]
+[1, 23, 78, 64, 7] => [1, 23, 78]
+[23, 78, 64, 7, 99] => [23, 78, 64]
+[78, 64, 7, 99, 23] => [78, 64, 7]
+[64, 7, 99, 23, 2] => [64, 7, 99]
+[7, 99, 23, 2, 36] => [7, 99, 23]
+[99, 23, 2, 36, 73] => [99, 23, 2]
+[23, 2, 36, 73, 26] => [23, 2, 36]
+[2, 36, 73, 26, 27] => [2, 36, 73]
+[36, 73, 26, 27, 33] => [36, 73, 26]
+[73, 26, 27, 33, 24] => [73, 26, 27]
+[26, 27, 33, 24, 51] => [26, 27, 33]
+[27, 33, 24, 51, 73] => [27, 33, 24]
+[33, 24, 51, 73, 64] => [33, 24, 51]
+[24, 51, 73, 64, 13] => [24, 51, 73]
+[51, 73, 64, 13, 13] => [51, 73, 64]
+[73, 64, 13, 13, 53] => [73, 64, 13]
+[64, 13, 13, 53, 40] => [64, 13, 13]
+[13, 13, 53, 40, 64] => [13, 13, 53]
+# prepare data for the LSTM
+def get_data(n_in, n_out):
+	# generate random sequence
+	sequence = generate_sequence()
+	# one hot encode
+	encoded = one_hot_encode(sequence)
+	# convert to X,y pairs
+	X,y = to_supervised(encoded, n_in, n_out)
+	return X,y
+model = Sequential()
+model.add(LSTM(20, batch_input_shape=(7, 5, 100), return_sequences=True, stateful=True))
+Dense(100, activation='softmax')
+model.add(TimeDistributed(Dense(100, activation='softmax')))
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+# train LSTM
+for epoch in range(500):
+	# generate new random sequence
+	X,y = get_data(5, 5)
+	# fit model for one epoch on this sequence
+	model.fit(X, y, epochs=1, batch_size=7, verbose=2, shuffle=False)
+	model.reset_states()
+# evaluate LSTM
+X,y = get_data(5, 5)
+yhat = model.predict(X, batch_size=7, verbose=0)
+# decode all pairs
+for i in range(len(X)):
+	print('Expected:', one_hot_decode(y[i]), 'Predicted', one_hot_decode(yhat[i]))
+from random import randint
+from numpy import array
+from numpy import argmax
+from pandas import DataFrame
+from pandas import concat
+from keras.models import Sequential
+from keras.layers import LSTM
+from keras.layers import Dense
+from keras.layers import TimeDistributed
+
+# generate a sequence of random numbers in [0, 99]
+def generate_sequence(length=25):
+	return [randint(0, 99) for _ in range(length)]
+
+# one hot encode sequence
+def one_hot_encode(sequence, n_unique=100):
+	encoding = list()
+	for value in sequence:
+		vector = [0 for _ in range(n_unique)]
+		vector[value] = 1
+		encoding.append(vector)
+	return array(encoding)
+
+# decode a one hot encoded string
+def one_hot_decode(encoded_seq):
+	return [argmax(vector) for vector in encoded_seq]
+
+# convert encoded sequence to supervised learning
+def to_supervised(sequence, n_in, n_out):
+	# create lag copies of the sequence
+	df = DataFrame(sequence)
+	df = concat([df.shift(n_in-i-1) for i in range(n_in)], axis=1)
+	# drop rows with missing values
+	df.dropna(inplace=True)
+	# specify columns for input and output pairs
+	values = df.values
+	width = sequence.shape[1]
+	X = values.reshape(len(values), n_in, width)
+	y = values[:, 0:(n_out*width)].reshape(len(values), n_out, width)
+	return X, y
+
+# prepare data for the LSTM
+def get_data(n_in, n_out):
+	# generate random sequence
+	sequence = generate_sequence()
+	# one hot encode
+	encoded = one_hot_encode(sequence)
+	# convert to X,y pairs
+	X,y = to_supervised(encoded, n_in, n_out)
+	return X,y
+
+# define LSTM
+n_in = 5
+n_out = 5
+encoded_length = 100
+batch_size = 7
+model = Sequential()
+model.add(LSTM(20, batch_input_shape=(batch_size, n_in, encoded_length), return_sequences=True, stateful=True))
+model.add(TimeDistributed(Dense(encoded_length, activation='softmax')))
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+# train LSTM
+for epoch in range(500):
+	# generate new random sequence
+	X,y = get_data(n_in, n_out)
+	# fit model for one epoch on this sequence
+	model.fit(X, y, epochs=1, batch_size=batch_size, verbose=2, shuffle=False)
+	model.reset_states()
+# evaluate LSTM
+X,y = get_data(n_in, n_out)
+yhat = model.predict(X, batch_size=batch_size, verbose=0)
+# decode all pairs
+for i in range(len(X)):
+	print('Expected:', one_hot_decode(y[i]), 'Predicted', one_hot_decode(yhat[i]))
+
+Epoch 1/1
+0s - loss: 1.7310 - acc: 1.0000
+Epoch 1/1
+0s - loss: 1.5712 - acc: 1.0000
+Epoch 1/1
+0s - loss: 1.7447 - acc: 1.0000
+Epoch 1/1
+0s - loss: 1.5704 - acc: 1.0000
+Epoch 1/1
+0s - loss: 1.6124 - acc: 1.0000
+Expected: [98, 30, 98, 11, 49] Predicted [98, 30, 98, 11, 49]
+Expected: [30, 98, 11, 49, 1] Predicted [30, 98, 11, 49, 1]
+Expected: [98, 11, 49, 1, 77] Predicted [98, 11, 49, 1, 77]
+Expected: [11, 49, 1, 77, 80] Predicted [11, 49, 1, 77, 80]
+Expected: [49, 1, 77, 80, 23] Predicted [49, 1, 77, 80, 23]
+Expected: [1, 77, 80, 23, 32] Predicted [1, 77, 80, 23, 32]
+Expected: [77, 80, 23, 32, 27] Predicted [77, 80, 23, 32, 27]
+Expected: [80, 23, 32, 27, 66] Predicted [80, 23, 32, 27, 66]
+Expected: [23, 32, 27, 66, 96] Predicted [23, 32, 27, 66, 96]
+Expected: [32, 27, 66, 96, 76] Predicted [32, 27, 66, 96, 76]
+Expected: [27, 66, 96, 76, 10] Predicted [27, 66, 96, 76, 10]
+Expected: [66, 96, 76, 10, 39] Predicted [66, 96, 76, 10, 39]
+Expected: [96, 76, 10, 39, 44] Predicted [96, 76, 10, 39, 44]
+Expected: [76, 10, 39, 44, 57] Predicted [76, 10, 39, 44, 57]
+Expected: [10, 39, 44, 57, 11] Predicted [10, 39, 44, 57, 11]
+Expected: [39, 44, 57, 11, 48] Predicted [39, 44, 57, 11, 48]
+Expected: [44, 57, 11, 48, 39] Predicted [44, 57, 11, 48, 39]
+Expected: [57, 11, 48, 39, 28] Predicted [57, 11, 48, 39, 28]
+Expected: [11, 48, 39, 28, 15] Predicted [11, 48, 39, 28, 15]
+Expected: [48, 39, 28, 15, 49] Predicted [48, 39, 28, 15, 49]
+Expected: [39, 28, 15, 49, 76] Predicted [39, 28, 15, 49, 76]
+[1, 2, 3, 4, 5] => [1, 2]
+model.add(LSTM(150, batch_input_shape=(21, 5, 100), stateful=True))
+...
+model.add(TimeDistributed(Dense(100, activation='softmax')))
+model.add(LSTM(150, return_sequences=True, stateful=True))
+model.add(RepeatVector(2))
+model = Sequential()
+model.add(LSTM(150, batch_input_shape=(21, 5, 100), stateful=True))
+model.add(RepeatVector(2))
+model.add(LSTM(150, return_sequences=True, stateful=True))
+model.add(TimeDistributed(Dense(100, activation='softmax')))
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+from random import randint
+from numpy import array
+from numpy import argmax
+from pandas import DataFrame
+from pandas import concat
+from keras.models import Sequential
+from keras.layers import LSTM
+from keras.layers import Dense
+from keras.layers import TimeDistributed
+from keras.layers import RepeatVector
+
+# generate a sequence of random numbers in [0, 99]
+def generate_sequence(length=25):
+	return [randint(0, 99) for _ in range(length)]
+
+# one hot encode sequence
+def one_hot_encode(sequence, n_unique=100):
+	encoding = list()
+	for value in sequence:
+		vector = [0 for _ in range(n_unique)]
+		vector[value] = 1
+		encoding.append(vector)
+	return array(encoding)
+
+# decode a one hot encoded string
+def one_hot_decode(encoded_seq):
+	return [argmax(vector) for vector in encoded_seq]
+
+# convert encoded sequence to supervised learning
+def to_supervised(sequence, n_in, n_out):
+	# create lag copies of the sequence
+	df = DataFrame(sequence)
+	df = concat([df.shift(n_in-i-1) for i in range(n_in)], axis=1)
+	# drop rows with missing values
+	df.dropna(inplace=True)
+	# specify columns for input and output pairs
+	values = df.values
+	width = sequence.shape[1]
+	X = values.reshape(len(values), n_in, width)
+	y = values[:, 0:(n_out*width)].reshape(len(values), n_out, width)
+	return X, y
+
+# prepare data for the LSTM
+def get_data(n_in, n_out):
+	# generate random sequence
+	sequence = generate_sequence()
+	# one hot encode
+	encoded = one_hot_encode(sequence)
+	# convert to X,y pairs
+	X,y = to_supervised(encoded, n_in, n_out)
+	return X,y
+
+# define LSTM
+n_in = 5
+n_out = 2
+encoded_length = 100
+batch_size = 21
+model = Sequential()
+model.add(LSTM(150, batch_input_shape=(batch_size, n_in, encoded_length), stateful=True))
+model.add(RepeatVector(n_out))
+model.add(LSTM(150, return_sequences=True, stateful=True))
+model.add(TimeDistributed(Dense(encoded_length, activation='softmax')))
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+# train LSTM
+for epoch in range(5000):
+	# generate new random sequence
+	X,y = get_data(n_in, n_out)
+	# fit model for one epoch on this sequence
+	model.fit(X, y, epochs=1, batch_size=batch_size, verbose=2, shuffle=False)
+	model.reset_states()
+# evaluate LSTM
+X,y = get_data(n_in, n_out)
+yhat = model.predict(X, batch_size=batch_size, verbose=0)
+# decode all pairs
+for i in range(len(X)):
+	print('Expected:', one_hot_decode(y[i]), 'Predicted', one_hot_decode(yhat[i]))
+
+Epoch 1/1
+0s - loss: 0.0248 - acc: 1.0000
+Epoch 1/1
+0s - loss: 0.0399 - acc: 1.0000
+Epoch 1/1
+0s - loss: 0.0285 - acc: 1.0000
+Epoch 1/1
+0s - loss: 0.0410 - acc: 0.9762
+Epoch 1/1
+0s - loss: 0.0236 - acc: 1.0000
+Expected: [6, 52] Predicted [6, 52]
+Expected: [52, 96] Predicted [52, 96]
+Expected: [96, 45] Predicted [96, 45]
+Expected: [45, 69] Predicted [45, 69]
+Expected: [69, 52] Predicted [69, 52]
+Expected: [52, 96] Predicted [52, 96]
+Expected: [96, 11] Predicted [96, 96]
+Expected: [11, 96] Predicted [11, 96]
+Expected: [96, 54] Predicted [96, 54]
+Expected: [54, 27] Predicted [54, 27]
+Expected: [27, 48] Predicted [27, 48]
+Expected: [48, 9] Predicted [48, 9]
+Expected: [9, 32] Predicted [9, 32]
+Expected: [32, 62] Predicted [32, 62]
+Expected: [62, 41] Predicted [62, 41]
+Expected: [41, 54] Predicted [41, 54]
+Expected: [54, 20] Predicted [54, 20]
+Expected: [20, 80] Predicted [20, 80]
+Expected: [80, 63] Predicted [80, 63]
+Expected: [63, 69] Predicted [63, 69]
+Expected: [69, 36] Predicted [69, 36]
+'''

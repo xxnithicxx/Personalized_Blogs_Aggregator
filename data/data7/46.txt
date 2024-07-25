@@ -1,0 +1,494 @@
+How to Use the TimeseriesGenerator for Time Series Forecasting in Keras
+https://machinelearningmastery.com/how-to-use-the-timeseriesgenerator-for-time-series-forecasting-in-keras/
+2018-11-06
+Time series data must be transformed into a structure of samples with input and output components before it can be used to fit a supervised learning model.
+This can be challenging if you have to perform this transformation manually. The Keras deep learning library provides the TimeseriesGenerator to automatically transform both univariate and multivariate time series data into samples, ready to train deep learning models.
+In this tutorial, you will discover how to use the Keras TimeseriesGenerator for preparing time series data for modeling with deep learning methods.
+After completing this tutorial, you will know:
+- How to define the TimeseriesGenerator generator and use it to fit deep learning models.
+- How to prepare a generator for univariate time series and fit MLP and LSTM models.
+- How to prepare a generator for multivariate time series and fit an LSTM model.
+Kick-start your project with my new book Deep Learning for Time Series Forecasting, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Use the TimeseriesGenerator for Time Series Forecasting in KerasPhoto by Chris Fithall, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into six parts; they are:
+- Problem with Time Series for Supervised Learning
+- How to Use the TimeseriesGenerator
+- Univariate Time Series Example
+- Multivariate Time Series Example
+- Multivariate Inputs and Dependent Series Example
+- Multi-step Forecasts Example
+Note: This tutorial assumes that you are using Keras v2.2.4 or higher.
+# Problem with Time Series for Supervised Learning
+Time series data requires preparation before it can be used to train a supervised learning model, such as a deep learning model.
+For example, a univariate time series is represented as a vector of observations:
+A supervised learning algorithm requires that data is provided as a collection of samples, where each sample has an input component (X) and an output component (y).
+The model will learn how to map inputs to outputs from the provided examples.
+A time series must be transformed into samples with input and output components. The transform both informs what the model will learn and how you intend to use the model in the future when making predictions, e.g. what is required to make a prediction (X) and what prediction is made (y).
+For a univariate time series interested in one-step predictions, the observations at prior time steps, so-called lag observations, are used as input and the output is the observation at the current time step.
+For example, the above 10-step univariate series can be expressed as a supervised learning problem with three time steps for input and one step as output, as follows:
+You can write code to perform this transform yourself; for example, see the post:
+- How to Convert a Time Series to a Supervised Learning Problem in Python
+Alternately, when you are interested in training neural network models with Keras, you can use the TimeseriesGenerator class.
+
+
+
+
+# How to use the TimeseriesGenerator
+Keras provides the TimeseriesGenerator that can be used to automatically transform a univariate or multivariate time series dataset into a supervised learning problem.
+There are two parts to using the TimeseriesGenerator: defining it and using it to train models.
+You can create an instance of the class and specify the input and output aspects of your time series problem and it will provide an instance of a Sequence class that can then be used to iterate across the inputs and outputs of the series.
+In most time series prediction problems, the input and output series will be the same series.
+For example:
+Technically, the class is not a generator in the sense that it is not a Python Generator and you cannot use the next() function on it.
+In addition to specifying the input and output aspects of your time series problem, there are some additional parameters that you should configure; for example:
+- length: The number of lag observations to use in the input portion of each sample (e.g. 3).
+- batch_size: The number of samples to return on each iteration (e.g. 32).
+You must define a length argument based on your designed framing of the problem. That is the desired number of lag observations to use as input.
+You must also define the batch size as the batch size of your model during training. If the number of samples in your dataset is less than your batch size, you can set the batch size in the generator and in your model to the total number of samples in your generator found via calculating its length; for example:
+There are also other arguments such as defining start and end offsets into your data, the sampling rate, stride, and more. You are less likely to use these features, but you can see the full API for more details.
+The samples are not shuffled by default. This is useful for some recurrent neural networks like LSTMs that maintain state across samples within a batch.
+It can benefit other neural networks, such as CNNs and MLPs, to shuffle the samples when training. Shuffling can be enabled by setting the ‘shuffle‘ argument to True. This will have the effect of shuffling samples returned for each batch.
+At the time of writing, the TimeseriesGenerator is limited to one-step outputs. Multi-step time series forecasting is not supported.
+Once a TimeseriesGenerator instance has been defined, it can be used to train a neural network model.
+A model can be trained using the TimeseriesGenerator as a data generator. This can be achieved by fitting the defined model using the fit_generator() function.
+This function takes the generator as an argument. It also takes a steps_per_epoch argument that defines the number of samples to use in each epoch. This can be set to the length of the TimeseriesGenerator instance to use all samples in the generator.
+For example:
+Similarly, the generator can be used to evaluate a fit model by calling the evaluate_generator() function, and using a fit model to make predictions on new data with the predict_generator() function.
+A model fit with the data generator does not have to use the generator versions of the evaluate and predict functions. They can be used only if you wish to have the data generator prepare your data for the model.
+# Univariate Time Series Example
+We can make the TimeseriesGenerator concrete with a worked example with a small contrived univariate time series dataset.
+First, let’s define our dataset.
+We will choose to frame the problem where the last two lag observations will be used to predict the next value in the sequence. For example:
+For now, we will use a batch size of 1, so that we can explore the data in the generator.
+Next, we can see how many samples will be prepared by the data generator for this time series.
+Finally, we can print the input and output components of each sample, to confirm that the data was prepared as we expected.
+The complete example is listed below.
+Running the example first prints the total number of samples in the generator, which is eight.
+We can then see that each input array has the shape [1, 2] and each output has the shape [1,].
+The observations are prepared as we expected, with two lag observations that will be used as input and the subsequent value in the sequence as the output.
+Now we can fit a model on this data and learn to map the input sequence to the output sequence.
+We will start with a simple Multilayer Perceptron, or MLP, model.
+The generator will be defined so that all samples will be used in each batch, given the small number of samples.
+We can define a simple model with one hidden layer with 50 nodes and an output layer that will make the prediction.
+We can then fit the model with the generator using the fit_generator() function. We only have one batch worth of data in the generator so we’ll set the steps_per_epoch to 1. The model will be fit for 200 epochs.
+Once fit, we will make an out of sample prediction.
+Given the inputs [9, 10], we will make a prediction and expect the model to predict [11], or close to it. The model is not tuned; this is just an example of how to use the generator.
+The complete example is listed below.
+
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+
+Running the example prepares the generator, fits the model, and makes the out of sample prediction, correctly predicting a value close to 11.
+We can also use the generator to fit a recurrent neural network, such as a Long Short-Term Memory network, or LSTM.
+The LSTM expects data input to have the shape [samples, timesteps, features], whereas the generator described so far is providing lag observations as features or the shape [samples, features].
+We can reshape the univariate time series prior to preparing the generator from [10, ] to [10, 1] for 10 time steps and 1 feature; for example:
+The TimeseriesGenerator will then split the series into samples with the shape [batch, n_input, 1] or [8, 2, 1] for all eight samples in the generator and the two lag observations used as time steps.
+The complete example is listed below.
+
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+
+Again, running the example prepares the data, fits the model, and predicts the next out of sample value in the sequence.
+
+# Multivariate Time Series Example
+The TimeseriesGenerator also supports multivariate time series problems.
+These are problems where you have multiple parallel series, with observations at the same time step in each series.
+We can demonstrate this with an example.
+First, we can contrive a dataset of two parallel series.
+It is a standard structure to have multivariate time series formatted such that each time series is a separate column and rows are the observations at each time step.
+The series we have defined are vectors, but we can convert them into columns. We can reshape each series into an array with the shape [10, 1] for the 10 time steps and 1 feature.
+We can now horizontally stack the columns into a dataset by calling the hstack() NumPy function.
+We can now provide this dataset to the TimeseriesGenerator directly. We will use the prior two observations of each series as input and the next observation of each series as output.
+Each sample will then be a three-dimensional array of [1, 2, 2] for the 1 sample, 2 time steps, and 2 features or parallel series. The output will be a two-dimensional series of [1, 2] for the 1 sample and 2 features. The first sample will be:
+The complete example is listed below.
+Running the example will first print the prepared dataset, followed by the total number of samples in the dataset.
+Next, the input and output portion of each sample is printed, confirming our intended structure.
+The three-dimensional structure of the samples means that the generator cannot be used directly for simple models like MLPs.
+This could be achieved by first flattening the time series dataset to a one-dimensional vector prior to providing it to the TimeseriesGenerator and set length to the number of steps to use as input multiplied by the number of columns in the series (n_steps * n_features).
+A limitation of this approach is that the generator will only allow you to predict one variable. You almost certainly may be better off writing your own function to prepare multivariate time series for an MLP than using the TimeseriesGenerator.
+The three-dimensional structure of the samples can be used directly by CNN and LSTM models. A complete example for multivariate time series forecasting with the TimeseriesGenerator is listed below.
+
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+
+Running the example prepares the data, fits the model, and makes a prediction for the next value in each of the input time series, which we expect to be [110, 115].
+
+# Multivariate Inputs and Dependent Series Example
+There are multivariate time series problems where there are one or more input series and a separate output series to be forecasted that is dependent upon the input series.
+To make this concrete, we can contrive one example with two input time series and an output series that is the sum of the input series.
+Where values in the output sequence are the sum of values at the same time step in the input time series.
+This is different from prior examples where, given inputs, we wish to predict a value in the target time series for the next time step, not the same time step as the input.
+For example, we want samples like:
+We don’t want samples like the following:
+Nevertheless, the TimeseriesGenerator class assumes that we are predicting the next time step and will provide data as in the second case above.
+For example:
+Running the example prints the input and output portions of the samples with the output values for the next time step rather than the current time step as we may desire for this type of problem.
+We can therefore modify the target series (out_seq) and insert an additional value at the beginning in order to push all observations down by one time step.
+This artificial shift will allow the preferred framing of the problem.
+The complete example with this shift is provided below.
+Running the example shows the preferred framing of the problem.
+This approach will work regardless of the length of the input sample.
+
+# Multi-step Forecasts Example
+A benefit of neural network models over many other types of classical and machine learning models is that they can make multi-step forecasts.
+That is, that the model can learn to map an input pattern of one or more features to an output pattern of more than one feature. This can be used in time series forecasting to directly forecast multiple future time steps.
+This can be achieved either by directly outputting a vector from the model, by specifying the desired number of outputs as the number of nodes in the output layer, or it can be achieved by specialized sequence prediction models such as an encoder-decoder model.
+A limitation of the TimeseriesGenerator is that it does not directly support multi-step outputs. Specifically, it will not create the multiple steps that may be required in the target sequence.
+Nevertheless, if you prepare your target sequence to have multiple steps, it will honor and use them as the output portion of each sample. This means the onus is on you to prepare the expected output for each time step.
+We can demonstrate this with a simple univariate time series with two time steps in the output sequence.
+You can see that you must have the same number of rows in the target sequence as you do in the input sequence. In this case, we must know values beyond the values in the input sequence, or trim the input sequence to the length of the target sequence.
+The complete example is listed below.
+Running the example prints the input and output portions of the samples showing the two lag observations as input and the two steps as output in the multi-step forecasting problem.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- How to Convert a Time Series to a Supervised Learning Problem in Python
+- TimeseriesGenerator Keras API
+- Sequence Keras API
+- Sequential Model Keras API
+- Python Generator
+# Summary
+In this tutorial, you discovered how to use the Keras TimeseriesGenerator for preparing time series data for modeling with deep learning methods.
+Specifically, you learned:
+- How to define the TimeseriesGenerator generator and use it to fit deep learning models.
+- How to prepare a generator for univariate time series and fit MLP and LSTM models.
+- How to prepare a generator for multivariate time series and fit an LSTM model.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop Deep Learning models for Time Series Today!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Deep Learning for Time Series Forecasting
+It provides self-study tutorials on topics like: 
+CNNs, LSTMs,
+Multivariate Forecasting, Multi-Step Forecasting and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+[1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+X,					y
+example input, 		example output
+example input, 		example output
+example input, 		example output
+...
+y = f(X)
+X,			y
+[1, 2, 3],	[4]
+[2, 3, 4],	[5]
+[3, 4, 5],	[6]
+...
+# load data
+inputs = ...
+outputs = ...
+# define generator
+generator = TimeseriesGenerator(inputs, outputs, ...)
+# iterator generator
+for i in range(len(generator)):
+	...
+print(len(generator))
+# define generator
+generator = TimeseriesGenerator(...)
+# define model
+model = ...
+# fit model
+model.fit_generator(generator, steps_per_epoch=len(generator), ...)
+# define dataset
+series = array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+X,			y
+[1, 2]		3
+# define generator
+n_input = 2
+generator = TimeseriesGenerator(series, series, length=n_input, batch_size=1)
+# number of samples
+print('Samples: %d' % len(generator))
+for i in range(len(generator)):
+	x, y = generator[i]
+	print('%s => %s' % (x, y))
+# univariate one step problem
+from numpy import array
+from keras.preprocessing.sequence import TimeseriesGenerator
+# define dataset
+series = array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+# define generator
+n_input = 2
+generator = TimeseriesGenerator(series, series, length=n_input, batch_size=1)
+# number of samples
+print('Samples: %d' % len(generator))
+# print each sample
+for i in range(len(generator)):
+	x, y = generator[i]
+	print('%s => %s' % (x, y))
+Samples: 8
+
+[[1. 2.]] => [3.]
+[[2. 3.]] => [4.]
+[[3. 4.]] => [5.]
+[[4. 5.]] => [6.]
+[[5. 6.]] => [7.]
+[[6. 7.]] => [8.]
+[[7. 8.]] => [9.]
+[[8. 9.]] => [10.]
+# define generator
+n_input = 2
+generator = TimeseriesGenerator(series, series, length=n_input, batch_size=8)
+# define model
+model = Sequential()
+model.add(Dense(100, activation='relu', input_dim=n_input))
+model.add(Dense(1))
+model.compile(optimizer='adam', loss='mse')
+# fit model
+model.fit_generator(generator, steps_per_epoch=1, epochs=200, verbose=0)
+# make a one step prediction out of sample
+x_input = array([9, 10]).reshape((1, n_input))
+yhat = model.predict(x_input, verbose=0)
+# univariate one step problem with mlp
+from numpy import array
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.preprocessing.sequence import TimeseriesGenerator
+# define dataset
+series = array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+# define generator
+n_input = 2
+generator = TimeseriesGenerator(series, series, length=n_input, batch_size=8)
+# define model
+model = Sequential()
+model.add(Dense(100, activation='relu', input_dim=n_input))
+model.add(Dense(1))
+model.compile(optimizer='adam', loss='mse')
+# fit model
+model.fit_generator(generator, steps_per_epoch=1, epochs=200, verbose=0)
+# make a one step prediction out of sample
+x_input = array([9, 10]).reshape((1, n_input))
+yhat = model.predict(x_input, verbose=0)
+print(yhat)
+[[11.510406]]
+# reshape to [10, 1]
+n_features = 1
+series = series.reshape((len(series), n_features))
+# univariate one step problem with lstm
+from numpy import array
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+from keras.preprocessing.sequence import TimeseriesGenerator
+# define dataset
+series = array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+# reshape to [10, 1]
+n_features = 1
+series = series.reshape((len(series), n_features))
+# define generator
+n_input = 2
+generator = TimeseriesGenerator(series, series, length=n_input, batch_size=8)
+# define model
+model = Sequential()
+model.add(LSTM(100, activation='relu', input_shape=(n_input, n_features)))
+model.add(Dense(1))
+model.compile(optimizer='adam', loss='mse')
+# fit model
+model.fit_generator(generator, steps_per_epoch=1, epochs=500, verbose=0)
+# make a one step prediction out of sample
+x_input = array([9, 10]).reshape((1, n_input, n_features))
+yhat = model.predict(x_input, verbose=0)
+print(yhat)
+[[11.092189]]
+# define dataset
+in_seq1 = array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
+in_seq2 = array([15, 25, 35, 45, 55, 65, 75, 85, 95, 105])
+# reshape series
+in_seq1 = in_seq1.reshape((len(in_seq1), 1))
+in_seq2 = in_seq2.reshape((len(in_seq2), 1))
+# horizontally stack columns
+dataset = hstack((in_seq1, in_seq2))
+# define generator
+n_input = 2
+generator = TimeseriesGenerator(dataset, dataset, length=n_input, batch_size=1)
+X, 							y
+[[10, 15], [20, 25]]		[[30, 35]]
+# multivariate one step problem
+from numpy import array
+from numpy import hstack
+from keras.preprocessing.sequence import TimeseriesGenerator
+# define dataset
+in_seq1 = array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
+in_seq2 = array([15, 25, 35, 45, 55, 65, 75, 85, 95, 105])
+# reshape series
+in_seq1 = in_seq1.reshape((len(in_seq1), 1))
+in_seq2 = in_seq2.reshape((len(in_seq2), 1))
+# horizontally stack columns
+dataset = hstack((in_seq1, in_seq2))
+print(dataset)
+# define generator
+n_input = 2
+generator = TimeseriesGenerator(dataset, dataset, length=n_input, batch_size=1)
+# number of samples
+print('Samples: %d' % len(generator))
+# print each sample
+for i in range(len(generator)):
+	x, y = generator[i]
+	print('%s => %s' % (x, y))
+[[ 10  15]
+ [ 20  25]
+ [ 30  35]
+ [ 40  45]
+ [ 50  55]
+ [ 60  65]
+ [ 70  75]
+ [ 80  85]
+ [ 90  95]
+ [100 105]]
+
+Samples: 8
+
+[[[10. 15.]
+  [20. 25.]]] => [[30. 35.]]
+[[[20. 25.]
+  [30. 35.]]] => [[40. 45.]]
+[[[30. 35.]
+  [40. 45.]]] => [[50. 55.]]
+[[[40. 45.]
+  [50. 55.]]] => [[60. 65.]]
+[[[50. 55.]
+  [60. 65.]]] => [[70. 75.]]
+[[[60. 65.]
+  [70. 75.]]] => [[80. 85.]]
+[[[70. 75.]
+  [80. 85.]]] => [[90. 95.]]
+[[[80. 85.]
+  [90. 95.]]] => [[100. 105.]]
+# multivariate one step problem with lstm
+from numpy import array
+from numpy import hstack
+from keras.models import Sequential
+from keras.layers import Dense
+from keras.layers import LSTM
+from keras.preprocessing.sequence import TimeseriesGenerator
+# define dataset
+in_seq1 = array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
+in_seq2 = array([15, 25, 35, 45, 55, 65, 75, 85, 95, 105])
+# reshape series
+in_seq1 = in_seq1.reshape((len(in_seq1), 1))
+in_seq2 = in_seq2.reshape((len(in_seq2), 1))
+# horizontally stack columns
+dataset = hstack((in_seq1, in_seq2))
+# define generator
+n_features = dataset.shape[1]
+n_input = 2
+generator = TimeseriesGenerator(dataset, dataset, length=n_input, batch_size=8)
+# define model
+model = Sequential()
+model.add(LSTM(100, activation='relu', input_shape=(n_input, n_features)))
+model.add(Dense(2))
+model.compile(optimizer='adam', loss='mse')
+# fit model
+model.fit_generator(generator, steps_per_epoch=1, epochs=500, verbose=0)
+# make a one step prediction out of sample
+x_input = array([[90, 95], [100, 105]]).reshape((1, n_input, n_features))
+yhat = model.predict(x_input, verbose=0)
+print(yhat)
+[[111.03207 116.58153]]
+# define dataset
+in_seq1 = array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
+in_seq2 = array([15, 25, 35, 45, 55, 65, 75, 85, 95, 105])
+out_seq = array([25, 45, 65, 85, 105, 125, 145, 165, 185, 205])
+10 + 15 = 25
+X, 			y
+[10, 15],	25
+[20, 25],	45
+[30, 35],	65
+...
+X, 			y
+[10, 15],	45
+[20, 25],	65
+[30, 35],	85
+...
+# multivariate one step problem
+from numpy import array
+from numpy import hstack
+from keras.preprocessing.sequence import TimeseriesGenerator
+# define dataset
+in_seq1 = array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
+in_seq2 = array([15, 25, 35, 45, 55, 65, 75, 85, 95, 105])
+out_seq = array([25, 45, 65, 85, 105, 125, 145, 165, 185, 205])
+# reshape series
+in_seq1 = in_seq1.reshape((len(in_seq1), 1))
+in_seq2 = in_seq2.reshape((len(in_seq2), 1))
+out_seq = out_seq.reshape((len(out_seq), 1))
+# horizontally stack columns
+dataset = hstack((in_seq1, in_seq2))
+# define generator
+n_input = 1
+generator = TimeseriesGenerator(dataset, out_seq, length=n_input, batch_size=1)
+# print each sample
+for i in range(len(generator)):
+	x, y = generator[i]
+	print('%s => %s' % (x, y))
+[[[10. 15.]]] => [[45.]]
+[[[20. 25.]]] => [[65.]]
+[[[30. 35.]]] => [[85.]]
+[[[40. 45.]]] => [[105.]]
+[[[50. 55.]]] => [[125.]]
+[[[60. 65.]]] => [[145.]]
+[[[70. 75.]]] => [[165.]]
+[[[80. 85.]]] => [[185.]]
+[[[90. 95.]]] => [[205.]]
+# shift the target sample by one step
+out_seq = insert(out_seq, 0, 0)
+# multivariate one step problem
+from numpy import array
+from numpy import hstack
+from numpy import insert
+from keras.preprocessing.sequence import TimeseriesGenerator
+# define dataset
+in_seq1 = array([10, 20, 30, 40, 50, 60, 70, 80, 90, 100])
+in_seq2 = array([15, 25, 35, 45, 55, 65, 75, 85, 95, 105])
+out_seq = array([25, 45, 65, 85, 105, 125, 145, 165, 185, 205])
+# reshape series
+in_seq1 = in_seq1.reshape((len(in_seq1), 1))
+in_seq2 = in_seq2.reshape((len(in_seq2), 1))
+out_seq = out_seq.reshape((len(out_seq), 1))
+# horizontally stack columns
+dataset = hstack((in_seq1, in_seq2))
+# shift the target sample by one step
+out_seq = insert(out_seq, 0, 0)
+# define generator
+n_input = 1
+generator = TimeseriesGenerator(dataset, out_seq, length=n_input, batch_size=1)
+# print each sample
+for i in range(len(generator)):
+	x, y = generator[i]
+	print('%s => %s' % (x, y))
+[[[10. 15.]]] => [25.]
+[[[20. 25.]]] => [45.]
+[[[30. 35.]]] => [65.]
+[[[40. 45.]]] => [85.]
+[[[50. 55.]]] => [105.]
+[[[60. 65.]]] => [125.]
+[[[70. 75.]]] => [145.]
+[[[80. 85.]]] => [165.]
+[[[90. 95.]]] => [185.]
+# define dataset
+series = array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+target = array([[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11]])
+# univariate multi-step problem
+from numpy import array
+from keras.preprocessing.sequence import TimeseriesGenerator
+# define dataset
+series = array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
+target = array([[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11]])
+# define generator
+n_input = 2
+generator = TimeseriesGenerator(series, target, length=n_input, batch_size=1)
+# print each sample
+for i in range(len(generator)):
+	x, y = generator[i]
+	print('%s => %s' % (x, y))
+[[1. 2.]] => [[3. 4.]]
+[[2. 3.]] => [[4. 5.]]
+[[3. 4.]] => [[5. 6.]]
+[[4. 5.]] => [[6. 7.]]
+[[5. 6.]] => [[7. 8.]]
+[[6. 7.]] => [[8. 9.]]
+[[7. 8.]] => [[ 9. 10.]]
+[[8. 9.]] => [[10. 11.]]
+'''

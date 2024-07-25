@@ -1,0 +1,280 @@
+How to Calculate Precision, Recall, and F-Measure for Imbalanced Classification
+https://machinelearningmastery.com/precision-recall-and-f-measure-for-imbalanced-classification/
+2020-01-02
+Classification accuracy is the total number of correct predictions divided by the total number of predictions made for a dataset.
+As a performance measure, accuracy is inappropriate for imbalanced classification problems.
+The main reason is that the overwhelming number of examples from the majority class (or classes) will overwhelm the number of examples in the minority class, meaning that even unskillful models can achieve accuracy scores of 90 percent, or 99 percent, depending on how severe the class imbalance happens to be.
+An alternative to using classification accuracy is to use precision and recall metrics.
+In this tutorial, you will discover how to calculate and develop an intuition for precision and recall for imbalanced classification.
+After completing this tutorial, you will know:
+- Precision quantifies the number of positive class predictions that actually belong to the positive class.
+- Recall quantifies the number of positive class predictions made out of all positive examples in the dataset.
+- F-Measure provides a single score that balances both the concerns of precision and recall in one number.
+Kick-start your project with my new book Imbalanced Classification with Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Update Jan/2020: Improved language about the objective of precision and recall. Fixed typos about what precision and recall seek to minimize (thanks for the comments!).
+- Update Feb/2020: Fixed typo in variable name for recall and f1.
+How to Calculate Precision, Recall, and F-Measure for Imbalanced ClassificationPhoto by Waldemar Merger, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into five parts; they are:
+- Confusion Matrix for Imbalanced Classification
+- Precision for Imbalanced Classification
+- Recall for Imbalanced Classification
+- Precision vs. Recall for Imbalanced Classification
+- F-Measure for Imbalanced Classification
+# Confusion Matrix for Imbalanced Classification
+Before we dive into precision and recall, it is important to review the confusion matrix.
+For imbalanced classification problems, the majority class is typically referred to as the negative outcome (e.g. such as “no change” or “negative test result“), and the minority class is typically referred to as the positive outcome (e.g. “change” or “positive test result”).
+The confusion matrix provides more insight into not only the performance of a predictive model, but also which classes are being predicted correctly, which incorrectly, and what type of errors are being made.
+The simplest confusion matrix is for a two-class classification problem, with negative (class 0) and positive (class 1) classes.
+In this type of confusion matrix, each cell in the table has a specific and well-understood name, summarized as follows:
+The precision and recall metrics are defined in terms of the cells in the confusion matrix, specifically terms like true positives and false negatives.
+Now that we have brushed up on the confusion matrix, let’s take a closer look at the precision metric.
+# Precision for Imbalanced Classification
+Precision is a metric that quantifies the number of correct positive predictions made.
+Precision, therefore, calculates the accuracy for the minority class.
+It is calculated as the ratio of correctly predicted positive examples divided by the total number of positive examples that were predicted.
+Precision evaluates the fraction of correct classified instances among the ones classified as positive …
+— Page 52, Learning from Imbalanced Data Sets, 2018.
+In an imbalanced classification problem with two classes, precision is calculated as the number of true positives divided by the total number of true positives and false positives.
+- Precision = TruePositives / (TruePositives + FalsePositives)
+The result is a value between 0.0 for no precision and 1.0 for full or perfect precision.
+Let’s make this calculation concrete with some examples.
+Consider a dataset with a 1:100 minority to majority ratio, with 100 minority examples and 10,000 majority class examples.
+A model makes predictions and predicts 120 examples as belonging to the minority class, 90 of which are correct, and 30 of which are incorrect.
+The precision for this model is calculated as:
+- Precision = TruePositives / (TruePositives + FalsePositives)
+- Precision = 90 / (90 + 30)
+- Precision = 90 / 120
+- Precision = 0.75
+The result is a precision of 0.75, which is a reasonable value but not outstanding.
+You can see that precision is simply the ratio of correct positive predictions out of all positive predictions made, or the accuracy of minority class predictions.
+Consider the same dataset, where a model predicts 50 examples belonging to the minority class, 45 of which are true positives and five of which are false positives. We can calculate the precision for this model as follows:
+- Precision = TruePositives / (TruePositives + FalsePositives)
+- Precision = 45 / (45 + 5)
+- Precision = 45 / 50
+- Precision = 0.90
+In this case, although the model predicted far fewer examples as belonging to the minority class, the ratio of correct positive examples is much better.
+This highlights that although precision is useful, it does not tell the whole story. It does not comment on how many real positive class examples were predicted as belonging to the negative class, so-called false negatives.
+
+
+
+
+Precision is not limited to binary classification problems.
+In an imbalanced classification problem with more than two classes, precision is calculated as the sum of true positives across all classes divided by the sum of true positives and false positives across all classes.
+- Precision = Sum c in C TruePositives_c / Sum c in C (TruePositives_c + FalsePositives_c)
+For example, we may have an imbalanced multiclass classification problem where the majority class is the negative class, but there are two positive minority classes: class 1 and class 2. Precision can quantify the ratio of correct predictions across both positive classes.
+Consider a dataset with a 1:1:100 minority to majority class ratio, that is a 1:1 ratio for each positive class and a 1:100 ratio for the minority classes to the majority class, and we have 100 examples in each minority class, and 10,000 examples in the majority class.
+A model makes predictions and predicts 70 examples for the first minority class, where 50 are correct and 20 are incorrect. It predicts 150 for the second class with 99 correct and 51 incorrect. Precision can be calculated for this model as follows:
+- Precision = (TruePositives_1 + TruePositives_2) / ((TruePositives_1 + TruePositives_2) + (FalsePositives_1 + FalsePositives_2) )
+- Precision = (50 + 99) / ((50 + 99) + (20 + 51))
+- Precision = 149 / (149 + 71)
+- Precision = 149 / 220
+- Precision = 0.677
+We can see that the precision metric calculation scales as we increase the number of minority classes.
+The precision score can be calculated using the precision_score() scikit-learn function.
+For example, we can use this function to calculate precision for the scenarios in the previous section.
+First, the case where there are 100 positive to 10,000 negative examples, and a model predicts 90 true positives and 30 false positives. The complete example is listed below.
+Running the example calculates the precision, matching our manual calculation.
+Next, we can use the same function to calculate precision for the multiclass problem with 1:1:100, with 100 examples in each minority class and 10,000 in the majority class. A model predicts 50 true positives and 20 false positives for class 1 and 99 true positives and 51 false positives for class 2.
+When using the precision_score() function for multiclass classification, it is important to specify the minority classes via the “labels” argument and to perform set the “average” argument to ‘micro‘ to ensure the calculation is performed as we expect.
+The complete example is listed below.
+Again, running the example calculates the precision for the multiclass example matching our manual calculation.
+
+# Recall for Imbalanced Classification
+Recall is a metric that quantifies the number of correct positive predictions made out of all positive predictions that could have been made.
+Unlike precision that only comments on the correct positive predictions out of all positive predictions, recall provides an indication of missed positive predictions.
+In this way, recall provides some notion of the coverage of the positive class.
+For imbalanced learning, recall is typically used to measure the coverage of the minority class.
+— Page 27, Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+In an imbalanced classification problem with two classes, recall is calculated as the number of true positives divided by the total number of true positives and false negatives.
+- Recall = TruePositives / (TruePositives + FalseNegatives)
+The result is a value between 0.0 for no recall and 1.0 for full or perfect recall.
+Let’s make this calculation concrete with some examples.
+As in the previous section, consider a dataset with 1:100 minority to majority ratio, with 100 minority examples and 10,000 majority class examples.
+A model makes predictions and predicts 90 of the positive class predictions correctly and 10 incorrectly. We can calculate the recall for this model as follows:
+- Recall = TruePositives / (TruePositives + FalseNegatives)
+- Recall = 90 / (90 + 10)
+- Recall = 90 / 100
+- Recall = 0.9
+This model has a good recall.
+Recall is not limited to binary classification problems.
+In an imbalanced classification problem with more than two classes, recall is calculated as the sum of true positives across all classes divided by the sum of true positives and false negatives across all classes.
+- Recall = Sum c in C TruePositives_c / Sum c in C (TruePositives_c + FalseNegatives_c)
+As in the previous section, consider a dataset with a 1:1:100 minority to majority class ratio, that is a 1:1 ratio for each positive class and a 1:100 ratio for the minority classes to the majority class, and we have 100 examples in each minority class, and 10,000 examples in the majority class.
+A model predicts 77 examples correctly and 23 incorrectly for class 1, and 95 correctly and five incorrectly for class 2. We can calculate recall for this model as follows:
+- Recall = (TruePositives_1 + TruePositives_2) / ((TruePositives_1 + TruePositives_2) + (FalseNegatives_1 + FalseNegatives_2))
+- Recall = (77 + 95) / ((77 + 95) + (23 + 5))
+- Recall = 172 / (172 + 28)
+- Recall = 172 / 200
+- Recall = 0.86
+The recall score can be calculated using the recall_score() scikit-learn function.
+For example, we can use this function to calculate recall for the scenarios above.
+First, we can consider the case of a 1:100 imbalance with 100 and 10,000 examples respectively, and a model predicts 90 true positives and 10 false negatives.
+The complete example is listed below.
+Running the example, we can see that the score matches the manual calculation above.
+We can also use the recall_score() for imbalanced multiclass classification problems.
+In this case, the dataset has a 1:1:100 imbalance, with 100 in each minority class and 10,000 in the majority class. A model predicts 77 true positives and 23 false negatives for class 1 and 95 true positives and five false negatives for class 2.
+The complete example is listed below.
+Again, running the example calculates the recall for the multiclass example matching our manual calculation.
+
+# Precision vs. Recall for Imbalanced Classification
+You may decide to use precision or recall on your imbalanced classification problem.
+Maximizing precision will minimize the number false positives, whereas maximizing the recall will minimize the number of false negatives.
+- Precision: Appropriate when minimizing false positives is the focus.
+- Recall: Appropriate when minimizing false negatives is the focus.
+Sometimes, we want excellent predictions of the positive class. We want high precision and high recall.
+This can be challenging, as often increases in recall often come at the expense of decreases in precision.
+In imbalanced datasets, the goal is to improve recall without hurting precision. These goals, however, are often conflicting, since in order to increase the TP for the minority class, the number of FP is also often increased, resulting in reduced precision.
+— Page 55, Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+Nevertheless, instead of picking one measure or the other, we can choose a new metric that combines both precision and recall into one score.
+# F-Measure for Imbalanced Classification
+Classification accuracy is widely used because it is one single measure used to summarize model performance.
+F-Measure provides a way to combine both precision and recall into a single measure that captures both properties.
+Alone, neither precision or recall tells the whole story. We can have excellent precision with terrible recall, or alternately, terrible precision with excellent recall. F-measure provides a way to express both concerns with a single score.
+Once precision and recall have been calculated for a binary or multiclass classification problem, the two scores can be combined into the calculation of the F-Measure.
+The traditional F measure is calculated as follows:
+- F-Measure = (2 * Precision * Recall) / (Precision + Recall)
+This is the harmonic mean of the two fractions. This is sometimes called the F-Score or the F1-Score and might be the most common metric used on imbalanced classification problems.
+… the F1-measure, which weights precision and recall equally, is the variant most often used when learning from imbalanced data.
+— Page 27, Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+Like precision and recall, a poor F-Measure score is 0.0 and a best or perfect F-Measure score is 1.0
+For example, a perfect precision and recall score would result in a perfect F-Measure score:
+- F-Measure = (2 * Precision * Recall) / (Precision + Recall)
+- F-Measure = (2 * 1.0 * 1.0) / (1.0 + 1.0)
+- F-Measure = (2 * 1.0) / 2.0
+- F-Measure = 1.0
+Let’s make this calculation concrete with a worked example.
+Consider a binary classification dataset with 1:100 minority to majority ratio, with 100 minority examples and 10,000 majority class examples.
+Consider a model that predicts 150 examples for the positive class, 95 are correct (true positives), meaning five were missed (false negatives) and 55 are incorrect (false positives).
+We can calculate the precision as follows:
+- Precision = TruePositives / (TruePositives + FalsePositives)
+- Precision = 95 / (95 + 55)
+- Precision = 0.633
+We can calculate the recall as follows:
+- Recall = TruePositives / (TruePositives + FalseNegatives)
+- Recall = 95 / (95 + 5)
+- Recall = 0.95
+This shows that the model has poor precision, but excellent recall.
+Finally, we can calculate the F-Measure as follows:
+- F-Measure = (2 * Precision * Recall) / (Precision + Recall)
+- F-Measure = (2 * 0.633 * 0.95) / (0.633 + 0.95)
+- F-Measure = (2 * 0.601) / 1.583
+- F-Measure = 1.202 / 1.583
+- F-Measure = 0.759
+We can see that the good recall levels-out the poor precision, giving an okay or reasonable F-measure score.
+The F-measure score can be calculated using the f1_score() scikit-learn function.
+For example, we use this function to calculate F-Measure for the scenario above.
+This is the case of a 1:100 imbalance with 100 and 10,000 examples respectively, and a model predicts 95 true positives, five false negatives, and 55 false positives.
+The complete example is listed below.
+Running the example computes the F-Measure, matching our manual calculation, within some minor rounding errors.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- How to Calculate Precision, Recall, F1, and More for Deep Learning Models
+- How to Use ROC Curves and Precision-Recall Curves for Classification in Python
+- A Systematic Analysis Of Performance Measures For Classification Tasks, 2009.
+- Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+- Learning from Imbalanced Data Sets, 2018.
+- sklearn.metrics.precision_score API.
+- sklearn.metrics.recall_score API.
+- sklearn.metrics.f1_score API.
+- Confusion matrix, Wikipedia.
+- Precision and recall, Wikipedia.
+- F1 score, Wikipedia.
+# Summary
+In this tutorial, you discovered how to calculate and develop an intuition for precision and recall for imbalanced classification.
+Specifically, you learned:
+- Precision quantifies the number of positive class predictions that actually belong to the positive class.
+- Recall quantifies the number of positive class predictions made out of all positive examples in the dataset.
+- F-Measure provides a single score that balances both the concerns of precision and recall in one number.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Imbalanced Classification!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Imbalanced Classification with Python
+It provides self-study tutorials and end-to-end projects on:
+Performance Metrics, Undersampling Methods, SMOTE, Threshold Moving, Probability Calibration, Cost-Sensitive Algorithms
+and much more...
+See What's Inside
+
+'''
+               | Positive Prediction | Negative Prediction
+Positive Class | True Positive (TP)  | False Negative (FN)
+Negative Class | False Positive (FP) | True Negative (TN)
+# calculates precision for 1:100 dataset with 90 tp and 30 fp
+from sklearn.metrics import precision_score
+# define actual
+act_pos = [1 for _ in range(100)]
+act_neg = [0 for _ in range(10000)]
+y_true = act_pos + act_neg
+# define predictions
+pred_pos = [0 for _ in range(10)] + [1 for _ in range(90)]
+pred_neg = [1 for _ in range(30)] + [0 for _ in range(9970)]
+y_pred = pred_pos + pred_neg
+# calculate prediction
+precision = precision_score(y_true, y_pred, average='binary')
+print('Precision: %.3f' % precision)
+Precision: 0.750
+# calculates precision for 1:1:100 dataset with 50tp,20fp, 99tp,51fp
+from sklearn.metrics import precision_score
+# define actual
+act_pos1 = [1 for _ in range(100)]
+act_pos2 = [2 for _ in range(100)]
+act_neg = [0 for _ in range(10000)]
+y_true = act_pos1 + act_pos2 + act_neg
+# define predictions
+pred_pos1 = [0 for _ in range(50)] + [1 for _ in range(50)]
+pred_pos2 = [0 for _ in range(1)] + [2 for _ in range(99)]
+pred_neg = [1 for _ in range(20)] + [2 for _ in range(51)] + [0 for _ in range(9929)]
+y_pred = pred_pos1 + pred_pos2 + pred_neg
+# calculate prediction
+precision = precision_score(y_true, y_pred, labels=[1,2], average='micro')
+print('Precision: %.3f' % precision)
+Precision: 0.677
+# calculates recall for 1:100 dataset with 90 tp and 10 fn
+from sklearn.metrics import recall_score
+# define actual
+act_pos = [1 for _ in range(100)]
+act_neg = [0 for _ in range(10000)]
+y_true = act_pos + act_neg
+# define predictions
+pred_pos = [0 for _ in range(10)] + [1 for _ in range(90)]
+pred_neg = [0 for _ in range(10000)]
+y_pred = pred_pos + pred_neg
+# calculate recall
+recall = recall_score(y_true, y_pred, average='binary')
+print('Recall: %.3f' % recall)
+Recall: 0.900
+# calculates recall for 1:1:100 dataset with 77tp,23fn and 95tp,5fn
+from sklearn.metrics import recall_score
+# define actual
+act_pos1 = [1 for _ in range(100)]
+act_pos2 = [2 for _ in range(100)]
+act_neg = [0 for _ in range(10000)]
+y_true = act_pos1 + act_pos2 + act_neg
+# define predictions
+pred_pos1 = [0 for _ in range(23)] + [1 for _ in range(77)]
+pred_pos2 = [0 for _ in range(5)] + [2 for _ in range(95)]
+pred_neg = [0 for _ in range(10000)]
+y_pred = pred_pos1 + pred_pos2 + pred_neg
+# calculate recall
+recall = recall_score(y_true, y_pred, labels=[1,2], average='micro')
+print('Recall: %.3f' % recall)
+Recall: 0.860
+# calculates f1 for 1:100 dataset with 95tp, 5fn, 55fp
+from sklearn.metrics import f1_score
+# define actual
+act_pos = [1 for _ in range(100)]
+act_neg = [0 for _ in range(10000)]
+y_true = act_pos + act_neg
+# define predictions
+pred_pos = [0 for _ in range(5)] + [1 for _ in range(95)]
+pred_neg = [1 for _ in range(55)] + [0 for _ in range(9945)]
+y_pred = pred_pos + pred_neg
+# calculate score
+score = f1_score(y_true, y_pred, average='binary')
+print('F-Measure: %.3f' % score)
+F-Measure: 0.760
+'''

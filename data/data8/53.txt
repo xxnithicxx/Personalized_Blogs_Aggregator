@@ -1,0 +1,134 @@
+Understand Time Series Forecast Uncertainty Using Prediction Intervals with Python
+https://machinelearningmastery.com/time-series-forecast-uncertainty-using-confidence-intervals-python/
+2017-02-09
+Time series forecast models can both make predictions and provide a prediction interval for those predictions.
+Prediction intervals provide an upper and lower expectation for the real observation. These can be useful for assessing the range of real possible outcomes for a prediction and for better understanding the skill of the model
+In this tutorial, you will discover how to calculate and interpret prediction intervals for time series forecasts with Python.
+Specifically, you will learn:
+- How to make a forecast with an ARIMA model and gather forecast diagnostic information.
+- How to calculate and report a prediction interval for a forecast.
+- How to interpret a prediction interval for a forecast and configure different intervals.
+Kick-start your project with my new book Time Series Forecasting With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s dive in.
+- Updated Apr/2019: Updated the link to dataset.
+- Updated Jun/2019: Changed from prediction intervals to prediction intervals.
+- Updated Aug/2019: Updated data loading to use new API.
+- Updated Dec/2020: Updated modeling for changes to the API.
+Understand Time Series Forecast Uncertainty Using Prediction Intervals with PythonPhoto by Bernard Spragg. NZ, some rights reserved.
+# ARIMA Forecast
+The ARIMA implementation in the statsmodels Python library can be used to fit an ARIMA model.
+It returns an ARIMAResults object. This object provides the get_forecast() function that can be used to make predictions about future time steps and default to predicting the value at the next time step after the end of the training data.
+Assuming we are predicting just the next time step, the get_forecast() function returns a PredictionResults object with useful information such as:
+- predicted_mean. The forecasted value in the units of the training time series.
+- mean_se. The standard error for the model.
+- conf_int. The prediction interval for the forecast for a given alpha level.
+In this tutorial, we will better understand the prediction interval provided with an ARIMA forecast.
+Before we dive in, let’s first look at the Daily Female Births dataset that we will use as the context for this tutorial.
+
+
+
+
+# Daily Female Births Dataset
+This dataset describes the number of daily female births in California in 1959.
+The units are a count and there are 365 observations. The source of the dataset is credited to Newton (1988).
+- Download the dataset.
+Download the dataset and save it in your current working directory with the filename “daily-total-female-births.csv“.
+The example below loads and graphs the dataset.
+Running the example loads the dataset and graphs it as a line plot.
+Daily Female Births Dataset
+# Forecast Prediction Interval
+In this section, we will train an ARIMA model, use it to make a prediction, and inspect the prediction interval.
+First, we will split the training dataset into a training and test dataset. Almost all observations will be used for training and we will hold back the last single observation as a test dataset for which we will make a prediction.
+An ARIMA(5,1,1) model is trained. This is not the optimal model for this problem, just a good model for demonstration purposes.
+The trained model is then used to make a prediction by calling the get_forecast() function. The results of the forecast are then printed.
+The complete example is listed below.
+Running the example prints the expected value from the test set followed by the predicted value, standard error, and prediction interval for the forecast.
+
+# Interpreting the Prediction Interval
+The get_forecast() function allows the prediction interval to be specified.
+The alpha argument on the conf_int() function on the PredictionResult specifies the prediction level.
+An alpha of 0.05 means that the ARIMA model will estimate the upper and lower values around the forecast where there is a only a 5% chance that the real value will not be in that range.
+Put another way, the 95% prediction interval suggests that there is a high likelihood that the real observation will be within the range.
+In the above example, the forecast was 45.149. The 95% prediction interval suggested that the real observation was highly likely to fall within the range of values between 31.413 and 58.886.
+The real observation was 50.0 and was well within this range.
+We can tighten the range of likely values a few ways:
+- We can ask for a range that is narrower but increases the statistical likelihood of a real observation falling outside of the range.
+- We can develop a model that has more predictive power and in turn makes more accurate predictions.
+Further, the prediction interval is also limited by the assumptions made by the model, such as the distribution of errors made by the model fit a Gaussian distribution with a zero mean value (e.g. white noise).
+Extending the example above, we can report our forecast with a few different commonly used prediction intervals of 80%, 90%, 95% and 99%.
+The complete example is listed below.
+Running the example prints the forecasts and prediction intervals for each alpha value.
+We can see that we get the same forecast value each time and an interval that expands as our desire for a ‘safer’ interval increases. We can see that an 80% captures our actual value just fine in this specific case.
+
+# Summary
+In this tutorial, you discovered how to calculate and interpret the prediction interval for a time series forecast with Python.
+Specifically, you learned:
+- How to report forecast diagnostic statistics when making a point forecast.
+- How to calculate and report a prediction interval for a forecast.
+- How to interpret and configure the prediction interval for a time series forecast.
+Do you have any questions about forecast prediction intervals, or about this tutorial?
+Ask your questions in the comments below and I will do my best to answer.
+# Want to Develop Time Series Forecasts with Python?
+Discover how in my new Ebook:
+Introduction to Time Series Forecasting With Python
+It covers self-study tutorials and end-to-end projects on topics like:
+Loading data, visualization, modeling, algorithm tuning, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+from pandas import read_csv
+from matplotlib import pyplot
+series = read_csv('daily-total-female-births.csv', header=0, index_col=0)
+series.plot()
+pyplot.show()
+# summarize the confidence interval on an ARIMA forecast
+from pandas import read_csv
+from statsmodels.tsa.arima.model import ARIMA
+# load dataset
+series = read_csv('daily-total-female-births.csv', header=0, index_col=0, parse_dates=True, squeeze=True)
+# split into train and test sets
+X = series.values
+X = X.astype('float32')
+size = len(X) - 1
+train, test = X[0:size], X[size:]
+# fit an ARIMA model
+model = ARIMA(train, order=(5,1,1))
+model_fit = model.fit()
+# forecast
+result = model_fit.get_forecast()
+# summarize forecast and confidence intervals
+print('Expected: %.3f' % result.predicted_mean)
+print('Forecast: %.3f' % test[0])
+print('Standard Error: %.3f' % result.se_mean)
+ci = result.conf_int(0.05)
+print('95%% Interval: %.3f to %.3f' % (ci[0,0], ci[0,1]))
+Expected: 45.149
+Forecast: 50.000
+Standard Error: 7.009
+95% Interval: 31.413 to 58.886
+# summarize multiple confidence intervals on an ARIMA forecast
+from pandas import read_csv
+from statsmodels.tsa.arima.model import ARIMA
+# load data
+series = read_csv('daily-total-female-births.csv', header=0, index_col=0, parse_dates=True, squeeze=True)
+# split data into train and test setes
+X = series.values
+X = X.astype('float32')
+size = len(X) - 1
+train, test = X[0:size], X[size:]
+# fit an ARIMA model
+model = ARIMA(train, order=(5,1,1))
+model_fit = model.fit()
+result = model_fit.get_forecast()
+forecast = result.predicted_mean
+# summarize confidence intervals
+intervals = [0.2, 0.1, 0.05, 0.01]
+for a in intervals:
+	ci = result.conf_int(alpha=a)
+	print('%.1f%% Confidence Interval: %.3f between %.3f and %.3f' % ((1-a)*100, forecast, ci[0,0], ci[0,1]))
+80.0% Confidence Interval: 45.149 between 36.167 and 54.131
+90.0% Confidence Interval: 45.149 between 33.621 and 56.677
+95.0% Confidence Interval: 45.149 between 31.413 and 58.886
+99.0% Confidence Interval: 45.149 between 27.096 and 63.202
+'''

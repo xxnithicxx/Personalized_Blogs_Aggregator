@@ -1,0 +1,251 @@
+Nested Cross-Validation for Machine Learning with Python
+https://machinelearningmastery.com/nested-cross-validation-for-machine-learning-with-python/
+2020-07-28
+The k-fold cross-validation procedure is used to estimate the performance of machine learning models when making predictions on data not used during training.
+This procedure can be used both when optimizing the hyperparameters of a model on a dataset, and when comparing and selecting a model for the dataset. When the same cross-validation procedure and dataset are used to both tune and select a model, it is likely to lead to an optimistically biased evaluation of the model performance.
+One approach to overcoming this bias is to nest the hyperparameter optimization procedure under the model selection procedure. This is called double cross-validation or nested cross-validation and is the preferred way to evaluate and compare tuned machine learning models.
+In this tutorial, you will discover nested cross-validation for evaluating tuned machine learning models.
+After completing this tutorial, you will know:
+- Hyperparameter optimization can overfit a dataset and provide an optimistic evaluation of a model that should not be used for model selection.
+- Nested cross-validation provides a way to reduce the bias in combined hyperparameter tuning and model selection.
+- How to implement nested cross-validation for evaluating tuned machine learning algorithms in scikit-learn.
+Kick-start your project with my new book Machine Learning Mastery With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Updated Jan/2021: Added section on pipeline thinking and a link to a related tutorial.
+Nested Cross-Validation for Machine Learning with PythonPhoto by Andrew Bone, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Combined Hyperparameter Tuning and Model Selection
+- What Is Nested Cross-Validation
+
+What Is the Cost of Nested Cross-Validation?
+How Do You Set k?
+How Do You Configure the Final Model?
+What Configuration Was Chosen by Inner Loop?
+
+
+- What Is the Cost of Nested Cross-Validation?
+- How Do You Set k?
+- How Do You Configure the Final Model?
+- What Configuration Was Chosen by Inner Loop?
+- Nested Cross-Validation With Scikit-Learn
+# Combined Hyperparameter Tuning and Model Selection
+It is common to evaluate machine learning models on a dataset using k-fold cross-validation.
+The k-fold cross-validation procedure divides a limited dataset into k non-overlapping folds. Each of the k folds is given an opportunity to be used as a held back test set whilst all other folds collectively are used as a training dataset. A total of k models are fit and evaluated on the k holdout test sets and the mean performance is reported.
+For more on the k-fold cross-validation procedure, see the tutorial:
+- A Gentle Introduction to k-fold Cross-Validation
+The procedure provides an estimate of the model performance on the dataset when making a prediction on data not used during training. It is less biased than some other techniques, such as a single train-test split for small- to modestly-sized dataset. Common values for k are k=3, k=5, and k=10.
+Each machine learning algorithm includes one or more hyperparameters that allow the algorithm behavior to be tailored to a specific dataset. The trouble is, there is rarely if ever good heuristics on how to configure the model hyperparameters for a dataset. Instead, an optimization procedure is used to discover a set of hyperparameters that perform well or best on the dataset. Common examples of optimization algorithms include grid search and random search, and each distinct set of model hyperparameters are typically evaluated using k-fold cross-validation.
+This highlights that the k-fold cross-validation procedure is used both in the selection of model hyperparameters to configure each model and in the selection of configured models.
+The k-fold cross-validation procedure is an effective approach for estimating the performance of a model. Nevertheless, a limitation of the procedure is that if it is used multiple times with the same algorithm, it can lead to overfitting.
+Each time a model with different model hyperparameters is evaluated on a dataset, it provides information about the dataset. Specifically, a noisy dataset often score worse. This knowledge about the model on the dataset can be exploited in the model configuration procedure to find the best performing configuration for the dataset. The k-fold cross-validation procedure attempts to reduce this effect, yet it cannot be removed completely, and some form of hill-climbing or overfitting of the model hyperparameters to the dataset will be performed. This is the normal case for hyperparameter optimization.
+The problem is that if this score alone is used to then select a model, or the same dataset is used to evaluate the tuned models, then the selection process will be biased by this inadvertent overfitting. The result is an overly optimistic estimate of model performance that does not generalize to new data.
+A procedure is required that allows both the models to select well-performing hyperparameters for the dataset and select among a collection of well-configured models on a dataset.
+One approach to this problem is called nested cross-validation.
+# What Is Nested Cross-Validation
+Nested cross-validation is an approach to model hyperparameter optimization and model selection that attempts to overcome the problem of overfitting the training dataset.
+In order to overcome the bias in performance evaluation, model selection should be viewed as an integral part of the model fitting procedure, and should be conducted independently in each trial in order to prevent selection bias and because it reflects best practice in operational use.
+— On Over-fitting in Model Selection and Subsequent Selection Bias in Performance Evaluation, 2010.
+The procedure involves treating model hyperparameter optimization as part of the model itself and evaluating it within the broader k-fold cross-validation procedure for evaluating models for comparison and selection.
+As such, the k-fold cross-validation procedure for model hyperparameter optimization is nested inside the k-fold cross-validation procedure for model selection. The use of two cross-validation loops also leads the procedure to be called “double cross-validation.”
+Typically, the k-fold cross-validation procedure involves fitting a model on all folds but one and evaluating the fit model on the holdout fold. Let’s refer to the aggregate of folds used to train the model as the “train dataset” and the held-out fold as the “test dataset.”
+Each training dataset is then provided to a hyperparameter optimized procedure, such as grid search or random search, that finds an optimal set of hyperparameters for the model. The evaluation of each set of hyperparameters is performed using k-fold cross-validation that splits up the provided train dataset into k folds, not the original dataset.
+This is termed the “internal” protocol as the model selection process is performed independently within each fold of the resampling procedure.
+— On Over-fitting in Model Selection and Subsequent Selection Bias in Performance Evaluation, 2010.
+Under this procedure, hyperparameter search does not have an opportunity to overfit the dataset as it is only exposed to a subset of the dataset provided by the outer cross-validation procedure. This reduces, if not eliminates, the risk of the search procedure overfitting the original dataset and should provide a less biased estimate of a tuned model’s performance on the dataset.
+In this way, the performance estimate includes a component properly accounting for the error introduced by overfitting the model selection criterion.
+— On Over-fitting in Model Selection and Subsequent Selection Bias in Performance Evaluation, 2010.
+A downside of nested cross-validation is the dramatic increase in the number of model evaluations performed.
+If n * k models are fit and evaluated as part of a traditional cross-validation hyperparameter search for a given model, then this is increased to k * n * k as the procedure is then performed k more times for each fold in the outer loop of nested cross-validation.
+To make this concrete, you might use k=5 for the hyperparameter search and test 100 combinations of model hyperparameters. A traditional hyperparameter search would, therefore, fit and evaluate 5 * 100 or 500 models. Nested cross-validation with k=10 folds in the outer loop would fit and evaluate 5,000 models. A 10x increase in this case.
+The k value for the inner loop and the outer loop should be set as you would set the k-value for a single k-fold cross-validation procedure.
+You must choose a k-value for your dataset that balances the computational cost of the evaluation procedure (not too many model evaluations) and unbiased estimate of model performance.
+It is common to use k=10 for the outer loop and a smaller value of k for the inner loop, such as k=3 or k=5.
+For more general help on setting k, see this tutorial:
+- How to Configure k-Fold Cross-Validation
+The final model is configured and fit using the procedure applied in one pass of the outer loop, e.g. the outer loop applied to the entire dataset.
+As follows:
+- An algorithm is selected based on its performance on the outer loop of nested cross-validation.
+- Then the inner-procedure is applied to the entire dataset.
+- The hyperparameters found during this final search are then used to configure a final model.
+- The final model is fit on the entire dataset.
+This model can then be used to make predictions on new data. We know how well it will perform on average based on the score provided during the final model tuning procedure.
+It doesn’t matter, that’s the whole idea.
+An automatic configuration procedure was used instead of a specific configuration. There is a single final model, but the best configuration for that final model is found via the chosen search procedure, on the final run.
+You let go of the need to dive into the specific model configuration chosen, just like at the next level down you let go of the specific model coefficients found each cross-validation fold.
+This requires a shift in thinking and can be challenging, e.g. a shift from “I configured my model like this…” to “I used an automatic model configuration procedure with these constraints…“.
+This tutorial has more on the topic of “pipeline thinking” and may help:
+- A Gentle Introduction to Machine Learning Modeling Pipelines
+Now that we are familiar with nested-cross validation, let’s review how we can implement it in practice.
+# Nested Cross-Validation With Scikit-Learn
+The k-fold cross-validation procedure is available in the scikit-learn Python machine learning library via the KFold class.
+The class is configured with the number of folds (splits), then the split() function is called, passing in the dataset. The results of the split() function are enumerated to give the row indexes for the train and test sets for each fold.
+For example:
+This class can be used to perform the outer-loop of the nested-cross validation procedure.
+The scikit-learn library provides cross-validation random search and grid search hyperparameter optimization via the RandomizedSearchCV and GridSearchCV classes respectively. The procedure is configured by creating the class and specifying the model, dataset, hyperparameters to search, and cross-validation procedure.
+For example:
+These classes can be used for the inner loop of nested cross-validation where the train dataset defined by the outer loop is used as the dataset for the inner loop.
+We can tie these elements together and implement the nested cross-validation procedure.
+Importantly, we can configure the hyperparameter search to refit a final model with the entire training dataset using the best hyperparameters found during the search. This can be achieved by setting the “refit” argument to True, then retrieving the model via the “best_estimator_” attribute on the search result.
+This model can then be used to make predictions on the holdout data from the outer loop and estimate the performance of the model.
+Tying all of this together, we can demonstrate nested cross-validation for the RandomForestClassifier on a synthetic classification dataset.
+We will keep things simple and tune just two hyperparameters with three values each, e.g. (3 * 3) 9 combinations. We will use 10 folds in the outer cross-validation and three folds for the inner cross-validation, resulting in (10 * 9 * 3) or 270 model evaluations.
+The complete example is listed below.
+Running the example evaluates random forest using nested-cross validation on a synthetic classification dataset.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+You can use the example as a starting point and adapt it to evaluate different algorithm hyperparameters, different algorithms, or a different dataset.
+Each iteration of the outer cross-validation procedure reports the estimated performance of the best performing model (using 3-fold cross-validation) and the hyperparameters found to perform the best, as well as the accuracy on the holdout dataset.
+This is insightful as we can see that the actual and estimated accuracies are different, but in this case, similar. We can also see that different hyperparameters are found on each iteration, showing that good hyperparameters on this dataset are dependent on the specifics of the dataset.
+A final mean classification accuracy is then reported.
+A simpler way that we can perform the same procedure is by using the cross_val_score() function that will execute the outer cross-validation procedure. This can be performed on the configured GridSearchCV directly that will automatically use the refit best performing model on the test set from the outer loop.
+This greatly reduces the amount of code required to perform the nested cross-validation.
+The complete example is listed below.
+
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+
+Running the examples performs the nested cross-validation on the random forest algorithm, achieving a mean accuracy that matches our manual procedure.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- A Gentle Introduction to k-fold Cross-Validation
+- How to Configure k-Fold Cross-Validation
+- A Gentle Introduction to Machine Learning Modeling Pipelines
+- Cross-validatory choice and assessment of statistical predictions, 1974.
+- On Over-fitting in Model Selection and Subsequent Selection Bias in Performance Evaluation, 2010.
+- Cross-validation pitfalls when selecting and assessing regression and classification models, 2014.
+- Nested cross-validation when selecting classifiers is overzealous for most practical applications, 2018.
+- Cross-validation: evaluating estimator performance, scikit-learn.
+- Nested versus non-nested cross-validation, scikit-learn example.
+- sklearn.model_selection.KFold API.
+- sklearn.model_selection.GridSearchCV API.
+- sklearn.ensemble.RandomForestClassifier API.
+- sklearn.model_selection.cross_val_score API.
+# Summary
+In this tutorial, you discovered nested cross-validation for evaluating tuned machine learning models.
+Specifically, you learned:
+- Hyperparameter optimization can overfit a dataset and provide an optimistic evaluation of a model that should not be used for model selection.
+- Nested cross-validation provides a way to reduce the bias in combined hyperparameter tuning and model selection.
+- How to implement nested cross-validation for evaluating tuned machine learning algorithms in scikit-learn.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Discover Fast Machine Learning in Python!
+...with just a few lines of scikit-learn code
+Learn how in my new Ebook:
+Machine Learning Mastery With Python
+Covers self-study tutorials and end-to-end projects like:
+Loading data, visualization, modeling, tuning, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+
+# configure the cross-validation procedure
+cv = KFold(n_splits=10, random_state=1)
+# perform cross-validation procedure
+for train_ix, test_ix in cv_outer.split(X):
+	# split data
+	X_train, X_test = X[train_ix, :], X[test_ix, :]
+	y_train, y_test = y[train_ix], y[test_ix]
+	# fit and evaluate a model
+	...
+
+# configure the cross-validation procedure
+cv = KFold(n_splits=3, shuffle=True, random_state=1)
+# define search space
+space = dict()
+...
+# define search
+search = GridSearchCV(model, space, scoring='accuracy', n_jobs=-1, cv=cv)
+# execute search
+result = search.fit(X, y)
+
+# define search
+search = GridSearchCV(model, space, scoring='accuracy', n_jobs=-1, cv=cv_inner, refit=True)
+# execute search
+result = search.fit(X_train, y_train)
+# get the best performing model fit on the whole training set
+best_model = result.best_estimator_
+
+# evaluate model on the hold out dataset
+yhat = best_model.predict(X_test)
+# manual nested cross-validation for random forest on a classification dataset
+from numpy import mean
+from numpy import std
+from sklearn.datasets import make_classification
+from sklearn.model_selection import KFold
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+# create dataset
+X, y = make_classification(n_samples=1000, n_features=20, random_state=1, n_informative=10, n_redundant=10)
+# configure the cross-validation procedure
+cv_outer = KFold(n_splits=10, shuffle=True, random_state=1)
+# enumerate splits
+outer_results = list()
+for train_ix, test_ix in cv_outer.split(X):
+	# split data
+	X_train, X_test = X[train_ix, :], X[test_ix, :]
+	y_train, y_test = y[train_ix], y[test_ix]
+	# configure the cross-validation procedure
+	cv_inner = KFold(n_splits=3, shuffle=True, random_state=1)
+	# define the model
+	model = RandomForestClassifier(random_state=1)
+	# define search space
+	space = dict()
+	space['n_estimators'] = [10, 100, 500]
+	space['max_features'] = [2, 4, 6]
+	# define search
+	search = GridSearchCV(model, space, scoring='accuracy', cv=cv_inner, refit=True)
+	# execute search
+	result = search.fit(X_train, y_train)
+	# get the best performing model fit on the whole training set
+	best_model = result.best_estimator_
+	# evaluate model on the hold out dataset
+	yhat = best_model.predict(X_test)
+	# evaluate the model
+	acc = accuracy_score(y_test, yhat)
+	# store the result
+	outer_results.append(acc)
+	# report progress
+	print('>acc=%.3f, est=%.3f, cfg=%s' % (acc, result.best_score_, result.best_params_))
+# summarize the estimated performance of the model
+print('Accuracy: %.3f (%.3f)' % (mean(outer_results), std(outer_results)))
+>acc=0.900, est=0.932, cfg={'max_features': 4, 'n_estimators': 100}
+>acc=0.940, est=0.924, cfg={'max_features': 4, 'n_estimators': 500}
+>acc=0.930, est=0.929, cfg={'max_features': 4, 'n_estimators': 500}
+>acc=0.930, est=0.927, cfg={'max_features': 6, 'n_estimators': 100}
+>acc=0.920, est=0.927, cfg={'max_features': 4, 'n_estimators': 100}
+>acc=0.950, est=0.927, cfg={'max_features': 4, 'n_estimators': 500}
+>acc=0.910, est=0.918, cfg={'max_features': 2, 'n_estimators': 100}
+>acc=0.930, est=0.924, cfg={'max_features': 6, 'n_estimators': 500}
+>acc=0.960, est=0.926, cfg={'max_features': 2, 'n_estimators': 500}
+>acc=0.900, est=0.937, cfg={'max_features': 4, 'n_estimators': 500}
+Accuracy: 0.927 (0.019)
+# automatic nested cross-validation for random forest on a classification dataset
+from numpy import mean
+from numpy import std
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import KFold
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+# create dataset
+X, y = make_classification(n_samples=1000, n_features=20, random_state=1, n_informative=10, n_redundant=10)
+# configure the cross-validation procedure
+cv_inner = KFold(n_splits=3, shuffle=True, random_state=1)
+# define the model
+model = RandomForestClassifier(random_state=1)
+# define search space
+space = dict()
+space['n_estimators'] = [10, 100, 500]
+space['max_features'] = [2, 4, 6]
+# define search
+search = GridSearchCV(model, space, scoring='accuracy', n_jobs=1, cv=cv_inner, refit=True)
+# configure the cross-validation procedure
+cv_outer = KFold(n_splits=10, shuffle=True, random_state=1)
+# execute the nested cross-validation
+scores = cross_val_score(search, X, y, scoring='accuracy', cv=cv_outer, n_jobs=-1)
+# report performance
+print('Accuracy: %.3f (%.3f)' % (mean(scores), std(scores)))
+Accuracy: 0.927 (0.019)
+'''

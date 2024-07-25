@@ -1,0 +1,172 @@
+How to Calculate McNemar's Test to Compare Two Machine Learning Classifiers
+https://machinelearningmastery.com/mcnemars-test-for-machine-learning/
+2018-07-24
+The choice of a statistical hypothesis test is a challenging open problem for interpreting machine learning results.
+In his widely cited 1998 paper, Thomas Dietterich recommended the McNemar’s test in those cases where it is expensive or impractical to train multiple copies of classifier models.
+This describes the current situation with deep learning models that are both very large and are trained and evaluated on large datasets, often requiring days or weeks to train a single model.
+In this tutorial, you will discover how to use the McNemar’s statistical hypothesis test to compare machine learning classifier models on a single test dataset.
+After completing this tutorial, you will know:
+- The recommendation of the McNemar’s test for models that are expensive to train, which suits large deep learning models.
+- How to transform prediction results from two classifiers into a contingency table and how the table is used to calculate the statistic in the McNemar’s test.
+- How to calculate the McNemar’s test in Python and interpret and report the result.
+Kick-start your project with my new book Statistics for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Calculate McNemar’s Test for Two Machine Learning ClassifiersPhoto by Mark Kao, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into five parts; they are:
+- Statistical Hypothesis Tests for Deep Learning
+- Contingency Table
+- McNemar’s Test Statistic
+- Interpret the McNemar’s Test for Classifiers
+- McNemar’s Test in Python
+
+
+
+
+# Statistical Hypothesis Tests for Deep Learning
+In his important and widely cited 1998 paper on the use of statistical hypothesis tests to compare classifiers titled “Approximate Statistical Tests for Comparing Supervised Classification Learning Algorithms“, Thomas Dietterich recommends the use of the McNemar’s test.
+Specifically, the test is recommended in those cases where the algorithms that are being compared can only be evaluated once, e.g. on one test set, as opposed to repeated evaluations via a resampling technique, such as k-fold cross-validation.
+For algorithms that can be executed only once, McNemar’s test is the only test with acceptable Type I error.
+— Approximate Statistical Tests for Comparing Supervised Classification Learning Algorithm, 1998.
+Specifically, Dietterich’s study was concerned with the evaluation of different statistical hypothesis tests, some operating upon the results from resampling methods. The concern of the study was low Type I error, that is, the statistical test reporting an effect when in fact no effect was present (false positive).
+Statistical tests that can compare models based on a single test set is an important consideration for modern machine learning, specifically in the field of deep learning.
+Deep learning models are often large and operate on very large datasets. Together, these factors can mean that the training of a model can take days or even weeks on fast modern hardware.
+This precludes the practical use of resampling methods to compare models and suggests the need to use a test that can operate on the results of evaluating trained models on a single test dataset.
+The McNemar’s test may be a suitable test for evaluating these large and slow-to-train deep learning models.
+# Contingency Table
+The McNemar’s test operates upon a contingency table.
+Before we dive into the test, let’s take a moment to understand how the contingency table for two classifiers is calculated.
+A contingency table is a tabulation or count of two categorical variables. In the case of the McNemar’s test, we are interested in binary variables correct/incorrect or yes/no for a control and a treatment or two cases. This is called a 2×2 contingency table.
+The contingency table may not be intuitive at first glance. Let’s make it concrete with a worked example.
+Consider that we have two trained classifiers. Each classifier makes binary class prediction for each of the 10 examples in a test dataset. The predictions are evaluated and determined to be correct or incorrect.
+We can then summarize these results in a table, as follows:
+We can see that Classifier1 got 6 correct, or an accuracy of 60%, and Classifier2 got 5 correct, or 50% accuracy on the test set.
+The table can now be reduced to a contingency table.
+The contingency table relies on the fact that both classifiers were trained on exactly the same training data and evaluated on exactly the same test data instances.
+The contingency table has the following structure:
+In the case of the first cell in the table, we must sum the total number of test instances that Classifier1 got correct and Classifier2 got correct. For example, the first instance that both classifiers predicted correctly was instance number 5. The total number of instances that both classifiers predicted correctly was 4.
+Another more programmatic way to think about this is to sum each combination of Yes/No in the results table above.
+The results organized into a contingency table are as follows:
+
+# McNemar’s Test Statistic
+McNemar’s test is a paired nonparametric or distribution-free statistical hypothesis test.
+It is also less intuitive than some other statistical hypothesis tests.
+The McNemar’s test is checking if the disagreements between two cases match. Technically, this is referred to as the homogeneity of the contingency table (specifically the marginal homogeneity). Therefore, the McNemar’s test is a type of homogeneity test for contingency tables.
+The test is widely used in medicine to compare the effect of a treatment against a control.
+In terms of comparing two binary classification algorithms, the test is commenting on whether the two models disagree in the same way (or not). It is not commenting on whether one model is more or less accurate or error prone than another. This is clear when we look at how the statistic is calculated.
+The McNemar’s test statistic is calculated as:
+Where Yes/No is the count of test instances that Classifier1 got correct and Classifier2 got incorrect, and No/Yes is the count of test instances that Classifier1 got incorrect and Classifier2 got correct.
+This calculation of the test statistic assumes that each cell in the contingency table used in the calculation has a count of at least 25. The test statistic has a Chi-Squared distribution with 1 degree of freedom.
+We can see that only two elements of the contingency table are used, specifically that the Yes/Yes and No/No elements are not used in the calculation of the test statistic. As such, we can see that the statistic is reporting on the different correct or incorrect predictions between the two models, not the accuracy or error rates. This is important to understand when making claims about the finding of the statistic.
+The default assumption, or null hypothesis, of the test is that the two cases disagree to the same amount. If the null hypothesis is rejected, it suggests that there is evidence to suggest that the cases disagree in different ways, that the disagreements are skewed.
+Given the selection of a significance level, the p-value calculated by the test can be interpreted as follows:
+- p > alpha: fail to reject H0, no difference in the disagreement (e.g. treatment had no effect).
+- p <= alpha: reject H0, significant difference in the disagreement (e.g. treatment had an effect).
+# Interpret the McNemar’s Test for Classifiers
+It is important to take a moment to clearly understand how to interpret the result of the test in the context of two machine learning classifier models.
+The two terms used in the calculation of the McNemar’s Test capture the errors made by both models. Specifically, the No/Yes and Yes/No cells in the contingency table. The test checks if there is a significant difference between the counts in these two cells. That is all.
+If these cells have counts that are similar, it shows us that both models make errors in much the same proportion, just on different instances of the test set. In this case, the result of the test would not be significant and the null hypothesis would not be rejected.
+Under the null hypothesis, the two algorithms should have the same error rate …
+— Approximate Statistical Tests for Comparing Supervised Classification Learning Algorithm, 1998.
+If these cells have counts that are not similar, it shows that both models not only make different errors, but in fact have a different relative proportion of errors on the test set. In this case, the result of the test would be significant and we would reject the null hypothesis.
+So we may reject the null hypothesis in favor of the hypothesis that the two algorithms have different performance when trained on the particular training
+— Approximate Statistical Tests for Comparing Supervised Classification Learning Algorithm, 1998.
+We can summarize this as follows:
+- Fail to Reject Null Hypothesis: Classifiers have a similar proportion of errors on the test set.
+- Reject Null Hypothesis: Classifiers have a different proportion of errors on the test set.
+After performing the test and finding a significant result, it may be useful to report an effect statistical measure in order to quantify the finding. For example, a natural choice would be to report the odds ratios, or the contingency table itself, although both of these assume a sophisticated reader.
+It may be useful to report the difference in error between the two classifiers on the test set. In this case, be careful with your claims as the significant test does not report on the difference in error between the models, only the relative difference in the proportion of error between the models.
+Finally, in using the McNemar’s test, Dietterich highlights two important limitations that must be considered. They are:
+Generally, model behavior varies based on the specific training data used to fit the model.
+This is due to both the interaction of the model with specific training instances and the use of randomness during learning. Fitting the model on multiple different training datasets and evaluating the skill, as is done with resampling methods, provides a way to measure the variance of the model.
+The test is appropriate if the sources of variability are small.
+Hence, McNemar’s test should only be applied if we believe these sources of variability are small.
+— Approximate Statistical Tests for Comparing Supervised Classification Learning Algorithm, 1998.
+The two classifiers are evaluated on a single test set, and the test set is expected to be smaller than the training set.
+This is different from hypothesis tests that make use of resampling methods as more, if not all, of the dataset is made available as a test set during evaluation (which introduces its own problems from a statistical perspective).
+This provides less of an opportunity to compare the performance of the models. It requires that the test set is an appropriately representative of the domain, often meaning that the test dataset is large.
+# McNemar’s Test in Python
+The McNemar’s test can be implemented in Python using the mcnemar() Statsmodels function.
+The function takes the contingency table as an argument and returns the calculated test statistic and p-value.
+There are two ways to use the statistic depending on the amount of data.
+If there is a cell in the table that is used in the calculation of the test statistic that has a count of less than 25, then a modified version of the test is used that calculates an exact p-value using a binomial distribution. This is the default usage of the test:
+Alternately, if all cells used in the calculation of the test statistic in the contingency table have a value of 25 or more, then the standard calculation of the test can be used.
+We can calculate the McNemar’s on the example contingency table described above. This contingency table has a small count in both the disagreement cells and as such the exact method must be used.
+The complete example is listed below.
+Running the example calculates the statistic and p-value on the contingency table and prints the results.
+We can see that the test strongly confirms that there is very little difference in the disagreements between the two cases. The null hypothesis not rejected.
+As we are using the test to compare classifiers, we state that there is no statistically significant difference in the disagreements between the two models.
+
+# Extensions
+This section lists some ideas for extending the tutorial that you may wish to explore.
+- Find a research paper in machine learning that makes use of the McNemar’s statistical hypothesis test.
+- Update the code example such that the contingency table shows a significant difference in disagreement between the two cases.
+- Implement a function that will use the correct version of the McNemar’s test based on the provided contingency table.
+If you explore any of these extensions, I’d love to know.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Note on the sampling error of the difference between correlated proportions or percentages, 1947.
+- Approximate Statistical Tests for Comparing Supervised Classification Learning Algorithms, 1998.
+- statsmodels.stats.contingency_tables.mcnemar() API
+- McNemar’s test on Wikipedia
+- Type I and type II errors on Wikipedia
+- Contingency table on wikipedia
+# Summary
+In this tutorial, you discovered how to use the McNemar’s test statistical hypothesis test to compare machine learning classifier models on a single test dataset.
+Specifically, you learned:
+- The recommendation of the McNemar’s test for models that are expensive to train, which suits large deep learning models.
+- How to transform prediction results from two classifiers into a contingency table and how the table is used to calculate the statistic in the McNemar’s test.
+- How to calculate the McNemar’s test in Python and interpret and report the result.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Statistics for Machine Learning!
+...by writing lines of code in python
+Discover how in my new Ebook:
+Statistical Methods for Machine Learning
+It provides self-study tutorials on topics like:
+Hypothesis Tests, Correlation, Nonparametric Stats, Resampling, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+Instance,	Classifier1 Correct,	Classifier2 Correct
+1			Yes						No
+2			No						No
+3			No						Yes
+4			No						No
+5			Yes						Yes
+6			Yes						Yes
+7			Yes						Yes
+8			No						No
+9			Yes						No
+10			Yes						Yes
+						Classifier2 Correct,	Classifier2 Incorrect
+Classifier1 Correct 	??						??
+Classifier1 Incorrect 	?? 						??
+						Classifier2 Correct,	Classifier2 Incorrect
+Classifier1 Correct 	Yes/Yes					Yes/No
+Classifier1 Incorrect 	No/Yes 					No/No
+						Classifier2 Correct,	Classifier2 Incorrect
+Classifier1 Correct 	4						2
+Classifier1 Incorrect 	1 						3
+statistic = (Yes/No - No/Yes)^2 / (Yes/No + No/Yes)
+stat, p = mcnemar(table, exact=True)
+stat, p = mcnemar(table, exact=False, correction=True)
+# Example of calculating the mcnemar test
+from statsmodels.stats.contingency_tables import mcnemar
+# define contingency table
+table = [[4, 2],
+		 [1, 3]]
+# calculate mcnemar test
+result = mcnemar(table, exact=True)
+# summarize the finding
+print('statistic=%.3f, p-value=%.3f' % (result.statistic, result.pvalue))
+# interpret the p-value
+alpha = 0.05
+if result.pvalue > alpha:
+	print('Same proportions of errors (fail to reject H0)')
+else:
+	print('Different proportions of errors (reject H0)')
+statistic=1.000, p-value=1.000
+Same proportions of errors (fail to reject H0)
+'''

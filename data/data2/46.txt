@@ -1,0 +1,175 @@
+How to Implement Resampling Methods From Scratch In Python
+https://machinelearningmastery.com/implement-resampling-methods-scratch-python/
+2016-10-16
+The goal of predictive modeling is to create models that make good predictions on new data.
+We don’t have access to this new data at the time of training, so we must use statistical methods to estimate the performance of a model on new data.
+This class of methods are called resampling methods, as they resampling your available training data.
+In this tutorial, you will discover how to implement resampling methods from scratch in Python.
+After completing this tutorial, you will know:
+- How to implement a train and test split of your data.
+- How to implement a k-fold cross validation split of your data.
+Kick-start your project with my new book Machine Learning Algorithms From Scratch, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Update Jan/2017: Changed the calculation of fold_size in cross_validation_split() to always be an integer. Fixes issues with Python 3.
+- Update May/2018: Fixed typo re LOOCV.
+- Update Aug/2018: Tested and updated to work with Python 3.6.
+How to Implement Resampling Methods From Scratch In PythonPhoto by Andrew Lynch, some rights reserved.
+# Description
+The goal of resampling methods is to make the best use of your training data in order to accurately estimate the performance of a model on new unseen data.
+Accurate estimates of performance can then be used to help you choose which set of model parameters to use or which model to select.
+Once you have chosen a model, you can train for final model on the entire training dataset and start using it to make predictions.
+There are two common resampling methods that you can use:
+- A train and test split of your data.
+- k-fold cross validation.
+In this tutorial, we will look at using each and when to use one method over the other.
+# Tutorial
+This tutorial is divided into 3 parts:
+- Train and Test Split.
+- k-fold Cross Validation Split.
+- How to Choose a Resampling Method.
+These steps will provide the foundations you need to handle resampling your dataset to estimate algorithm performance on new data.
+The train and test split is the easiest resampling method.
+As such, it is the most widely used.
+The train and test split involves separating a dataset into two parts:
+- Training Dataset.
+- Test Dataset.
+The training dataset is used by the machine learning algorithm to train the model. The test dataset is held back and is used to evaluate the performance of the model.
+The rows assigned to each dataset are randomly selected. This is an attempt to ensure that the training and evaluation of a model is objective.
+If multiple algorithms are compared or multiple configurations of the same algorithm are compared, the same train and test split of the dataset should be used. This is to ensure that the comparison of performance is consistent or apples-to-apples.
+We can achieve this by seeding the random number generator the same way before splitting the data, or by holding the same split of the dataset for use by multiple algorithms.
+We can implement the train and test split of a dataset in a single function.
+Below is a function named train_test_split() to split a dataset into a train and test split. It accepts two arguments, the dataset to split as a list of lists and an optional split percentage.
+A default split percentage of 0.6 or 60% is used. This will assign 60% of the dataset to the training dataset and leave the remaining 40% to the test dataset. A 60/40 for train/test is a good default split of the data.
+The function first calculates how many rows the training set requires from the provided dataset. A copy of the original dataset is made. Random rows are selected and removed from the copied dataset and added to the train dataset until the train dataset contains the target number of rows.
+The rows that remain in the copy of the dataset are then returned as the test dataset.
+The randrange() function from the random model is used to generate a random integer in the range between 0 and the size of the list.
+We can test this function using a contrived dataset of 10 rows, each with a single column.
+The complete example is listed below.
+The example fixes the random seed before splitting the training dataset. This is to ensure the exact same split of the data is made every time the code is executed. This is handy if we want to use the same split many times to evaluate and compare the performance of different algorithms.
+Running the example produces the output below.
+The data in the train and test set is printed, showing that 6/10 or 60% of the records were assigned to the training dataset and 4/10 or 40% of the records were assigned to the test set.
+
+A limitation of using the train and test split method is that you get a noisy estimate of algorithm performance.
+The k-fold cross validation method (also called just cross validation) is a resampling method that provides a more accurate estimate of algorithm performance.
+It does this by first splitting the data into k groups. The algorithm is then trained and evaluated k times and the performance summarized by taking the mean performance score. Each group of data is called a fold, hence the name k-fold cross-validation.
+It works by first training the algorithm on the k-1 groups of the data and evaluating it on the kth hold-out group as the test set. This is repeated so that each of the k groups is given an opportunity to be held out and used as the test set.
+As such, the value of k should be divisible by the number of rows in your training dataset, to ensure each of the k groups has the same number of rows.
+You should choose a value for k that splits the data into groups with enough rows that each group is still representative of the original dataset. A good default to use is k=3 for a small dataset or k=10 for a larger dataset. A quick way to check if the fold sizes are representative is to calculate summary statistics such as mean and standard deviation and see how much the values differ from the same statistics on the whole dataset.
+We can reuse what we learned in the previous section in creating a train and test split here in implementing k-fold cross validation.
+Instead of two groups, we must return k-folds or k groups of data.
+Below is a function named cross_validation_split() that implements the cross validation split of data.
+As before, we create a copy of the dataset from which to draw randomly chosen rows.
+We calculate the size of each fold as the size of the dataset divided by the number of folds required.
+If the dataset does not cleanly divide by the number of folds, there may be some remainder rows and they will not be used in the split.
+We then create a list of rows with the required size and add them to a list of folds which is then returned at the end.
+We can test this resampling method on the same small contrived dataset as above. Each row has only a single column value, but we can imagine how this might scale to a standard machine learning dataset.
+The complete example is listed below.
+As before, we fix the seed for the random number generator to ensure that each time the code is executed that the same rows are used in the same folds.
+A k value of 4 is used for demonstration purposes. We would expect that the 10 rows divided into 4 folds will result in 2 rows per fold, with a remainder of 2 that will not be used in the split.
+Running the example produces the output below. The list of the folds is printed, showing that indeed as expected there are two rows per fold.
+
+The gold standard for estimating the performance of machine learning algorithms on new data is k-fold cross validation.
+When well-configured, k-fold cross validation gives a robust estimate of performance compared to other methods such as the train and test split.
+The downside of cross-validation is that it can be time-consuming to run, requiring k different models to be trained and evaluated. This is a problem if you have a very large dataset or if you are evaluating a model that takes a long time to train.
+The train and test split resampling method is the most widely used. This is because it is easy to understand and implement, and because it gives a quick estimate of algorithm performance.
+Only a single model is constructed and evaluated.
+Although the train and test split method can give a noisy or unreliable estimate of the performance of a model on new data, this becomes less of a problem if you have a very large dataset.
+Large datasets are those in the hundreds of thousands or millions of records, large enough that splitting it in half results in two datasets that have nearly equivalent statistical properties.
+In such cases, there may be little need to use k-fold cross validation as an evaluation of the algorithm and a train and test split may be just as reliable.
+# Extensions
+In this tutorial, we have looked at the two most common resampling methods.
+There are other methods you may want to investigate and implement as extensions to this tutorial.
+For example:
+- Repeated Train and Test. This is where the train and test split is used, but the process is repeated many times.
+- LOOCV or Leave One Out Cross Validation. This is a form of k-fold cross-validation where the value of k is fixed at n (the number of training examples).
+- Stratification. In classification problems, this is where the balance of class values in each group is forced to match the original dataset.
+Did you implement an extension?
+Share your experiences in the comments below.
+# Review
+In this tutorial, you discovered how to implement resampling methods in Python from scratch.
+Specifically, you learned:
+- How to implement the train and test split method.
+- How to implement the k-fold cross validation method.
+- When to use each method.
+Do you have any questions about resampling methods or about this post?
+Ask your questions in the comments and I will do my best to answer.
+# Discover How to Code Algorithms From Scratch!
+...with step-by-step tutorials on real-world datasets
+Discover how in my new Ebook:
+Machine Learning Algorithms From Scratch
+It covers 18 tutorials with all the code for 12 top algorithms, like:
+Linear Regression, k-Nearest Neighbors, Stochastic Gradient Descent and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+from random import randrange
+
+# Split a dataset into a train and test set
+def train_test_split(dataset, split=0.60):
+	train = list()
+	train_size = split * len(dataset)
+	dataset_copy = list(dataset)
+	while len(train) < train_size:
+		index = randrange(len(dataset_copy))
+		train.append(dataset_copy.pop(index))
+	return train, dataset_copy
+from random import seed
+from random import randrange
+
+# Split a dataset into a train and test set
+def train_test_split(dataset, split=0.60):
+	train = list()
+	train_size = split * len(dataset)
+	dataset_copy = list(dataset)
+	while len(train) < train_size:
+		index = randrange(len(dataset_copy))
+		train.append(dataset_copy.pop(index))
+	return train, dataset_copy
+
+# test train/test split
+seed(1)
+dataset = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]
+train, test = train_test_split(dataset)
+print(train)
+print(test)
+[[3], [2], [7], [1], [8], [9]]
+[[4], [5], [6], [10]]
+fold size = total rows / total folds
+from random import randrange
+
+# Split a dataset into k folds
+def cross_validation_split(dataset, folds=3):
+	dataset_split = list()
+	dataset_copy = list(dataset)
+	fold_size = int(len(dataset) / folds)
+	for i in range(folds):
+		fold = list()
+		while len(fold) < fold_size:
+			index = randrange(len(dataset_copy))
+			fold.append(dataset_copy.pop(index))
+		dataset_split.append(fold)
+	return dataset_split
+from random import seed
+from random import randrange
+
+# Split a dataset into k folds
+def cross_validation_split(dataset, folds=3):
+	dataset_split = list()
+	dataset_copy = list(dataset)
+	fold_size = int(len(dataset) / folds)
+	for i in range(folds):
+		fold = list()
+		while len(fold) < fold_size:
+			index = randrange(len(dataset_copy))
+			fold.append(dataset_copy.pop(index))
+		dataset_split.append(fold)
+	return dataset_split
+
+# test cross validation split
+seed(1)
+dataset = [[1], [2], [3], [4], [5], [6], [7], [8], [9], [10]]
+folds = cross_validation_split(dataset, 4)
+print(folds)
+[[[3], [2]], [[7], [1]], [[8], [9]], [[10], [6]]]
+'''

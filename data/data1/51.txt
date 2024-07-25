@@ -1,0 +1,145 @@
+A Gentle Introduction to Early Stopping to Avoid Overtraining Neural Networks
+https://machinelearningmastery.com/early-stopping-to-avoid-overtraining-neural-network-models/
+2018-12-06
+A major challenge in training neural networks is how long to train them.
+Too little training will mean that the model will underfit the train and the test sets. Too much training will mean that the model will overfit the training dataset and have poor performance on the test set.
+A compromise is to train on the training dataset but to stop training at the point when performance on a validation dataset starts to degrade. This simple, effective, and widely used approach to training neural networks is called early stopping.
+In this post, you will discover that stopping the training of a neural network early before it has overfit the training dataset can reduce overfitting and improve the generalization of deep neural networks.
+After reading this post, you will know:
+- The challenge of training a neural network long enough to learn the mapping, but not so long that it overfits the training data.
+- Model performance on a holdout validation dataset can be monitored during training and training stopped when generalization error starts to increase.
+- The use of early stopping requires the selection of a performance measure to monitor, a trigger to stop training, and a selection of the model weights to use.
+Kick-start your project with my new book Better Deep Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+A Gentle Introduction to Early Stopping for Avoiding Overtraining Neural Network ModelsPhoto by Benson Kua, some rights reserved.
+# Overview
+This tutorial is divided into five parts; they are:
+- The Problem of Training Just Enough
+- Stop Training When Generalization Error Increases
+- How to Stop Training Early
+- Examples of Early Stopping
+- Tips for Early Stopping
+# The Problem of Training Just Enough
+Training neural networks is challenging.
+When training a large network, there will be a point during training when the model will stop generalizing and start learning the statistical noise in the training dataset.
+This overfitting of the training dataset will result in an increase in generalization error, making the model less useful at making predictions on new data.
+The challenge is to train the network long enough that it is capable of learning the mapping from inputs to outputs, but not training the model so long that it overfits the training data.
+However, all standard neural network architectures such as the fully connected multi-layer perceptron are prone to overfitting [10]: While the network seems to get better and better, i.e., the error on the training set decreases, at some point during training it actually begins to get worse again, i.e., the error on unseen examples increases.
+— Early Stopping – But When?, 2002.
+One approach to solving this problem is to treat the number of training epochs as a hyperparameter and train the model multiple times with different values, then select the number of epochs that result in the best performance on the train or a holdout test dataset.
+The downside of this approach is that it requires multiple models to be trained and discarded. This can be computationally inefficient and time-consuming, especially for large models trained on large datasets over days or weeks.
+# Stop Training When Generalization Error Increases
+An alternative approach is to train the model once for a large number of training epochs.
+During training, the model is evaluated on a holdout validation dataset after each epoch. If the performance of the model on the validation dataset starts to degrade (e.g. loss begins to increase or accuracy begins to decrease), then the training process is stopped.
+… the error measured with respect to independent data, generally called a validation set, often shows a decrease at first, followed by an increase as the network starts to over-fit. Training can therefore be stopped at the point of smallest error with respect to the validation data set
+— Page 259, Pattern Recognition and Machine Learning, 2006.
+The model at the time that training is stopped is then used and is known to have good generalization performance.
+This procedure is called “early stopping” and is perhaps one of the oldest and most widely used forms of neural network regularization.
+This strategy is known as early stopping. It is probably the most commonly used form of regularization in deep learning. Its popularity is due both to its effectiveness and its simplicity.
+— Page 247, Deep Learning, 2016.
+If regularization methods like weight decay that update the loss function to encourage less complex models are considered “explicit” regularization, then early stopping may be thought of as a type of “implicit” regularization, much like using a smaller network that has less capacity.
+Regularization may also be implicit as is the case with early stopping.
+— Understanding deep learning requires rethinking generalization, 2017.
+# How to Stop Training Early
+Early stopping requires that you configure your network to be under constrained, meaning that it has more capacity than is required for the problem.
+When training the network, a larger number of training epochs is used than may normally be required, to give the network plenty of opportunity to fit, then begin to overfit the training dataset.
+There are three elements to using early stopping; they are:
+- Monitoring model performance.
+- Trigger to stop training.
+- The choice of model to use.
+The performance of the model must be monitored during training.
+This requires the choice of a dataset that is used to evaluate the model and a metric used to evaluate the model.
+It is common to split the training dataset and use a subset, such as 30%, as a validation dataset used to monitor performance of the model during training. This validation set is not used to train the model. It is also common to use the loss on a validation dataset as the metric to monitor, although you may also use prediction error in the case of regression, or accuracy in the case of classification.
+The loss of the model on the training dataset will also be available as part of the training procedure, and additional metrics may also be calculated and monitored on the training dataset.
+Performance of the model is evaluated on the validation set at the end of each epoch, which adds an additional computational cost during training. This can be reduced by evaluating the model less frequently, such as every 2, 5, or 10 training epochs.
+Once a scheme for evaluating the model is selected, a trigger for stopping the training process must be chosen.
+The trigger will use a monitored performance metric to decide when to stop training. This is often the performance of the model on the holdout dataset, such as the loss.
+In the simplest case, training is stopped as soon as the performance on the validation dataset decreases as compared to the performance on the validation dataset at the prior training epoch (e.g. an increase in loss).
+More elaborate triggers may be required in practice. This is because the training of a neural network is stochastic and can be noisy. Plotted on a graph, the performance of a model on a validation dataset may go up and down many times. This means that the first sign of overfitting may not be a good place to stop training.
+… the validation error can still go further down after it has begun to increase […] Real validation error curves almost always have more than one local minimum.
+— Early Stopping – But When?, 2002.
+Some more elaborate triggers may include:
+- No change in metric over a given number of epochs.
+- An absolute change in a metric.
+- A decrease in performance observed over a given number of epochs.
+- Average change in metric over a given number of epochs.
+Some delay or “patience” in stopping is almost always a good idea.
+… results indicate that “slower” criteria, which stop later than others, on the average lead to improved generalization compared to “faster” ones. However, the training time that has to be expended for such improvements is rather large on average and also varies dramatically when slow criteria are used.
+— Early Stopping – But When?, 2002.
+At the time that training is halted, the model is known to have slightly worse generalization error than a model at a prior epoch.
+As such, some consideration may need to be given as to exactly which model is saved. Specifically, the training epoch from which weights in the model that are saved to file.
+This will depend on the trigger chosen to stop the training process. For example, if the trigger is a simple decrease in performance from one epoch to the next, then the weights for the model at the prior epoch will be preferred.
+If the trigger is required to observe a decrease in performance over a fixed number of epochs, then the model at the beginning of the trigger period will be preferred.
+Perhaps a simple approach is to always save the model weights if the performance of the model on a holdout dataset is better than at the previous epoch. That way, you will always have the model with the best performance on the holdout set.
+Every time the error on the validation set improves, we store a copy of the model parameters. When the training algorithm terminates, we return these parameters, rather than the latest parameters.
+— Page 246, Deep Learning, 2016.
+# Examples of Early Stopping
+This section summarizes some examples where early stopping has been used.
+Yoon Kim in his seminal application of convolutional neural networks to sentiment analysis in the 2014 paper titled “Convolutional Neural Networks for Sentence Classification” used early stopping with 10% of the training dataset used as the validation hold outset.
+We do not otherwise perform any dataset-specific tuning other than early stopping on dev sets. For datasets without a standard dev set we randomly select 10% of the training data as the dev set.
+Chiyuan Zhang, et al. from MIT, Berkeley, and Google in their 2017 paper titled “Understanding deep learning requires rethinking generalization” highlight that on very deep convolutional neural networks for photo classification where there is an abundant dataset that early stopping may not always offer benefit, as the model is less likely to overfit such large datasets.
+[regarding] the training and testing accuracy on ImageNet [results suggest] a reference of potential performance gain for early stopping. However, on the CIFAR10 dataset, we do not observe any potential benefit of early stopping.
+Yarin Gal and Zoubin Ghahramani from Cambridge in their 2015 paper titled “A Theoretically Grounded Application of Dropout in Recurrent Neural Networks” use early stopping as an “unregularized baseline” for LSTM models on a suite of language modeling problems.
+Lack of regularisation in RNN models makes it difficult to handle small data, and to avoid overfitting researchers often use early stopping, or small and under-specified models
+Alex Graves, et al., in their famous 2013 paper titled “Speech recognition with deep recurrent neural networks” achieved state-of-the-art results with LSTMs for speech recognition, while making use of early stopping.
+Regularisation is vital for good performance with RNNs, as their flexibility makes them prone to overfitting. Two regularisers were used in this paper: early stopping and weight noise …
+# Tips for Early Stopping
+This section provides some tips for using early stopping regularization with your neural network.
+Early stopping is so easy to use, e.g. with the simplest trigger, that there is little reason to not use it when training neural networks.
+Use of early stopping may be a staple of the modern training of deep neural networks.
+Early stopping should be used almost universally.
+— Page 425, Deep Learning, 2016.
+Before using early stopping, it may be interesting to fit an under constrained model and monitor the performance of the model on a train and validation dataset.
+Plotting the performance of the model in real-time or at the end of a long run will show how noisy the training process is with your specific model and dataset.
+This may help in the choice of a trigger for early stopping.
+Loss is an easy metric to monitor during training and to trigger early stopping.
+The problem is that loss does not always capture what is most important about the model to you and your project.
+It may be better to choose a performance metric to monitor that best defines the performance of the model in terms of the way you intend to use it. This may be the metric that you intend to use to report the performance of the model.
+A problem with early stopping is that the model does not make use of all available training data.
+It may be desirable to avoid overfitting and to train on all possible data, especially on problems where the amount of training data is very limited.
+A recommended approach would be to treat the number of training epochs as a hyperparameter and to grid search a range of different values, perhaps using k-fold cross-validation. This will allow you to fix the number of training epochs and fit a final model on all available data.
+Early stopping could be used instead. The early stopping procedure could be repeated a number of times. The epoch number at which training was stopped could be recorded. Then, the average of the epoch number across all repeats of early stopping could be used when fitting a final model on all available training data.
+This process could be performed using a different split of the training set into train and validation steps each time early stopping is run.
+An alternative might be to use early stopping with a validation dataset, then update the final model with further training on the held out validation set.
+Early stopping could be used with k-fold cross-validation, although it is not recommended.
+The k-fold cross-validation procedure is designed to estimate the generalization error of a model by repeatedly refitting and evaluating it on different subsets of a dataset.
+Early stopping is designed to monitor the generalization error of one model and stop training when generalization error begins to degrade.
+They are at odds because cross-validation assumes you don’t know the generalization error and early stopping is trying to give you the best model based on knowledge of generalization error.
+It may be desirable to use cross-validation to estimate the performance of models with different hyperparameter values, such as learning rate or network structure, whilst also using early stopping.
+In this case, if you have the resources to repeatedly evaluate the performance of the model, then perhaps the number of training epochs may also be treated as a hyperparameter to be optimized, instead of using early stopping.
+Instead of using cross-validation with early stopping, early stopping may be used directly without repeated evaluation when evaluating different hyperparameter values for the model (e.g. different learning rates).
+One possible point of confusion is that early stopping is sometimes referred to as “cross-validated training.” Further, research into early stopping that compares triggers may use cross-validation to compare the impact of different triggers.
+Repeating the early stopping procedure many times may result in the model overfitting the validation dataset.
+This can happen just as easily as overfitting the training dataset.
+One approach is to only use early stopping once all other hyperparameters of the model have been chosen.
+Another strategy may be to use a different split of the training dataset into train and validation sets each time early stopping is used.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Section 7.8 Early Stopping, Deep Learning, 2016.
+- Section 5.5.2 Early stopping, Pattern Recognition and Machine Learning, 2006.
+- Section 16.1 Early Stopping, Neural Smithing: Supervised Learning in Feedforward Artificial Neural Networks, 1999.
+- Early Stopping – But When?, 2002.
+- Improving model selection by nonconvergent methods, 1993.
+- Automatic early stopping using cross validation: quantifying the criteria, 1997.
+- Understanding deep learning requires rethinking generalization, 2017.
+- Avoid Overfitting By Early Stopping With XGBoost In Python
+- Early stopping, Wikipedia.
+# Summary
+In this post, you discovered that stopping the training of neural network early before it has overfit the training dataset can reduce overfitting and improve the generalization of deep neural networks.
+Specifically, you learned:
+- The challenge of training a neural network long enough to learn the mapping, but not so long that it overfits the training data.
+- Model performance on a holdout validation dataset can be monitored during training and training stopped when generalization error starts to increase.
+- The use of early stopping requires the selection of a performance measure to monitor, a trigger for stopping training, and a selection of the model weights to use.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop Better Deep Learning Models Today!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Better Deep Learning
+It provides self-study tutorials on topics like: weight decay, batch normalization, dropout, model stacking and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+
+'''

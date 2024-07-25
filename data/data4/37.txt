@@ -1,0 +1,210 @@
+Cost-Sensitive Learning for Imbalanced Classification
+https://machinelearningmastery.com/cost-sensitive-learning-for-imbalanced-classification/
+2020-02-06
+Most machine learning algorithms assume that all misclassification errors made by a model are equal.
+This is often not the case for imbalanced classification problems where missing a positive or minority class case is worse than incorrectly classifying an example from the negative or majority class. There are many real-world examples, such as detecting spam email, diagnosing a medical condition, or identifying fraud. In all of these cases, a false negative (missing a case) is worse or more costly than a false positive.
+Cost-sensitive learning is a subfield of machine learning that takes the costs of prediction errors (and potentially other costs) into account when training a machine learning model. It is a field of study that is closely related to the field of imbalanced learning that is concerned with classification on datasets with a skewed class distribution. As such, many conceptualizations and techniques developed and used for cost-sensitive learning can be adopted for imbalanced classification problems.
+In this tutorial, you will discover a gentle introduction to cost-sensitive learning for imbalanced classification.
+After completing this tutorial, you will know:
+- Imbalanced classification problems often value false-positive classification errors differently from false negatives.
+- Cost-sensitive learning is a subfield of machine learning that involves explicitly defining and using costs when training machine learning algorithms.
+- Cost-sensitive techniques may be divided into three groups, including data resampling, algorithm modifications, and ensemble methods.
+Kick-start your project with my new book Imbalanced Classification with Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+Cost-Sensitive Learning for Imbalanced ClassificationPhoto by bvi4092, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into four parts; they are:
+- Not All Classification Errors Are Equal
+- Cost-Sensitive Learning
+- Cost-Sensitive Imbalanced Classification
+- Cost-Sensitive Methods
+# Not All Classification Errors Are Equal
+Classification is a predictive modeling problem that involves predicting the class label for an observation.
+There may be many class labels, so-called multi-class classification problems, although the simplest and perhaps most common type of classification problem has two classes and is referred to as binary classification.
+Most machine learning algorithms designed for classification assume that there is an equal number of examples for each observed class.
+This is not always the case in practice, and datasets that have a skewed class distribution are referred to as imbalanced classification problems.
+In cost-sensitive learning instead of each instance being either correctly or incorrectly classified, each class (or instance) is given a misclassification cost. Thus, instead of trying to optimize the accuracy, the problem is then to minimize the total misclassification cost.
+— Page 50, Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+In addition to assuming that the class distribution is balanced, most machine learning algorithms also assume that the prediction errors made by a classifier are the same, so-called miss-classifications.
+This is typically not the case for binary classification problems, especially those that have an imbalanced class distribution.
+Most classifiers assume that the misclassification costs (false negative and false positive cost) are the same. In most real-world applications, this assumption is not true.
+— Cost-sensitive Learning Methods For Imbalanced Data, 2010.
+For imbalanced classification problems, the examples from the majority class are referred to as the negative class and assigned the class label 0. Those examples from the minority class are referred to as the positive class and are assigned the class label 1.
+The reason for this negative vs. positive naming convention is because the examples from the majority class typically represent a normal or no-event case, whereas examples from the minority class represent the exceptional or event case.
+- Majority Class: Negative or no-event assigned the class label 0.
+- Minority Class: Positive or event assigned the class label 1.
+Real-world imbalanced binary classification problems typically have a different interpretation for each of the classification errors that can be made. For example, classifying a negative case as a positive case is typically far less of a problem than classifying a positive case as a negative case.
+This makes sense if we consider the goal of a classifier on imbalanced binary classification problems is to detect the positive cases correctly and positive cases represent an exceptional or event that we are most interested in.
+We can make this clear with some examples.
+Bank Loan Problem: Consider a problem where a bank wants to determine whether to give a loan to a customer or not. Denying a loan to a good customer is not as bad as giving a loan to a bad customer that may never repay it.
+Cancer Diagnosis Problem: Consider a problem where a doctor wants to determine whether a patient has cancer or not. It is better to diagnose a healthy patient with cancer and follow-up with more medical tests than it is to discharge a patient that has cancer.
+… in medical diagnosis of a certain cancer, if the cancer is regarded as the positive class, and non-cancer (healthy) as negative, then missing a cancer (the patient is actually positive but is classified as negative; thus it is also called “false negative”) is much more serious (thus expensive) than the false-positive error.
+— Cost-Sensitive Learning, Encyclopedia of Machine Learning, 2010.
+Fraud Detection Problem: Consider the problem of an insurance company wants to determine whether a claim is fraudulent. Identifying good claims as fraudulent and following up with the customer is better than honoring fraudulent insurance claims.
+We can see with these examples that misclassification errors are not desirable in general, but one type of misclassification is much worse than the other. Specifically predicting positive cases as a negative case is more harmful, more expensive, or worse in whatever way we want to measure the context of the target domain.
+… it is often more expensive to misclassify an actual positive example into negative, than an actual negative example into positive.
+— Cost-Sensitive Learning, Encyclopedia of Machine Learning, 2010.
+Machine learning algorithms that treat each type of misclassification error as the same are unable to meet the needs of these types of problems.
+As such, both the underrepresentation of the minority class in the training data and the increased importance on correctly identifying examples from the minority class make imbalanced classification one of the most challenging problems in applied machine learning.
+Class imbalance is one of the challenging problems for machine learning algorithms.
+— Cost-sensitive Learning Methods For Imbalanced Data, 2010.
+
+
+
+
+# Cost-Sensitive Learning
+There is a subfield of machine learning that is focused on learning and using models on data that have uneven penalties or costs when making predictions and more.
+This field is generally referred to as Cost-Sensitive Machine Learning, or more simply Cost-Sensitive Learning.
+… the machine learning algorithm needs to be sensitive to the cost that it is dealing with, and in the better case take the cost into account in the model fitting process. This leads to cost-sensitive machine learning, a relatively new research topic in machine learning.
+— Page xiii, Cost-Sensitive Machine Learning, 2011.
+Traditionally, machine learning algorithms are trained on a dataset and seek to minimize error. Fitting a model on data solves an optimization problem where we explicitly seek to minimize error. A range of functions can be used to calculate the error of a model on training data, and the more general term is referred to as loss. We seek to minimize the loss of a model on the training data, which is the same as talking about error minimization.
+- Error Minimization: The conventional goal when training a machine learning algorithm is to minimize the error of the model on a training dataset.
+In cost-sensitive learning, a penalty associated with an incorrect prediction and is referred to as a “cost.” We could alternately refer to the inverse of the penalty as the “benefit“, although this framing is rarely used.
+- Cost: The penalty associated with an incorrect prediction.
+The goal of cost-sensitive learning is to minimize the cost of a model on the training dataset, where it is assumed that different types of prediction errors have a different and known associated cost.
+- Cost Minimization: The goal of cost-sensitive learning is to minimize the cost of a model on a training dataset.
+Cost-Sensitive Learning is a type of learning that takes the misclassification costs (and possibly other types of cost) into consideration. The goal of this type of learning is to minimize the total cost.
+— Cost-Sensitive Learning, Encyclopedia of Machine Learning, 2010.
+There is a tight-coupling between imbalanced classification and cost-sensitive learning. Specifically, an imbalanced learning problem can be addressed using cost-sensitive learning.
+Nevertheless, cost-sensitive learning is a separate subfield of study and cost may be defined more broadly than prediction error or classification error. This means that although some methods from cost-sensitive learning can be helpful on imbalanced classification, not all cost-sensitive learning techniques are imbalanced-learning techniques, and conversely, not all methods used to address imbalanced learning are appropriate for cost-sensitive learning.
+To make this concrete, we can consider a wide range of other ways we might wish to consider or measure cost when training a model on a dataset. For example, Peter Turney lists nine types of costs that might be considered in machine learning in his 2000 paper titled “Types of Cost in Inductive Concept Learning.”
+In summary, they are:
+- Cost of misclassification errors (or prediction errors more generally).
+- Cost of tests or evaluation.
+- Cost of teacher or labeling.
+- Cost of intervention or changing the system from which observations are drawn.
+- Cost of unwanted achievements or outcomes from intervening.
+- Cost of computation or computational complexity.
+- Cost of cases or data collection.
+- Cost of human-computer interaction or framing the problem and using software to fit and use a model.
+- Cost of instability or variance known as concept drift.
+Although critical to many real-world problems, the idea of costs and cost-sensitive learning is a new topic that was largely ignored up until recently.
+In real-world applications of concept learning, there are many different types of cost involved. The majority of the machine learning literature ignores all types of cost …
+— Types of Cost in Inductive Concept Learning, 2000.
+The above list highlights that the cost we are interested in for imbalanced-classification is just one type of the range of costs that the broader field of cost-sensitive learning might consider.
+In the next section, we will take a closer look at how we can harness ideas of misclassification cost-sensitive learning to help with imbalanced classification.
+# Cost-Sensitive Imbalanced Classification
+Cost-sensitive learning for imbalanced classification is focused on first assigning different costs to the types of misclassification errors that can be made, then using specialized methods to take those costs into account.
+The varying misclassification costs are best understood using the idea of a cost matrix.
+Let’s start by reviewing the confusion matrix.
+A confusion matrix is a summary of the predictions made by a model on classification tasks. It is a table that summarizes the number of predictions made for each class, separated by the actual class to which each example belongs.
+It is best understood using a binary classification problem with negative and positive classes, typically assigned 0 and 1 class labels respectively. The columns of the table represent the actual class to which examples belong, and the rows represent the predicted class (although the meaning of rows and columns can and often are interchanged with no loss of meaning). A cell in the table is the count of the number of examples that meet the conditions of the row and column, and each cell has a specific common name.
+An example of a confusion matrix for a binary classification task is listed below showing the common names for the values in each of the four cells of the table.
+We can see that we are most interested in the errors, the so-called False Positives and False Negatives, and it is the False Negatives that probably interest us the most on many imbalanced classification tasks.
+Now, we can consider the same table with the same rows and columns and assign a cost to each of the cells. This is called a cost matrix.
+- Cost Matrix: A matrix that assigns a cost to each cell in the confusion matrix.
+The example below is a cost matrix where we use the notation C() to indicate the cost, the first value represented as the predicted class and the second value represents the actual class. The names of each cell from the confusion matrix are also listed as acronyms, e.g. False Positive is FP.
+We can see that the cost of a False Positive is C(1,0) and the cost of a False Negative is C(0,1).
+This formulation and notation of the cost matrix comes from Charles Elkan’s seminal 2001 paper on the topic titled “The Foundations of Cost-Sensitive Learning.”
+An intuition from this matrix is that the cost of misclassification is always higher than correct classification, otherwise, cost can be minimized by predicting one class.
+Conceptually, the cost of labeling an example incorrectly should always be greater than the cost of labeling it correctly.
+— The Foundations Of Cost-sensitive Learning, 2001.
+For example, we might assign no cost to correct predictions in each class, a cost of 5 for False Positives and a cost of 88 for False Negatives.
+We can define the total cost of a classifier using this framework as the cost-weighted sum of the False Negatives and False Positives.
+- Total Cost = C(0,1) * False Negatives + C(1,0) * False Positives
+This is the value that we seek to minimize in cost-sensitive learning, at least conceptually.
+The purpose of CSL is to build a model with minimum misclassification costs (total cost)
+— Cost-sensitive Learning Methods For Imbalanced Data, 2010.
+The values of the cost matrix must be carefully defined. Like the choice of error function for traditional machine learning models, the choice of costs or cost function will determine the quality and utility of the model that is fit on the training data.
+The effectiveness of cost-sensitive learning relies strongly on the supplied cost matrix. Parameters provided there will be of crucial importance to both training and predictions steps.
+— Page 66, Learning from Imbalanced Data Sets, 2018.
+In some problem domains, defining the cost matrix might be obvious. In an insurance claim example, the costs for a false positive might be the monetary cost of follow-up with the customer to the company and the cost of a false negative might be the cost of the insurance claim.
+In other domains, defining the cost matrix might be challenging. For example, in a cancer diagnostic test example, the cost of a false positive might be the monetary cost of performing subsequent tests, whereas what is the equivalent dollar cost for letting a sick patient go home and get sicker? A cost matrix might be able to be defined by a domain expert or economist in such cases, or not.
+Further, the cost might be a complex multi-dimensional function, including monetary costs, reputation costs, and more.
+A good starting point for imbalanced classification tasks is to assign costs based on the inverse class distribution.
+In many cases we do not have access to a domain expert and no a priori information on cost matrix is available during classifier training. This is a common scenario when we want to apply cost-sensitive learning as a method for solving imbalanced problems …
+— Page 67, Learning from Imbalanced Data Sets, 2018.
+For example, we may have a dataset with a 1 to 100 (1:100) ratio of examples in the minority class to examples in the majority class. This ratio can be inverted and used as the cost of misclassification errors, where the cost of a False Negative is 100 and the cost of a False Positive is 1.
+This is an effective heuristic for setting costs in general, although it assumes that the class distribution observed in the training data is representative of the broader problem and is appropriate for the chosen cost-sensitive method being used.
+As such, it is a good idea to use this heuristic as a starting point, then test a range of similar related costs or ratios to confirm it is sensible.
+# Cost-Sensitive Methods
+Cost-sensitive machine learning methods are those that explicitly use the cost matrix.
+Given our focus on imbalanced classification, we are specifically interested in those cost-sensitive techniques that focus on using varying misclassification costs in some way.
+Cost-sensitive learning methods target the problem of imbalanced learning by using different cost matrices that describe the costs for misclassifying any particular data example.
+— Page 3-4, Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+There are perhaps three main groups of cost-sensitive methods that are most relevant for imbalanced learning; they are:
+- Cost-Sensitive Resampling
+- Cost-Sensitive Algorithms
+- Cost-Sensitive Ensembles
+Let’s take a closer look at each in turn.
+In imbalanced classification, data resampling refers to techniques that transform the training dataset to better balance the class distribution.
+This may involve selectively deleting examples from the majority class, referred to as undersampling. More commonly, it refers to duplicating or synthesizing new examples in the minority class, referred to as oversampling, or combinations of both undersampling and oversampling.
+Data resampling is a technique that can be used for cost-sensitive learning directly. Instead of resampling with a focus on balancing the skewed class distribution, the focus is on changing the composition of the training dataset to meet the expectations of the cost matrix.
+This might involve directly resampling the data distribution or using a method to weight examples in the dataset. Such methods may be referred to as cost-proportionate weighing of the training dataset or cost-proportionate resampling.
+We propose and evaluate a family of methods […] based on cost-proportionate weighting of the training examples, which can be realized either by feeding the weights to the classification algorithm (as often done in boosting), or (in a black box manner) by careful subsampling.
+— Cost-Sensitive Learning by Cost-Proportionate Example Weighting, 2003.
+For imbalanced classification where the cost matrix is defined using the class distribution, then there is no difference in the data resampling technique.
+Machine learning algorithms are rarely developed specifically for cost-sensitive learning.
+Instead, the wealth of existing machine learning algorithms can be modified to make use of the cost matrix.
+This might involve a modification that is unique to each algorithm and which can be quite time consuming to develop and test. Many such algorithm-specific augmentations have been proposed for popular algorithms, like decision trees and support vector machines.
+Among all of the classifiers, induction of cost-sensitive decision trees has arguably gained the most attention.
+— Page 69, Learning from Imbalanced Data Sets, 2018.
+The scikit-learn Python machine learning library provides examples of these cost-sensitive extensions via the class_weight argument on the following classifiers:
+- SVC
+- DecisionTreeClassifier
+Another more general approach to modifying existing algorithms is to use the costs as a penalty for misclassification when the algorithms are trained. Given that most machine learning algorithms are trained to minimize error, cost for misclassification is added to the error or used to weigh the error during the training process.
+This approach can be used for iteratively trained algorithms, such as logistic regression and artificial neural networks.
+The scikit-learn library provides examples of these cost-sensitive extensions via the class_weight argument on the following classifiers:
+- LogisticRegression
+- RidgeClassifier
+The Keras Python Deep Learning library also provides access to this use of cost-sensitive augmentation for neural networks via the class_weight argument on the fit() function when training models.
+Again, the line is blurred between cost-sensitive augmentations to algorithms vs. imbalanced classification augmentations to algorithms when the inverse class distribution is used as the cost matrix.
+In the domain of cost-sensitive machine learning, these algorithms are referred to with the “Cost-Sensitive” prefix, e.g. Cost-Sensitive Logistic Regression, whereas in imbalanced-learning, such algorithms are referred to with a “Class-Weighted” prefix, e.g. Class-Weighted Logistic Regression or simply Weighted Logistic Regression.
+A second distinct group of methods is techniques designed to filter or combine the predictions from traditional machine learning models in order to take misclassification costs into account.
+These methods are referred to as “wrapper methods” as they wrap a standard machine learning classifier. They are also referred to as “meta-learners” or “ensembles” as they learn how to use or combine predictions from other models.
+Cost-sensitive meta-learning converts existing cost-insensitive classifiers into cost-sensitive ones without modifying them. Thus, it can be regarded as a middleware component that pre-processes the training data, or post-processes the output, from the cost-insensitive learning algorithms.
+— Cost-Sensitive Learning, Encyclopedia of Machine Learning, 2010.
+Perhaps the simplest approach is the use of a machine learning model to predict the probability of class membership, then using a line search on the threshold at which examples are assigned to each crisp class label that minimizes the cost of misclassification.
+This is often referred to as “thresholding” or threshold optimization and is used more generally for binary classification tasks, although it can easily be modified to minimize cost instead of a specific type of classification error metric.
+MetaCost is a data preprocessing technique that relabels examples in the training dataset in order to minimize cost.
+… we propose a principled method for making an arbitrary classifier cost-sensitive by wrapping a cost-minimizing procedure around it.
+— MetaCost: A General Method for Making Classifiers Cost-Sensitive, 1999.
+In MetaCost, first a bagged ensemble of classifiers is fit on the training dataset in order to identify those examples that need to be relabeled, a transformed version of the dataset with relabeled examples is created, then the ensemble is discarded and the transformed dataset is used to train a classifier model.
+Another important area is modifications to decision tree ensembles that take the cost matrix into account, such as bagging and boosting algorithms, most notably cost-sensitive versions of AdaBoost such as AdaCost.
+AdaCost, a variant of AdaBoost, is a misclassification cost-sensitive boosting method. It uses the cost of misclassifications to update the training distribution on successive boosting rounds.
+— AdaCost: Misclassification Cost-Sensitive Boosting, 1999.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- The Class Imbalance Problem: A Systematic Study, 2002.
+- Types of Cost in Inductive Concept Learning, 2000.
+- The Foundations Of Cost-sensitive Learning, 2001.
+- Cost-Sensitive Learning by Cost-Proportionate Example Weighting, 2003.
+- Cost-sensitive Learning Methods For Imbalanced Data, 2010.
+- MetaCost: A General Method for Making Classifiers Cost-Sensitive, 1999.
+- AdaCost: Misclassification Cost-Sensitive Boosting, 1999.
+- Cost-Sensitive Learning, Encyclopedia of Machine Learning, 2010.
+- Cost-Sensitive Machine Learning, 2011.
+- Chapter 4 Cost-Sensitive Learning, Learning from Imbalanced Data Sets, 2018.
+- Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+- Confusion matrix, Wikipedia.
+# Summary
+In this tutorial, you discovered cost-sensitive learning for imbalanced classification.
+Specifically, you learned:
+- Imbalanced classification problems often value false-positive classification errors differently from false negatives.
+- Cost-sensitive learning is a subfield of machine learning that involves explicitly defining and using costs when training machine learning algorithms.
+- Cost-sensitive techniques may be divided into three groups, including data resampling, algorithm modifications, and ensemble methods.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Imbalanced Classification!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Imbalanced Classification with Python
+It provides self-study tutorials and end-to-end projects on:
+Performance Metrics, Undersampling Methods, SMOTE, Threshold Moving, Probability Calibration, Cost-Sensitive Algorithms
+and much more...
+See What's Inside
+
+'''
+                   | Actual Negative | Actual Positive
+Predicted Negative | True Negative   | False Negative
+Predicted Positive | False Positive  | True Positive
+                   | Actual Negative | Actual Positive
+Predicted Negative | C(0,0), TN      | C(0,1), FN
+Predicted Positive | C(1,0), FP      | C(1,1), TP
+                   | Actual Negative | Actual Positive
+Predicted Negative | 0               | 88
+Predicted Positive | 5               | 0
+                   | Actual Negative | Actual Positive
+Predicted Negative | 0               | 100
+Predicted Positive | 1               | 0
+'''

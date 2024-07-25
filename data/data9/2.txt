@@ -1,0 +1,157 @@
+A Gentle Introduction to Object Recognition With Deep Learning
+https://machinelearningmastery.com/object-recognition-with-deep-learning/
+2019-05-21
+It can be challenging for beginners to distinguish between different related computer vision tasks.
+For example, image classification is straight forward, but the differences between object localization and object detection can be confusing, especially when all three tasks may be just as equally referred to as object recognition.
+Image classification involves assigning a class label to an image, whereas object localization involves drawing a bounding box around one or more objects in an image. Object detection is more challenging and combines these two tasks and draws a bounding box around each object of interest in the image and assigns them a class label. Together, all of these problems are referred to as object recognition.
+In this post, you will discover a gentle introduction to the problem of object recognition and state-of-the-art deep learning models designed to address it.
+After reading this post, you will know:
+- Object recognition is refers to a collection of related tasks for identifying objects in digital photographs.
+- Region-Based Convolutional Neural Networks, or R-CNNs, are a family of techniques for addressing object localization and recognition tasks, designed for model performance.
+- You Only Look Once, or YOLO, is a second family of techniques for object recognition designed for speed and real-time use.
+Kick-start your project with my new book Deep Learning for Computer Vision, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+A Gentle Introduction to Object Recognition With Deep LearningPhoto by Bart Everson, some rights reserved.
+# Overview
+This tutorial is divided into three parts; they are:
+- What is Object Recognition?
+- R-CNN Model Family
+- YOLO Model Family
+# What is Object Recognition?
+Object recognition is a general term to describe a collection of related computer vision tasks that involve identifying objects in digital photographs.
+Image classification involves predicting the class of one object in an image. Object localization refers to identifying the location of one or more objects in an image and drawing abounding box around their extent. Object detection combines these two tasks and localizes and classifies one or more objects in an image.
+When a user or practitioner refers to “object recognition“, they often mean “object detection“.
+… we will be using the term object recognition broadly to encompass both image classification (a task requiring an algorithm to determine what object classes are present in the image) as well as object detection (a task requiring an algorithm to localize all objects present in the image
+— ImageNet Large Scale Visual Recognition Challenge, 2015.
+As such, we can distinguish between these three computer vision tasks:
+- Image Classification: Predict the type or class of an object in an image.
+
+Input: An image with a single object, such as a photograph.
+Output: A class label (e.g. one or more integers that are mapped to class labels).
+
+
+- Input: An image with a single object, such as a photograph.
+- Output: A class label (e.g. one or more integers that are mapped to class labels).
+- Object Localization: Locate the presence of objects in an image and indicate their location with a bounding box.
+
+Input: An image with one or more objects, such as a photograph.
+Output: One or more bounding boxes (e.g. defined by a point, width, and height).
+
+
+- Input: An image with one or more objects, such as a photograph.
+- Output: One or more bounding boxes (e.g. defined by a point, width, and height).
+- Object Detection: Locate the presence of objects with a bounding box and types or classes of the located objects in an image.
+
+Input: An image with one or more objects, such as a photograph.
+Output: One or more bounding boxes (e.g. defined by a point, width, and height), and a class label for each bounding box.
+
+
+- Input: An image with one or more objects, such as a photograph.
+- Output: One or more bounding boxes (e.g. defined by a point, width, and height), and a class label for each bounding box.
+One further extension to this breakdown of computer vision tasks is object segmentation, also called “object instance segmentation” or “semantic segmentation,” where instances of recognized objects are indicated by highlighting the specific pixels of the object instead of a coarse bounding box.
+From this breakdown, we can see that object recognition refers to a suite of challenging computer vision tasks.
+Overview of Object Recognition Computer Vision Tasks
+Most of the recent innovations in image recognition problems have come as part of participation in the ILSVRC tasks.
+This is an annual academic competition with a separate challenge for each of these three problem types, with the intent of fostering independent and separate improvements at each level that can be leveraged more broadly. For example, see the list of the three corresponding task types below taken from the 2015 ILSVRC review paper:
+- Image classification: Algorithms produce a list of object categories present in the image.
+- Single-object localization: Algorithms produce a list of object categories present in the image, along with an axis-aligned bounding box indicating the position and scale of one instance of each object category.
+- Object detection: Algorithms produce a list of object categories present in the image along with an axis-aligned bounding box indicating the position and scale of every instance of each object category.
+We can see that “Single-object localization” is a simpler version of the more broadly defined “Object Localization,” constraining the localization tasks to objects of one type within an image, which we may assume is an easier task.
+Below is an example comparing single object localization and object detection, taken from the ILSVRC paper. Note the difference in ground truth expectations in each case.
+Comparison Between Single Object Localization and Object Detection.Taken From: ImageNet Large Scale Visual Recognition Challenge.
+The performance of a model for image classification is evaluated using the mean classification error across the predicted class labels. The performance of a model for single-object localization is evaluated using the distance between the expected and predicted bounding box for the expected class. Whereas the performance of a model for object recognition is evaluated using the precision and recall across each of the best matching bounding boxes for the known objects in the image.
+Now that we are familiar with the problem of object localization and detection, let’s take a look at some recent top-performing deep learning models.
+# R-CNN Model Family
+The R-CNN family of methods refers to the R-CNN, which may stand for “Regions with CNN Features” or “Region-Based Convolutional Neural Network,” developed by Ross Girshick, et al.
+This includes the techniques R-CNN, Fast R-CNN, and Faster-RCNN designed and demonstrated for object localization and object recognition.
+Let’s take a closer look at the highlights of each of these techniques in turn.
+The R-CNN was described in the 2014 paper by Ross Girshick, et al. from UC Berkeley titled “Rich feature hierarchies for accurate object detection and semantic segmentation.”
+It may have been one of the first large and successful application of convolutional neural networks to the problem of object localization, detection, and segmentation. The approach was demonstrated on benchmark datasets, achieving then state-of-the-art results on the VOC-2012 dataset and the 200-class ILSVRC-2013 object detection dataset.
+Their proposed R-CNN model is comprised of three modules; they are:
+- Module 1: Region Proposal. Generate and extract category independent region proposals, e.g. candidate bounding boxes.
+- Module 2: Feature Extractor. Extract feature from each candidate region, e.g. using a deep convolutional neural network.
+- Module 3: Classifier. Classify features as one of the known class, e.g. linear SVM classifier model.
+The architecture of the model is summarized in the image below, taken from the paper.
+Summary of the R-CNN Model ArchitectureTaken from Rich feature hierarchies for accurate object detection and semantic segmentation.
+A computer vision technique is used to propose candidate regions or bounding boxes of potential objects in the image called “selective search,” although the flexibility of the design allows other region proposal algorithms to be used.
+The feature extractor used by the model was the AlexNet deep CNN that won the ILSVRC-2012 image classification competition. The output of the CNN was a 4,096 element vector that describes the contents of the image that is fed to a linear SVM for classification, specifically one SVM is trained for each known class.
+It is a relatively simple and straightforward application of CNNs to the problem of object localization and recognition. A downside of the approach is that it is slow, requiring a CNN-based feature extraction pass on each of the candidate regions generated by the region proposal algorithm. This is a problem as the paper describes the model operating upon approximately 2,000 proposed regions per image at test-time.
+Python (Caffe) and MatLab source code for R-CNN as described in the paper was made available in the R-CNN GitHub repository.
+Given the great success of R-CNN, Ross Girshick, then at Microsoft Research, proposed an extension to address the speed issues of R-CNN in a 2015 paper titled “Fast R-CNN.”
+The paper opens with a review of the limitations of R-CNN, which can be summarized as follows:
+- Training is a multi-stage pipeline. Involves the preparation and operation of three separate models.
+- Training is expensive in space and time. Training a deep CNN on so many region proposals per image is very slow.
+- Object detection is slow. Make predictions using a deep CNN on so many region proposals is very slow.
+A prior work was proposed to speed up the technique called spatial pyramid pooling networks, or SPPnets, in the 2014 paper “Spatial Pyramid Pooling in Deep Convolutional Networks for Visual Recognition.” This did speed up the extraction of features, but essentially used a type of forward pass caching algorithm.
+Fast R-CNN is proposed as a single model instead of a pipeline to learn and output regions and classifications directly.
+The architecture of the model takes the photograph a set of region proposals as input that are passed through a deep convolutional neural network. A pre-trained CNN, such as a VGG-16, is used for feature extraction. The end of the deep CNN is a custom layer called a Region of Interest Pooling Layer, or RoI Pooling, that extracts features specific for a given input candidate region.
+The output of the CNN is then interpreted by a fully connected layer then the model bifurcates into two outputs, one for the class prediction via a softmax layer, and another with a linear output for the bounding box. This process is then repeated multiple times for each region of interest in a given image.
+The architecture of the model is summarized in the image below, taken from the paper.
+Summary of the Fast R-CNN Model Architecture.Taken from: Fast R-CNN.
+The model is significantly faster to train and to make predictions, yet still requires a set of candidate regions to be proposed along with each input image.
+Python and C++ (Caffe) source code for Fast R-CNN as described in the paper was made available in a GitHub repository.
+The model architecture was further improved for both speed of training and detection by Shaoqing Ren, et al. at Microsoft Research in the 2016 paper titled “Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks.”
+The architecture was the basis for the first-place results achieved on both the ILSVRC-2015 and MS COCO-2015 object recognition and detection competition tasks.
+The architecture was designed to both propose and refine region proposals as part of the training process, referred to as a Region Proposal Network, or RPN. These regions are then used in concert with a Fast R-CNN model in a single model design. These improvements both reduce the number of region proposals and accelerate the test-time operation of the model to near real-time with then state-of-the-art performance.
+… our detection system has a frame rate of 5fps (including all steps) on a GPU, while achieving state-of-the-art object detection accuracy on PASCAL VOC 2007, 2012, and MS COCO datasets with only 300 proposals per image. In ILSVRC and COCO 2015 competitions, Faster R-CNN and RPN are the foundations of the 1st-place winning entries in several tracks
+— Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks, 2016.
+Although it is a single unified model, the architecture is comprised of two modules:
+- Module 1: Region Proposal Network. Convolutional neural network for proposing regions and the type of object to consider in the region.
+- Module 2: Fast R-CNN. Convolutional neural network for extracting features from the proposed regions and outputting the bounding box and class labels.
+Both modules operate on the same output of a deep CNN. The region proposal network acts as an attention mechanism for the Fast R-CNN network, informing the second network of where to look or pay attention.
+The architecture of the model is summarized in the image below, taken from the paper.
+Summary of the Faster R-CNN Model Architecture.Taken from: Faster R-CNN: Towards Real-Time Object Detection With Region Proposal Networks.
+The RPN works by taking the output of a pre-trained deep CNN, such as VGG-16, and passing a small network over the feature map and outputting multiple region proposals and a class prediction for each. Region proposals are bounding boxes, based on so-called anchor boxes or pre-defined shapes designed to accelerate and improve the proposal of regions. The class prediction is binary, indicating the presence of an object, or not, so-called “objectness” of the proposed region.
+A procedure of alternating training is used where both sub-networks are trained at the same time, although interleaved. This allows the parameters in the feature detector deep CNN to be tailored or fine-tuned for both tasks at the same time.
+At the time of writing, this Faster R-CNN architecture is the pinnacle of the family of models and continues to achieve near state-of-the-art results on object recognition tasks. A further extension adds support for image segmentation, described in the paper 2017 paper “Mask R-CNN.”
+Python and C++ (Caffe) source code for Fast R-CNN as described in the paper was made available in a GitHub repository.
+# YOLO Model Family
+Another popular family of object recognition models is referred to collectively as YOLO or “You Only Look Once,” developed by Joseph Redmon, et al.
+The R-CNN models may be generally more accurate, yet the YOLO family of models are fast, much faster than R-CNN, achieving object detection in real-time.
+The YOLO model was first described by Joseph Redmon, et al. in the 2015 paper titled “You Only Look Once: Unified, Real-Time Object Detection.” Note that Ross Girshick, developer of R-CNN, was also an author and contributor to this work, then at Facebook AI Research.
+The approach involves a single neural network trained end to end that takes a photograph as input and predicts bounding boxes and class labels for each bounding box directly. The technique offers lower predictive accuracy (e.g. more localization errors), although operates at 45 frames per second and up to 155 frames per second for a speed-optimized version of the model.
+Our unified architecture is extremely fast. Our base YOLO model processes images in real-time at 45 frames per second. A smaller version of the network, Fast YOLO, processes an astounding 155 frames per second …
+— You Only Look Once: Unified, Real-Time Object Detection, 2015.
+The model works by first splitting the input image into a grid of cells, where each cell is responsible for predicting a bounding box if the center of a bounding box falls within the cell. Each grid cell predicts a bounding box involving the x, y coordinate and the width and height and the confidence. A class prediction is also based on each cell.
+For example, an image may be divided into a 7×7 grid and each cell in the grid may predict 2 bounding boxes, resulting in 94 proposed bounding box predictions. The class probabilities map and the bounding boxes with confidences are then combined into a final set of bounding boxes and class labels. The image taken from the paper below summarizes the two outputs of the model.
+Summary of Predictions made by YOLO Model.Taken from: You Only Look Once: Unified, Real-Time Object Detection
+The model was updated by Joseph Redmon and Ali Farhadi in an effort to further improve model performance in their 2016 paper titled “YOLO9000: Better, Faster, Stronger.”
+Although this variation of the model is referred to as YOLO v2, an instance of the model is described that was trained on two object recognition datasets in parallel, capable of predicting 9,000 object classes, hence given the name “YOLO9000.”
+A number of training and architectural changes were made to the model, such as the use of batch normalization and high-resolution input images.
+Like Faster R-CNN, YOLOv2 model makes use of anchor boxes, pre-defined bounding boxes with useful shapes and sizes that are tailored during training. The choice of bounding boxes for the image is pre-processed using a k-means analysis on the training dataset.
+Importantly, the predicted representation of the bounding boxes is changed to allow small changes to have a less dramatic effect on the predictions, resulting in a more stable model. Rather than predicting position and size directly, offsets are predicted for moving and reshaping the pre-defined anchor boxes relative to a grid cell and dampened by a logistic function.
+Example of the Representation Chosen when Predicting Bounding Box Position and ShapeTaken from: YOLO9000: Better, Faster, Stronger
+Further improvements to the model were proposed by Joseph Redmon and Ali Farhadi in their 2018 paper titled “YOLOv3: An Incremental Improvement.” The improvements were reasonably minor, including a deeper feature detector network and minor representational changes.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- ImageNet Large Scale Visual Recognition Challenge, 2015.
+- Rich feature hierarchies for accurate object detection and semantic segmentation, 2013.
+- Spatial Pyramid Pooling in Deep Convolutional Networks for Visual Recognition, 2014.
+- Fast R-CNN, 2015.
+- Faster R-CNN: Towards Real-Time Object Detection with Region Proposal Networks, 2016.
+- Mask R-CNN, 2017.
+- You Only Look Once: Unified, Real-Time Object Detection, 2015.
+- YOLO9000: Better, Faster, Stronger, 2016.
+- YOLOv3: An Incremental Improvement, 2018.
+- R-CNN: Regions with Convolutional Neural Network Features, GitHub.
+- Fast R-CNN, GitHub.
+- Faster R-CNN Python Code, GitHub.
+- YOLO, GitHub.
+- Ross Girshick, Homepage.
+- Joseph Redmon, Homepage.
+- YOLO: Real-Time Object Detection, Homepage.
+- A Brief History of CNNs in Image Segmentation: From R-CNN to Mask R-CNN, 2017.
+- Object Detection for Dummies Part 3: R-CNN Family, 2017.
+- Object Detection Part 4: Fast Detection Models, 2018.
+# Summary
+In this post, you discovered a gentle introduction to the problem of object recognition and state-of-the-art deep learning models designed to address it.
+Specifically, you learned:
+- Object recognition is refers to a collection of related tasks for identifying objects in digital photographs.
+- Region-Based Convolutional Neural Networks, or R-CNNs, are a family of techniques for addressing object localization and recognition tasks, designed for model performance.
+- You Only Look Once, or YOLO, is a second family of techniques for object recognition designed for speed and real-time use.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+
+'''
+
+'''

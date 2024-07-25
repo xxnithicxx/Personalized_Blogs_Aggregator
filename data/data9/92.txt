@@ -1,0 +1,236 @@
+Training-validation-test split and cross-validation done right
+https://machinelearningmastery.com/training-validation-test-split-and-cross-validation-done-right/
+2021-09-22
+One crucial step in machine learning is the choice of model. A suitable model with suitable hyperparameter is the key to a good prediction result. When we are faced with a choice between models, how should the decision be made?
+This is why we have cross validation. In scikit-learn, there is a family of functions that help us do this. But quite often, we see cross validation used improperly, or the result of cross validation not being interpreted correctly.
+In this tutorial, you will discover the correct procedure to use cross validation and a dataset to select the best models for a project.
+After completing this tutorial, you will know:
+- The significance of training-validation-test split of data and the trade-off in different ratios of the split
+- The metric to evaluate a model and how to compare models
+- How to use cross validation to evaluate a model
+- What should we do if we have a decision based on cross validation
+Let’s get started.
+Training-validation-test split and cross-validation done right.Photo by Conal Gallagher, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts:
+- The problem of model selection
+- Out-of-sample evaluation
+- Example of the model selection workflow using cross-validation
+# The problem of model selection
+The outcome of machine learning is a model that can do prediction. The most common cases are the classification model and the regression model; the former is to predict the class membership of an input and the latter is to predict the value of a dependent variable based on the input. However, in either case we have a variety of models to choose from. Classification model, for instance, includes decision tree, support vector machine, and neural network, to name a few. Any one of these, depends on some hyperparameters. Therefore, we have to decide on a number of settings before we start training a model.
+If we have two candidate models based on our intuition, and we want to pick one to use in our project, how should we pick?
+There are some standard metrics we can generally use. In regression problems, we commonly use one of the following:
+- Mean squared error (MSE)
+- Root mean squared error (RMSE)
+- Mean absolute error (MAE)
+and in case of classification problems, frequently used metrics consists of:
+- Accuracy
+- Log-loss
+- F-measure
+The metrics page from scikit-learn has a longer, but not exhaustive, list of common evaluations put into different categories. If we have a sample dataset and want to train a model to predict it, we can use one of these metrics to evaluate how efficient the model is.
+However, there is a problem; for the sample dataset, we only evaluated the model once. Assuming we correctly separated the dataset into a training set and a test set, and fitted the model with the training set while evaluated with the test set, we obtained only a single sample point of evaluation with one test set. How can we be sure it is an accurate evaluation, rather than a value too low or too high by chance? If we have two models, and found that one model is better than another based on the evaluation, how can we know this is also not by chance?
+The reason we are concerned about this, is to avoid surprisingly low accuracy when the model is deployed and used on an entirely new data than the one we obtained, in the future.
+# Out-of-sample evaluation
+The solution to this problem is the training-validation-test split.
+The model is initially fit on a training data set, […] Successively, the fitted model is used to predict the responses for the observations in a second data set called the validation data set. […] Finally, the test data set is a data set used to provide an unbiased evaluation of a final model fit on the training data set. If the data in the test data set has never been used in training (for example in cross-validation), the test data set is also called a holdout data set.
+— “Training, validation, and test sets”, Wikipedia
+The reason for such practice, lies in the concept of preventing data leakage.
+“What gets measured gets improved.”, or as Goodhart’s law puts it, “When a measure becomes a target, it ceases to be a good measure.” If we use one set of data to choose a model, the model we chose, with certainty, will do well on the same set of data under the same evaluation metric. However, what we should care about is the evaluation metric on the unseen data instead.
+Therefore, we need to keep a slice of data from the entire model selection and training process, and save it for the final evaluation. This slice of data is the “final exam” to our model and the exam questions must not be seen by the model before. Precisely, this is the workflow of how the data is being used:
+- training dataset is used to train a few candidate models
+- validation dataset is used to evaluate the candidate models
+- one of the candidates is chosen
+- the chosen model is trained with a new training dataset
+- the trained model is evaluated with the test dataset
+In steps 1 and 2, we do not want to evaluate the candidate models once. Instead, we prefer to evaluate each model multiple times with different dataset and take the average score for our decision at step 3. If we have the luxury of vast amounts of data, this could be done easily. Otherwise, we can use the trick of k-fold to resample the same dataset multiple times and pretend they are different. As we are evaluating the model, or hyperparameter, the model has to be trained from scratch, each time, without reusing the training result from previous attempts. We call this process cross validation.
+From the result of cross validation, we can conclude whether one model is better than another. Since the cross validation is done on a smaller dataset, we may want to retrain the model again, once we have a decision on the model. The reason is the same as that for why we need to use k-fold in cross-validation; we do not have a lot of data, and the smaller dataset we used previously, had a part of it held out for validation. We believe combining the training and validation dataset can produce a better model. This is what would occur in step 4.
+The dataset for evaluation in step 5, and the one we used in cross validation, are different because we do not want data leakage. If they were the same, we would see the same score as we have already seen from the cross validation. Or even worse, the test score was guaranteed to be good because it was part of the data we used to train the chosen model and we have adapted the model for that test dataset.
+Once we finished the training, we want to (1) compare this model to our previous evaluation and (2) estimate how it will perform if we deploy it.
+We make use of the test dataset that was never used in previous steps to evaluate the performance. Because this is unseen data, it can help us evaluate the generalization, or out-of-sample, error. This should simulate what the model will do when we deploy it. If there is overfitting, we would expect the error to be high at this evaluation.
+Similarly, we do not expect this evaluation score to be very different from that we obtained from cross validation in the previous step, if we did the model training correctly. This can serve as a confirmation for our model selection.
+# Example of the model selection workflow using cross-validation
+In the following, we fabricate a regression problem to illustrate how a model selection workflow should be.
+First, we use numpy to generate a dataset:
+We generate a sine curve and add some noise into it. Essentially, the data is
+y=1+0.5sin⁡(x)+ϵ
+for some small noise signal ϵ. The data looks like the following:
+
+Then we perform a train-test split, and hold out the test set until we finish our final model. Because we are going to use scikit-learn models for regression, and they assumed the input x to be in two-dimensional array, we reshape it here first. Also, to make the effect of model selection more pronounced, we do not shuffle the data in the split. In reality, this is usually not a good idea.
+In the next step, we create two models for regression. They are namely quadratic:
+y=c+b×x+a×x2
+and linear:
+y=b+a×x
+There are no polynomial regression in scikit-learn but we can make use of PolynomialFeatures combined with LinearRegression to achieve that. PolynomialFeatures(2) will convert input x into 1,x,x2 and linear regression on these three will find us the coefficients a,b,c in the formula above.
+The next step is to use only the training set and apply k-fold cross validation to each of the two models:
+The function cross_validate() returns a Python dictionary like the following:
+which the key test_score holds the score for each fold. We are using negative root mean square error for the cross validation and the higher the score, the less the error, and hence the better the model.
+The above is from the quadratic model. The corresponding test score from the linear model is as follows:
+By comparing the average score, we found that the linear model performs better than the quadratic model.
+
+Before we proceed to train our model of choice, we can illustrate what happened. Take the first cross-validation iteration as an example, we can see that the coefficient for quadratic regression is as follows:
+
+This means our fitted quadratic model is:
+y=−0.0319+0.2082×x–0.0094×x2
+and the coefficients of the linear regression at first iteration of its cross-validation are
+
+which means the fitted linear model is
+y=0.8570–0.0092×x
+We can see how they look like in a plot:
+
+Here we see the red line is the linear regression while the green line is from quadratic regression. We can see the quadratic curve is immensely off from the input data (blue curve) at two ends.
+Since we decided to use linear model for regression, we need to re-train the model and test it using our held out test data.
+
+Here, since scikit-learn will clone a new model on every iteration of cross validation, the model we created remain untrained after cross validation. Otherwise, we should reset the model by cloning a new one using linreg = sklearn.base.clone(linreg). But from above, we see that we obtained the root mean squared error of 0.440 from our test set while the score we obtained from cross validation is 0.446. This is not too much of a difference, and hence, we concluded that this model should see an error of similar magnitude for new data.
+Tying all these together, the complete example is listed below.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- A Gentle Introduction to k-fold Cross-Validation
+- What is the Difference Between Test and Validation Datasets?
+- How to Configure k-Fold Cross-Validation
+- sklearn.model_selection.KFold API.
+- sklearn.model_selection.cross_val_score API.
+- sklearn.model_selection.cross_validate API.
+- Cross-validation (statistics), Wikipedia.
+# Summary
+In this tutorial, you discovered how to do training-validation-test split of dataset and perform k-fold cross validation to select a model correctly and how to retrain the model after the selection.
+Specifically, you learned:
+- The significance of training-validation-test split to help model selection
+- How to evaluate and compare machine learning models using k-fold cross-validation on a training set.
+- How to retrain a model after we select from the candidates based on the advice from cross-validation
+- How to use test set to confirm our model selection
+ 
+ cross validation, train-test split
+'''
+
+# Generate data and plot
+N = 300
+x = np.linspace(0, 7*np.pi, N)
+smooth = 1 + 0.5*np.sin(x)
+y = smooth + 0.2*np.random.randn(N)
+
+# Train-test split, intentionally use shuffle=False
+X = x.reshape(-1,1)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, shuffle=False)
+
+# Create two models: Quadratic and linear regression
+polyreg = make_pipeline(PolynomialFeatures(2), LinearRegression(fit_intercept=False))
+linreg = LinearRegression()
+
+# Cross-validation
+scoring = "neg_root_mean_squared_error"
+polyscores = cross_validate(polyreg, X_train, y_train, scoring=scoring, return_estimator=True)
+linscores = cross_validate(linreg, X_train, y_train, scoring=scoring, return_estimator=True)
+{'fit_time': array([0.00177097, 0.00117302, 0.00219226, 0.0015142 , 0.00126314]),
+ 'score_time': array([0.00054097, 0.0004108 , 0.00086379, 0.00092077, 0.00043106]),
+ 'estimator': [Pipeline(steps=[('polynomialfeatures', PolynomialFeatures()),
+                               ('linearregression', LinearRegression(fit_intercept=False))]),
+               Pipeline(steps=[('polynomialfeatures', PolynomialFeatures()),
+                               ('linearregression', LinearRegression(fit_intercept=False))]),
+               Pipeline(steps=[('polynomialfeatures', PolynomialFeatures()),
+                               ('linearregression', LinearRegression(fit_intercept=False))]),
+               Pipeline(steps=[('polynomialfeatures', PolynomialFeatures()),
+                               ('linearregression', LinearRegression(fit_intercept=False))]),
+               Pipeline(steps=[('polynomialfeatures', PolynomialFeatures()),
+                               ('linearregression', LinearRegression(fit_intercept=False))])],
+ 'test_score': array([-1.00421665, -0.53397399, -0.47742336, -0.41834582, -0.68043053])}
+array([-0.43401194, -0.52385836, -0.42231028, -0.41532203, -0.43441137])
+
+# Which one is better? Linear and polynomial
+print(linscores["test_score"].mean())
+print(polyscores["test_score"].mean())
+print(linscores["test_score"].mean() - polyscores["test_score"].mean())
+Linear regression score: -0.4459827970437929
+Polynomial regression score: -0.6228780695994603
+Difference: 0.17689527255566745
+
+# Let's show the coefficient of the first fitted polynomial regression
+# This starts from the constant term and in ascending order of powers
+print(polyscores["estimator"][0].steps[1][1].coef_)
+[-0.03190358 0.20818594 -0.00937904]
+
+# And show the coefficient of the last-fitted linear regression
+print(linscores["estimator"][0].intercept_, linscores["estimator"][-1].coef_)
+0.856999187854241 [-0.00918622]
+
+# Plot and compare
+plt.plot(x, y)
+plt.plot(x, smooth)
+plt.plot(x, polyscores["estimator"][0].predict(X))
+plt.plot(x, linscores["estimator"][0].predict(X))
+plt.ylim(0,2)
+plt.xlabel("x")
+plt.ylabel("y")
+plt.show()
+
+# Retrain the model and evaluate
+linreg.fit(X_train, y_train)
+print("Test set RMSE:", mean_squared_error(y_test, linreg.predict(X_test), squared=False))
+print("Mean validation RMSE:", -linscores["test_score"].mean())
+Test set RMSE: 0.4403109417232645
+Mean validation RMSE: 0.4459827970437929
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.model_selection import cross_validate, train_test_split
+from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+from sklearn.pipeline import make_pipeline
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
+
+np.random.seed(42)
+
+# Generate data and plot
+N = 300
+x = np.linspace(0, 7*np.pi, N)
+smooth = 1 + 0.5*np.sin(x)
+y = smooth + 0.2*np.random.randn(N)
+plt.plot(x, y)
+plt.plot(x, smooth)
+plt.xlabel("x")
+plt.ylabel("y")
+plt.ylim(0,2)
+plt.show()
+
+# Train-test split, intentionally use shuffle=False
+X = x.reshape(-1,1)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.20, shuffle=False)
+
+# Create two models: Polynomial and linear regression
+degree = 2
+polyreg = make_pipeline(PolynomialFeatures(degree), LinearRegression(fit_intercept=False))
+linreg = LinearRegression()
+
+# Cross-validation
+scoring = "neg_root_mean_squared_error"
+polyscores = cross_validate(polyreg, X_train, y_train, scoring=scoring, return_estimator=True)
+linscores = cross_validate(linreg, X_train, y_train, scoring=scoring, return_estimator=True)
+
+# Which one is better? Linear and polynomial
+print("Linear regression score:", linscores["test_score"].mean())
+print("Polynomial regression score:", polyscores["test_score"].mean())
+print("Difference:", linscores["test_score"].mean() - polyscores["test_score"].mean())
+
+print("Coefficients of polynomial regression and linear regression:")
+# Let's show the coefficient of the last fitted polynomial regression
+# This starts from the constant term and in ascending order of powers
+print(polyscores["estimator"][0].steps[1][1].coef_)
+# And show the coefficient of the last-fitted linear regression
+print(linscores["estimator"][0].intercept_, linscores["estimator"][-1].coef_)
+
+# Plot and compare
+plt.plot(x, y)
+plt.plot(x, smooth)
+plt.plot(x, polyscores["estimator"][0].predict(X))
+plt.plot(x, linscores["estimator"][0].predict(X))
+plt.ylim(0,2)
+plt.xlabel("x")
+plt.ylabel("y")
+plt.show()
+
+# Retrain the model and evaluate
+import sklearn
+linreg = sklearn.base.clone(linreg)
+linreg.fit(X_train, y_train)
+print("Test set RMSE:", mean_squared_error(y_test, linreg.predict(X_test), squared=False))
+print("Mean validation RMSE:", -linscores["test_score"].mean())
+'''

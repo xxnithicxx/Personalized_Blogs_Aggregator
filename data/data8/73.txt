@@ -1,0 +1,284 @@
+Semi-Supervised Learning With Label Spreading
+https://machinelearningmastery.com/semi-supervised-learning-with-label-spreading/
+2021-01-03
+Semi-supervised learning refers to algorithms that attempt to make use of both labeled and unlabeled training data.
+Semi-supervised learning algorithms are unlike supervised learning algorithms that are only able to learn from labeled training data.
+A popular approach to semi-supervised learning is to create a graph that connects examples in the training dataset and propagates known labels through the edges of the graph to label unlabeled examples. An example of this approach to semi-supervised learning is the label spreading algorithm for classification predictive modeling.
+In this tutorial, you will discover how to apply the label spreading algorithm to a semi-supervised learning classification dataset.
+After completing this tutorial, you will know:
+- An intuition for how the label spreading semi-supervised learning algorithm works.
+- How to develop a semi-supervised classification dataset and establish a baseline in performance with a supervised learning algorithm.
+- How to develop and evaluate a label spreading algorithm and use the model output to train a supervised learning algorithm.
+Let’s get started.
+Semi-Supervised Learning With Label SpreadingPhoto by Jernej Furman, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Label Spreading Algorithm
+- Semi-Supervised Classification Dataset
+- Label Spreading for Semi-Supervised Learning
+# Label Spreading Algorithm
+Label Spreading is a semi-supervised learning algorithm.
+The algorithm was introduced by Dengyong Zhou, et al. in their 2003 paper titled “Learning With Local And Global Consistency.”
+The intuition for the broader approach of semi-supervised learning is that nearby points in the input space should have the same label, and points in the same structure or manifold in the input space should have the same label.
+The key to semi-supervised learning problems is the prior assumption of consistency, which means: (1) nearby points are likely to have the same label; and (2) points on the same structure typically referred to as a cluster or a manifold) are likely to have the same label.
+— Learning With Local And Global Consistency, 2003.
+The label spreading is inspired by a technique from experimental psychology called spreading activation networks.
+This algorithm can be understood intuitively in terms of spreading activation networks from experimental psychology.
+— Learning With Local And Global Consistency, 2003.
+Points in the dataset are connected in a graph based on their relative distances in the input space. The weight matrix of the graph is normalized symmetrically, much like spectral clustering. Information is passed through the graph, which is adapted to capture the structure in the input space.
+The approach is very similar to the label propagation algorithm for semi-supervised learning.
+Another similar label propagation algorithm was given by Zhou et al.: at each step a node i receives a contribution from its neighbors j (weighted by the normalized weight of the edge (i,j)), and an additional small contribution given by its initial value
+— Page 196, Semi-Supervised Learning, 2006.
+After convergence, labels are applied based on nodes that passed on the most information.
+Finally, the label of each unlabeled point is set to be the class of which it has received most information during the iteration process.
+— Learning With Local And Global Consistency, 2003.
+Now that we are familiar with the label spreading algorithm, let’s look at how we might use it on a project. First, we must define a semi-supervised classification dataset.
+# Semi-Supervised Classification Dataset
+In this section, we will define a dataset for semis-supervised learning and establish a baseline in performance on the dataset.
+First, we can define a synthetic classification dataset using the make_classification() function.
+We will define the dataset with two classes (binary classification) and two input variables and 1,000 examples.
+Next, we will split the dataset into train and test datasets with an equal 50-50 split (e.g. 500 rows in each).
+Finally, we will split the training dataset in half again into a portion that will have labels and a portion that we will pretend is unlabeled.
+Tying this together, the complete example of preparing the semi-supervised learning dataset is listed below.
+Running the example prepares the dataset and then summarizes the shape of each of the three portions.
+The results confirm that we have a test dataset of 500 rows, a labeled training dataset of 250 rows, and 250 rows of unlabeled data.
+A supervised learning algorithm will only have 250 rows from which to train a model.
+A semi-supervised learning algorithm will have the 250 labeled rows as well as the 250 unlabeled rows that could be used in numerous ways to improve the labeled training dataset.
+Next, we can establish a baseline in performance on the semi-supervised learning dataset using a supervised learning algorithm fit only on the labeled training data.
+This is important because we would expect a semi-supervised learning algorithm to outperform a supervised learning algorithm fit on the labeled data alone. If this is not the case, then the semi-supervised learning algorithm does not have skill.
+In this case, we will use a logistic regression algorithm fit on the labeled portion of the training dataset.
+The model can then be used to make predictions on the entire holdout test dataset and evaluated using classification accuracy.
+Tying this together, the complete example of evaluating a supervised learning algorithm on the semi-supervised learning dataset is listed below.
+Running the algorithm fits the model on the labeled training dataset and evaluates it on the holdout dataset and prints the classification accuracy.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the algorithm achieved a classification accuracy of about 84.8 percent.
+We would expect an effective semi-supervised learning algorithm to achieve a better accuracy than this.
+Next, let’s explore how to apply the label spreading algorithm to the dataset.
+# Label Spreading for Semi-Supervised Learning
+The label spreading algorithm is available in the scikit-learn Python machine learning library via the LabelSpreading class.
+The model can be fit just like any other classification model by calling the fit() function and used to make predictions for new data via the predict() function.
+Importantly, the training dataset provided to the fit() function must include labeled examples that are ordinal encoded (as per normal) and unlabeled examples marked with a label of -1.
+The model will then determine a label for the unlabeled examples as part of fitting the model.
+After the model is fit, the estimated labels for the labeled and unlabeled data in the training dataset is available via the “transduction_” attribute on the LabelSpreading class.
+Now that we are familiar with how to use the label spreading algorithm in scikit-learn, let’s look at how we might apply it to our semi-supervised learning dataset.
+First, we must prepare the training dataset.
+We can concatenate the input data of the training dataset into a single array.
+We can then create a list of -1 valued (unlabeled) for each row in the unlabeled portion of the training dataset.
+This list can then be concatenated with the labels from the labeled portion of the training dataset to correspond with the input array for the training dataset.
+We can now train the LabelSpreading model on the entire training dataset.
+Next, we can use the model to make predictions on the holdout dataset and evaluate the model using classification accuracy.
+Tying this together, the complete example of evaluating label spreading on the semi-supervised learning dataset is listed below.
+Running the algorithm fits the model on the entire training dataset and evaluates it on the holdout dataset and prints the classification accuracy.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the label spreading model achieves a classification accuracy of about 85.4 percent, which is slightly higher than a logistic regression fit only on the labeled training dataset that achieved an accuracy of about 84.8 percent.
+So far so good.
+Another approach we can use with the semi-supervised model is to take the estimated labels for the training dataset and fit a supervised learning model.
+Recall that we can retrieve the labels for the entire training dataset from the label spreading model as follows:
+We can then use these labels, along with all of the input data, to train and evaluate a supervised learning algorithm, such as a logistic regression model.
+The hope is that the supervised learning model fit on the entire training dataset would achieve even better performance than the semi-supervised learning model alone.
+Tying this together, the complete example of using the estimated training set labels to train and evaluate a supervised learning model is listed below.
+Running the algorithm fits the semi-supervised model on the entire training dataset, then fits a supervised learning model on the entire training dataset with inferred labels and evaluates it on the holdout dataset, printing the classification accuracy.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that this hierarchical approach of semi-supervised model followed by supervised model achieves a classification accuracy of about 85.8 percent on the holdout dataset, slightly better than the semi-supervised learning algorithm used alone that achieved an accuracy of about 85.6 percent.
+Can you achieve better results by tuning the hyperparameters of the LabelSpreading model?
+Let me know what you discover in the comments below.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Introduction to Semi-Supervised Learning, 2009.
+- Chapter 11: Label Propagation and Quadratic Criterion, Semi-Supervised Learning, 2006.
+- Learning With Local And Global Consistency, 2003.
+- sklearn.semi_supervised.LabelSpreading API.
+- Section 1.14. Semi-Supervised, Scikit-Learn User Guide.
+- sklearn.model_selection.train_test_split API.
+- sklearn.linear_model.LogisticRegression API.
+- sklearn.datasets.make_classification API.
+- Semi-supervised learning, Wikipedia.
+# Summary
+In this tutorial, you discovered how to apply the label spreading algorithm to a semi-supervised learning classification dataset.
+Specifically, you learned:
+- An intuition for how the label spreading semi-supervised learning algorithm works.
+- How to develop a semi-supervised classification dataset and establish a baseline in performance with a supervised learning algorithm.
+- How to develop and evaluate a label spreading algorithm and use the model output to train a supervised learning algorithm.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Discover Fast Machine Learning in Python!
+...with just a few lines of scikit-learn code
+Learn how in my new Ebook:
+Machine Learning Mastery With Python
+Covers self-study tutorials and end-to-end projects like:
+Loading data, visualization, modeling, tuning, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=2, n_informative=2, n_redundant=0, random_state=1)
+
+# split into train and test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.50, random_state=1, stratify=y)
+
+# split train into labeled and unlabeled
+X_train_lab, X_test_unlab, y_train_lab, y_test_unlab = train_test_split(X_train, y_train, test_size=0.50, random_state=1, stratify=y_train)
+# prepare semi-supervised learning dataset
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=2, n_informative=2, n_redundant=0, random_state=1)
+# split into train and test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.50, random_state=1, stratify=y)
+# split train into labeled and unlabeled
+X_train_lab, X_test_unlab, y_train_lab, y_test_unlab = train_test_split(X_train, y_train, test_size=0.50, random_state=1, stratify=y_train)
+# summarize training set size
+print('Labeled Train Set:', X_train_lab.shape, y_train_lab.shape)
+print('Unlabeled Train Set:', X_test_unlab.shape, y_test_unlab.shape)
+# summarize test set size
+print('Test Set:', X_test.shape, y_test.shape)
+Labeled Train Set: (250, 2) (250,)
+Unlabeled Train Set: (250, 2) (250,)
+Test Set: (500, 2) (500,)
+
+# define model
+model = LogisticRegression()
+# fit model on labeled dataset
+model.fit(X_train_lab, y_train_lab)
+
+# make predictions on hold out test set
+yhat = model.predict(X_test)
+# calculate score for test set
+score = accuracy_score(y_test, yhat)
+# summarize score
+print('Accuracy: %.3f' % (score*100))
+# baseline performance on the semi-supervised learning dataset
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.linear_model import LogisticRegression
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=2, n_informative=2, n_redundant=0, random_state=1)
+# split into train and test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.50, random_state=1, stratify=y)
+# split train into labeled and unlabeled
+X_train_lab, X_test_unlab, y_train_lab, y_test_unlab = train_test_split(X_train, y_train, test_size=0.50, random_state=1, stratify=y_train)
+# define model
+model = LogisticRegression()
+# fit model on labeled dataset
+model.fit(X_train_lab, y_train_lab)
+# make predictions on hold out test set
+yhat = model.predict(X_test)
+# calculate score for test set
+score = accuracy_score(y_test, yhat)
+# summarize score
+print('Accuracy: %.3f' % (score*100))
+Accuracy: 84.800
+
+# define model
+model = LabelSpreading()
+# fit model on training dataset
+model.fit(..., ...)
+# make predictions on hold out test set
+yhat = model.predict(...)
+
+# get labels for entire training dataset data
+tran_labels = model.transduction_
+
+# create the training dataset input
+X_train_mixed = concatenate((X_train_lab, X_test_unlab))
+
+# create "no label" for unlabeled data
+nolabel = [-1 for _ in range(len(y_test_unlab))]
+
+# recombine training dataset labels
+y_train_mixed = concatenate((y_train_lab, nolabel))
+
+# define model
+model = LabelSpreading()
+# fit model on training dataset
+model.fit(X_train_mixed, y_train_mixed)
+
+# make predictions on hold out test set
+yhat = model.predict(X_test)
+# calculate score for test set
+score = accuracy_score(y_test, yhat)
+# summarize score
+print('Accuracy: %.3f' % (score*100))
+# evaluate label spreading on the semi-supervised learning dataset
+from numpy import concatenate
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.semi_supervised import LabelSpreading
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=2, n_informative=2, n_redundant=0, random_state=1)
+# split into train and test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.50, random_state=1, stratify=y)
+# split train into labeled and unlabeled
+X_train_lab, X_test_unlab, y_train_lab, y_test_unlab = train_test_split(X_train, y_train, test_size=0.50, random_state=1, stratify=y_train)
+# create the training dataset input
+X_train_mixed = concatenate((X_train_lab, X_test_unlab))
+# create "no label" for unlabeled data
+nolabel = [-1 for _ in range(len(y_test_unlab))]
+# recombine training dataset labels
+y_train_mixed = concatenate((y_train_lab, nolabel))
+# define model
+model = LabelSpreading()
+# fit model on training dataset
+model.fit(X_train_mixed, y_train_mixed)
+# make predictions on hold out test set
+yhat = model.predict(X_test)
+# calculate score for test set
+score = accuracy_score(y_test, yhat)
+# summarize score
+print('Accuracy: %.3f' % (score*100))
+Accuracy: 85.400
+
+# get labels for entire training dataset data
+tran_labels = model.transduction_
+
+# define supervised learning model
+model2 = LogisticRegression()
+# fit supervised learning model on entire training dataset
+model2.fit(X_train_mixed, tran_labels)
+# make predictions on hold out test set
+yhat = model2.predict(X_test)
+# calculate score for test set
+score = accuracy_score(y_test, yhat)
+# summarize score
+print('Accuracy: %.3f' % (score*100))
+# evaluate logistic regression fit on label spreading for semi-supervised learning
+from numpy import concatenate
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.semi_supervised import LabelSpreading
+from sklearn.linear_model import LogisticRegression
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=2, n_informative=2, n_redundant=0, random_state=1)
+# split into train and test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.50, random_state=1, stratify=y)
+# split train into labeled and unlabeled
+X_train_lab, X_test_unlab, y_train_lab, y_test_unlab = train_test_split(X_train, y_train, test_size=0.50, random_state=1, stratify=y_train)
+# create the training dataset input
+X_train_mixed = concatenate((X_train_lab, X_test_unlab))
+# create "no label" for unlabeled data
+nolabel = [-1 for _ in range(len(y_test_unlab))]
+# recombine training dataset labels
+y_train_mixed = concatenate((y_train_lab, nolabel))
+# define model
+model = LabelSpreading()
+# fit model on training dataset
+model.fit(X_train_mixed, y_train_mixed)
+# get labels for entire training dataset data
+tran_labels = model.transduction_
+# define supervised learning model
+model2 = LogisticRegression()
+# fit supervised learning model on entire training dataset
+model2.fit(X_train_mixed, tran_labels)
+# make predictions on hold out test set
+yhat = model2.predict(X_test)
+# calculate score for test set
+score = accuracy_score(y_test, yhat)
+# summarize score
+print('Accuracy: %.3f' % (score*100))
+Accuracy: 85.800
+'''

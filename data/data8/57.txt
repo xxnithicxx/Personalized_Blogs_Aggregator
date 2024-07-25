@@ -1,0 +1,127 @@
+How to Save an ARIMA Time Series Forecasting Model in Python
+https://machinelearningmastery.com/save-arima-time-series-forecasting-model-python/
+2017-02-23
+The Autoregressive Integrated Moving Average Model, or ARIMA, is a popular linear model for time series analysis and forecasting.
+The statsmodels library provides an implementation of ARIMA for use in Python. ARIMA models can be saved to file for later use in making predictions on new data. There is a bug in the current version of the statsmodels library that prevents saved models from being loaded.
+In this tutorial, you will discover how to diagnose and work around this issue.
+Kick-start your project with my new book Time Series Forecasting With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Updated Apr/2019: Updated the link to dataset.
+- Updated Aug/2019: Updated data loading to use new API.
+NOTE: The bug discussed in this tutorial appears to
+have been fixed in statsmodels version 0.12.1.
+How to Save an ARIMA Time Series Forecasting Model in PythonPhoto by Les Chatfield, some rights reserved.
+# Daily Female Births Dataset
+First, let’s look at a standard time series dataset we can use to understand the problem with the statsmodels ARIMA implementation.
+This Daily Female Births dataset describes the number of daily female births in California in 1959.
+The units are a count and there are 365 observations. The source of the dataset is credited to Newton (1988).
+- Download the dataset.
+Download the dataset and place it in your current working directory with the filename “daily-total-female-births.csv“.
+The code snippet below will load and plot the dataset.
+Running the example loads the dataset as a Pandas Series, then shows a line plot of the data.
+Daily Total Female Births Plot
+
+
+
+
+# Python Environment
+Confirm you are using the latest version of the statsmodels library.
+You can do that by running the script below:
+Running the script should produce a result showing statsmodels 0.6 or 0.6.1.
+You can use either Python 2 or 3.
+NOTE: The bug discussed in this tutorial appears to
+have been fixed in statsmodels version 0.12.1.
+# ARIMA Model Save Bug
+We can easily train an ARIMA model on the Daily Female Births dataset.
+The code snippet below trains an ARIMA(1,1,1) on the dataset.
+The model.fit() function returns an ARIMAResults object on which we can call save() to save the model to file and load() to later load it.
+Running this example will train the model and save it to file without problem.
+An error will be reported when you try to load the model from file.
+Specifically, note the line:
+So far so good, so how do we fix it?
+# ARIMA Model Save Bug Workaround
+Zae Myung Kim discovered this bug in September 2016 and reported the fault.
+You can read all about it here:
+- BUG: Implemented __getnewargs__() method for unpickling
+The bug occurs because a function required by pickle (the library used to serialize Python objects) has not been defined in statsmodels.
+A function __getnewargs__ must be defined in the ARIMA model prior to saving that defines the arguments needed to construct the object.
+We can work around this issue. The fix involves two things:
+- Defining an implementation of the __getnewargs__ function suitable for the ARIMA object.
+- Adding the new function to ARIMA.
+Thankfully, Zae Myung Kim provided an example of the function in his bug report so we can just use that directly:
+Python allows us to monkey patch an object, even one from a library like statsmodels.
+We can define a new function on an existing object using assignment.
+We can do this for the __getnewargs__ function on the ARIMA object as follows:
+The complete example of training, saving, and loading an ARIMA model in Python with the monkey patch is listed below:
+Running the example now successfully loads the model without error.
+# Summary
+In this post, you discovered how to work around a bug in the statsmodels ARIMA implementation that prevented you from saving and loading an ARIMA model to and from file.
+You discovered how to write a monkey patch to work around the bug and how to demonstrate that it has indeed been fixed.
+Did you use this workaround on your project?
+Let me know about it in the comments below.
+# Want to Develop Time Series Forecasts with Python?
+Discover how in my new Ebook:
+Introduction to Time Series Forecasting With Python
+It covers self-study tutorials and end-to-end projects on topics like:
+Loading data, visualization, modeling, algorithm tuning, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+from pandas import read_csv
+from matplotlib import pyplot
+series = read_csv('daily-total-female-births.csv', header=0, index_col=0))
+series.plot()
+pyplot.show()
+import statsmodels
+print('statsmodels: %s' % statsmodels.__version__)
+statsmodels: 0.6.1
+from pandas import read_csv
+from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.arima_model import ARIMAResults
+# load data
+series = read_csv('daily-total-female-births.csv', header=0, index_col=0))
+# prepare data
+X = series.values
+X = X.astype('float32')
+# fit model
+model = ARIMA(X, order=(1,1,1))
+model_fit = model.fit()
+# save model
+model_fit.save('model.pkl')
+# load model
+loaded = ARIMAResults.load('model.pkl')
+Traceback (most recent call last):
+  File "...", line 16, in <module>
+    loaded = ARIMAResults.load('model.pkl')
+  File ".../site-packages/statsmodels/base/model.py", line 1529, in load
+    return load_pickle(fname)
+  File ".../site-packages/statsmodels/iolib/smpickle.py", line 41, in load_pickle
+    return cPickle.load(fin)
+TypeError: __new__() takes at least 3 arguments (1 given)
+TypeError: __new__() takes at least 3 arguments (1 given)
+def __getnewargs__(self):
+	return ((self.endog),(self.k_lags, self.k_diff, self.k_ma))
+ARIMA.__getnewargs__ = __getnewargs__
+from pandas import read_csv
+from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.arima_model import ARIMAResults
+
+# monkey patch around bug in ARIMA class
+def __getnewargs__(self):
+	return ((self.endog),(self.k_lags, self.k_diff, self.k_ma))
+ARIMA.__getnewargs__ = __getnewargs__
+
+# load data
+series = read_csv('daily-total-female-births.csv', header=0, index_col=0))
+# prepare data
+X = series.values
+X = X.astype('float32')
+# fit model
+model = ARIMA(X, order=(1,1,1))
+model_fit = model.fit()
+# save model
+model_fit.save('model.pkl')
+# load model
+loaded = ARIMAResults.load('model.pkl')
+'''

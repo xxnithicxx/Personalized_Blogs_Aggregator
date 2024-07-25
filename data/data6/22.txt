@@ -1,0 +1,311 @@
+How to Avoid Data Leakage When Performing Data Preparation
+https://machinelearningmastery.com/data-preparation-without-data-leakage/
+2020-06-21
+Data preparation is the process of transforming raw data into a form that is appropriate for modeling.
+A naive approach to preparing data applies the transform on the entire dataset before evaluating the performance of the model. This results in a problem referred to as data leakage, where knowledge of the hold-out test set leaks into the dataset used to train the model. This can result in an incorrect estimate of model performance when making predictions on new data.
+A careful application of data preparation techniques is required in order to avoid data leakage, and this varies depending on the model evaluation scheme used, such as train-test splits or k-fold cross-validation.
+In this tutorial, you will discover how to avoid data leakage during data preparation when evaluating machine learning models.
+After completing this tutorial, you will know:
+- Naive application of data preparation methods to the whole dataset results in data leakage that causes incorrect estimates of model performance.
+- Data preparation must be prepared on the training set only in order to avoid data leakage.
+- How to implement data preparation without data leakage for train-test splits and k-fold cross-validation in Python.
+Kick-start your project with my new book Data Preparation for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Avoid Data Leakage When Performing Data PreparationPhoto by kuhnmi, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Problem With Naive Data Preparation
+- Data Preparation With Train and Test Sets
+
+Train-Test Evaluation With Naive Data Preparation
+Train-Test Evaluation With Correct Data Preparation
+
+
+- Train-Test Evaluation With Naive Data Preparation
+- Train-Test Evaluation With Correct Data Preparation
+- Data Preparation With k-fold Cross-Validation
+
+Cross-Validation Evaluation With Naive Data Preparation
+Cross-Validation Evaluation With Correct Data Preparation
+
+
+- Cross-Validation Evaluation With Naive Data Preparation
+- Cross-Validation Evaluation With Correct Data Preparation
+# Problem With Naive Data Preparation
+The manner in which data preparation techniques are applied to data matters.
+A common approach is to first apply one or more transforms to the entire dataset. Then the dataset is split into train and test sets or k-fold cross-validation is used to fit and evaluate a machine learning model.
+- 1. Prepare Dataset
+- 2. Split Data
+- 3. Evaluate Models
+Although this is a common approach, it is dangerously incorrect in most cases.
+The problem with applying data preparation techniques before splitting data for model evaluation is that it can lead to data leakage and, in turn, will likely result in an incorrect estimate of a model’s performance on the problem.
+Data leakage refers to a problem where information about the holdout dataset, such as a test or validation dataset, is made available to the model in the training dataset. This leakage is often small and subtle but can have a marked effect on performance.
+… leakage means that information is revealed to the model that gives it an unrealistic advantage to make better predictions. This could happen when test data is leaked into the training set, or when data from the future is leaked to the past. Any time that a model is given information that it shouldn’t have access to when it is making predictions in real time in production, there is leakage.
+— Page 93, Feature Engineering for Machine Learning, 2018.
+We get data leakage by applying data preparation techniques to the entire dataset.
+This is not a direct type of data leakage, where we would train the model on the test dataset. Instead, it is an indirect type of data leakage, where some knowledge about the test dataset, captured in summary statistics is available to the model during training. This can make it a harder type of data leakage to spot, especially for beginners.
+One other aspect of resampling is related to the concept of information leakage which is where the test set data are used (directly or indirectly) during the training process. This can lead to overly optimistic results that do not replicate on future data points and can occur in subtle ways.
+— Page 55, Feature Engineering and Selection, 2019.
+For example, consider the case where we want to normalize a data, that is scale input variables to the range 0-1.
+When we normalize the input variables, this requires that we first calculate the minimum and maximum values for each variable before using these values to scale the variables. The dataset is then split into train and test datasets, but the examples in the training dataset know something about the data in the test dataset; they have been scaled by the global minimum and maximum values, so they know more about the global distribution of the variable then they should.
+We get the same type of leakage with almost all data preparation techniques; for example, standardization estimates the mean and standard deviation values from the domain in order to scale the variables; even models that impute missing values using a model or summary statistics will draw on the full dataset to fill in values in the training dataset.
+The solution is straightforward.
+Data preparation must be fit on the training dataset only. That is, any coefficients or models prepared for the data preparation process must only use rows of data in the training dataset.
+Once fit, the data preparation algorithms or models can then be applied to the training dataset, and to the test dataset.
+- 1. Split Data.
+- 2. Fit Data Preparation on Training Dataset.
+- 3. Apply Data Preparation to Train and Test Datasets.
+- 4. Evaluate Models.
+More generally, the entire modeling pipeline must be prepared only on the training dataset to avoid data leakage. This might include data transforms, but also other techniques such feature selection, dimensionality reduction, feature engineering and more. This means so-called “model evaluation” should really be called “modeling pipeline evaluation”.
+In order for any resampling scheme to produce performance estimates that generalize to new data, it must contain all of the steps in the modeling process that could significantly affect the model’s effectiveness.
+— Pages 54-55, Feature Engineering and Selection, 2019.
+Now that we are familiar with how to apply data preparation to avoid data leakage, let’s look at some worked examples.
+
+
+
+
+# Data Preparation With Train and Test Sets
+In this section, we will evaluate a logistic regression model using train and test sets on a synthetic binary classification dataset where the input variables have been normalized.
+First, let’s define our synthetic dataset.
+We will use the make_classification() function to create the dataset with 1,000 rows of data and 20 numerical input features. The example below creates the dataset and summarizes the shape of the input and output variable arrays.
+Running the example creates the dataset and confirms that the input part of the dataset has 1,000 rows and 20 columns for the 20 input variables and that the output variable has 1,000 examples to match the 1,000 rows of input data, one value per row.
+Next, we can evaluate our model on the scaled dataset, starting with their naive or incorrect approach.
+The naive approach involves first applying the data preparation method, then splitting the data before finally evaluating the model.
+We can normalize the input variables using the MinMaxScaler class, which is first defined with the default configuration scaling the data to the range 0-1, then the fit_transform() function is called to fit the transform on the dataset and apply it to the dataset in a single step. The result is a normalized version of the input variables, where each column in the array is separately normalized (e.g. has its own minimum and maximum calculated).
+Next, we can split our dataset into train and test sets using the train_test_split() function. We will use 67 percent for the training set and 33 percent for the test set.
+We can then define our logistic regression algorithm via the LogisticRegression class, with default configuration, and fit it on the training dataset.
+The fit model can then make a prediction for the input data for the test set, and we can compare the predictions to the expected values and calculate a classification accuracy score.
+Tying this together, the complete example is listed below.
+Running the example normalizes the data, splits the data into train and test sets, then fits and evaluates the model.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the estimate for the model is about 84.848 percent.
+Given we know that there was data leakage, we know that this estimate of model accuracy is wrong.
+Next, let’s explore how we might correctly prepare the data to avoid data leakage.
+The correct approach to performing data preparation with a train-test split evaluation is to fit the data preparation on the training set, then apply the transform to the train and test sets.
+This requires that we first split the data into train and test sets.
+We can then define the MinMaxScaler and call the fit() function on the training set, then apply the transform() function on the train and test sets to create a normalized version of each dataset.
+This avoids data leakage as the calculation of the minimum and maximum value for each input variable is calculated using only the training dataset (X_train) instead of the entire dataset (X).
+The model can then be evaluated as before.
+Tying this together, the complete example is listed below.
+Running the example splits the data into train and test sets, normalizes the data correctly, then fits and evaluates the model.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the estimate for the model is about 85.455 percent, which is more accurate than the estimate with data leakage in the previous section that achieved an accuracy of 84.848 percent.
+We expect data leakage to result in an incorrect estimate of model performance. We would expect this to be an optimistic estimate with data leakage, e.g. better performance, although in this case, we can see that data leakage resulted in slightly worse performance. This might be because of the difficulty of the prediction task.
+
+# Data Preparation With k-fold Cross-Validation
+In this section, we will evaluate a logistic regression model using k-fold cross-validation on a synthetic binary classification dataset where the input variables have been normalized.
+You may recall that k-fold cross-validation involves splitting a dataset into k non-overlapping groups of rows. The model is then trained on all but one group to form a training dataset and then evaluated on the held-out fold. This process is repeated so that each fold is given a chance to be used as the holdout test set. Finally, the average performance across all evaluations is reported.
+The k-fold cross-validation procedure generally gives a more reliable estimate of model performance than a train-test split, although it is more computationally expensive given the repeated fitting and evaluation of models.
+Let’s first look at naive data preparation with k-fold cross-validation.
+Naive data preparation with cross-validation involves applying the data transforms first, then using the cross-validation procedure.
+We will use the synthetic dataset prepared in the previous section and normalize the data directly.
+The k-fold cross-validation procedure must first be defined. We will use repeated stratified 10-fold cross-validation, which is a best practice for classification. Repeated means that the whole cross-validation procedure is repeated multiple times, three in this case. Stratified means that each group of rows will have the relative composition of examples from each class as the whole dataset. We will use k=10 or 10-fold cross-validation.
+This can be achieved using the RepeatedStratifiedKFold which can be configured to three repeats and 10 folds, and then using the cross_val_score() function to perform the procedure, passing in the defined model, cross-validation object, and metric to calculate, in this case, accuracy.
+We can then report the average accuracy across all of the repeats and folds.
+Tying this all together, the complete example of evaluating a model with cross-validation using data preparation with data leakage is listed below.
+Running the example normalizes the data first, then evaluates the model using repeated stratified cross-validation.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the model achieved an estimated accuracy of about 85.300 percent, which we know is incorrect given the data leakage allowed via the data preparation procedure.
+Next, let’s look at how we can evaluate the model with cross-validation and avoid data leakage.
+Data preparation without data leakage when using cross-validation is slightly more challenging.
+It requires that the data preparation method is prepared on the training set and applied to the train and test sets within the cross-validation procedure, e.g. the groups of folds of rows.
+We can achieve this by defining a modeling pipeline that defines a sequence of data preparation steps to perform and ending in the model to fit and evaluate.
+To provide a solid methodology, we should constrain ourselves to developing the list of preprocessing techniques, estimate them only in the presence of the training data points, and then apply the techniques to future data (including the test set).
+— Page 55, Feature Engineering and Selection, 2019.
+The evaluation procedure changes from simply and incorrectly evaluating just the model to correctly evaluating the entire pipeline of data preparation and model together as a single atomic unit.
+This can be achieved using the Pipeline class.
+This class takes a list of steps that define the pipeline. Each step in the list is a tuple with two elements. The first element is the name of the step (a string) and the second is the configured object of the step, such as a transform or a model. The model is only supported as the final step, although we can have as many transforms as we like in the sequence.
+We can then pass the configured object to the cross_val_score() function for evaluation.
+Tying this together, the complete example of correctly performing data preparation without data leakage when using cross-validation is listed below.
+Running the example normalizes the data correctly within the cross-validation folds of the evaluation procedure to avoid data leakage.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the model has an estimated accuracy of about 85.433 percent, compared to the approach with data leakage that achieved an accuracy of about 85.300 percent.
+As with the train-test example in the previous section, removing data leakage has resulted in a slight improvement in performance when our intuition might suggest a drop given that data leakage often results in an optimistic estimate of model performance. Nevertheless, the examples clearly demonstrate that data leakage does impact the estimate of model performance and how to correct data leakage by correctly performing data preparation after the data is split.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- How to Prepare Data For Machine Learning
+- Applied Machine Learning Process
+- Data Leakage in Machine Learning
+- Feature Engineering and Selection: A Practical Approach for Predictive Models, 2019.
+- Applied Predictive Modeling, 2013.
+- Data Mining: Practical Machine Learning Tools and Techniques, 2016.
+- Feature Engineering for Machine Learning, 2018.
+- sklearn.datasets.make_classification API.
+- sklearn.preprocessing.MinMaxScaler API.
+- sklearn.model_selection.train_test_split API.
+- sklearn.linear_model.LogisticRegression API.
+- sklearn.model_selection.RepeatedStratifiedKFold API.
+- sklearn.model_selection.cross_val_score API.
+- Data preparation, Wikipedia.
+- Data cleansing, Wikipedia.
+- Data pre-processing, Wikipedia.
+# Summary
+In this tutorial, you discovered how to avoid data leakage during data preparation when evaluating machine learning models.
+Specifically, you learned:
+- Naive application of data preparation methods to the whole dataset results in data leakage that causes incorrect estimates of model performance.
+- Data preparation must be prepared on the training set only in order to avoid data leakage.
+- How to implement data preparation without data leakage for train-test splits and k-fold cross-validation in Python.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Modern Data Preparation!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Data Preparation for Machine Learning
+It provides self-study tutorials with full working code on:
+Feature Selection, RFE, Data Cleaning, Data Transforms, Scaling, Dimensionality Reduction,
+and much more...
+See What's Inside
+
+'''
+# test classification dataset
+from sklearn.datasets import make_classification
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=20, n_informative=15, n_redundant=5, random_state=7)
+# summarize the dataset
+print(X.shape, y.shape)
+(1000, 20) (1000,)
+
+# standardize the dataset
+scaler = MinMaxScaler()
+X = scaler.fit_transform(X)
+
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+
+# fit the model
+model = LogisticRegression()
+model.fit(X_train, y_train)
+
+# evaluate the model
+yhat = model.predict(X_test)
+# evaluate predictions
+accuracy = accuracy_score(y_test, yhat)
+print('Accuracy: %.3f' % (accuracy*100))
+# naive approach to normalizing the data before splitting the data and evaluating the model
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=20, n_informative=15, n_redundant=5, random_state=7)
+# standardize the dataset
+scaler = MinMaxScaler()
+X = scaler.fit_transform(X)
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# fit the model
+model = LogisticRegression()
+model.fit(X_train, y_train)
+# evaluate the model
+yhat = model.predict(X_test)
+# evaluate predictions
+accuracy = accuracy_score(y_test, yhat)
+print('Accuracy: %.3f' % (accuracy*100))
+Accuracy: 84.848
+
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+
+# define the scaler
+scaler = MinMaxScaler()
+# fit on the training dataset
+scaler.fit(X_train)
+# scale the training dataset
+X_train = scaler.transform(X_train)
+# scale the test dataset
+X_test = scaler.transform(X_test)
+# correct approach for normalizing the data after the data is split before the model is evaluated
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=20, n_informative=15, n_redundant=5, random_state=7)
+# split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# define the scaler
+scaler = MinMaxScaler()
+# fit on the training dataset
+scaler.fit(X_train)
+# scale the training dataset
+X_train = scaler.transform(X_train)
+# scale the test dataset
+X_test = scaler.transform(X_test)
+# fit the model
+model = LogisticRegression()
+model.fit(X_train, y_train)
+# evaluate the model
+yhat = model.predict(X_test)
+# evaluate predictions
+accuracy = accuracy_score(y_test, yhat)
+print('Accuracy: %.3f' % (accuracy*100))
+Accuracy: 85.455
+
+# standardize the dataset
+scaler = MinMaxScaler()
+X = scaler.fit_transform(X)
+
+# define the evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate the model using cross-validation
+scores = cross_val_score(model, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+# naive data preparation for model evaluation with k-fold cross-validation
+from numpy import mean
+from numpy import std
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.linear_model import LogisticRegression
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=20, n_informative=15, n_redundant=5, random_state=7)
+# standardize the dataset
+scaler = MinMaxScaler()
+X = scaler.fit_transform(X)
+# define the model
+model = LogisticRegression()
+# define the evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate the model using cross-validation
+scores = cross_val_score(model, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+# report performance
+print('Accuracy: %.3f (%.3f)' % (mean(scores)*100, std(scores)*100))
+Accuracy: 85.300 (3.607)
+
+# define the pipeline
+steps = list()
+steps.append(('scaler', MinMaxScaler()))
+steps.append(('model', LogisticRegression()))
+pipeline = Pipeline(steps=steps)
+
+# define the evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate the model using cross-validation
+scores = cross_val_score(pipeline, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+# correct data preparation for model evaluation with k-fold cross-validation
+from numpy import mean
+from numpy import std
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=20, n_informative=15, n_redundant=5, random_state=7)
+# define the pipeline
+steps = list()
+steps.append(('scaler', MinMaxScaler()))
+steps.append(('model', LogisticRegression()))
+pipeline = Pipeline(steps=steps)
+# define the evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate the model using cross-validation
+scores = cross_val_score(pipeline, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+# report performance
+print('Accuracy: %.3f (%.3f)' % (mean(scores)*100, std(scores)*100))
+Accuracy: 85.433 (3.471)
+'''

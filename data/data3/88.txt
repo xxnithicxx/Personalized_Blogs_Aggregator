@@ -1,0 +1,144 @@
+A Gentle Introduction to Linear Regression With Maximum Likelihood Estimation
+https://machinelearningmastery.com/linear-regression-with-maximum-likelihood-estimation/
+2019-10-24
+Linear regression is a classical model for predicting a numerical quantity.
+The parameters of a linear regression model can be estimated using a least squares procedure or by a maximum likelihood estimation procedure. Maximum likelihood estimation is a probabilistic framework for automatically finding the probability distribution and parameters that best describe the observed data. Supervised learning can be framed as a conditional probability problem, and maximum likelihood estimation can be used to fit the parameters of a model that best summarizes the conditional probability distribution, so-called conditional maximum likelihood estimation.
+A linear regression model can be fit under this framework and can be shown to derive an identical solution to a least squares approach.
+In this post, you will discover linear regression with maximum likelihood estimation.
+After reading this post, you will know:
+- Linear regression is a model for predicting a numerical quantity and maximum likelihood estimation is a probabilistic framework for estimating model parameters.
+- Coefficients of a linear regression model can be estimated using a negative log-likelihood function from maximum likelihood estimation.
+- The negative log-likelihood function can be used to derive the least squares solution to linear regression.
+Kick-start your project with my new book Probability for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Update Nov/2019: Fixed typo in MLE calculation, had x instead of y (thanks Norman).
+A Gentle Introduction to Maximum Likelihood Estimation for Linear RegressionPhoto by Franck Michel, some rights reserved.
+# Overview
+This tutorial is divided into four parts; they are:
+- Linear Regression
+- Maximum Likelihood Estimation
+- Linear Regression as Maximum Likelihood
+- Least Squares and Maximum Likelihood
+# Linear Regression
+Linear regression is a standard modeling method from statistics and machine learning.
+Linear regression is the “work horse” of statistics and (supervised) machine learning.
+— Page 217, Machine Learning: A Probabilistic Perspective, 2012.
+Generally, it is a model that maps one or more numerical inputs to a numerical output. In terms of predictive modeling, it is suited to regression type problems: that is, the prediction of a real-valued quantity.
+The input data is denoted as X with n examples and the output is denoted y with one output for each input. The prediction of the model for a given input is denoted as yhat.
+- yhat = model(X)
+The model is defined in terms of parameters called coefficients (beta), where there is one coefficient per input and an additional coefficient that provides the intercept or bias.
+For example, a problem with inputs X with m variables x1, x2, …, xm will have coefficients beta1, beta2, …, betam and beta0. A given input is predicted as the weighted sum of the inputs for the example and the coefficients.
+- yhat = beta0 + beta1 * x1 + beta2 * x2 + … + betam * xm
+The model can also be described using linear algebra, with a vector for the coefficients (Beta) and a matrix for the input data (X) and a vector for the output (y).
+- y = X * Beta
+The examples are drawn from a broader population and as such, the sample is known to be incomplete. Additionally, there is expected to be measurement error or statistical noise in the observations.
+The parameters of the model (beta) must be estimated from the sample of observations drawn from the domain.
+There are many ways to estimate the parameters given the study of the model for more than 100 years; nevertheless, there are two frameworks that are the most common. They are:
+- Least Squares Optimization.
+- Maximum Likelihood Estimation.
+Both are optimization procedures that involve searching for different model parameters.
+Least squares optimization is an approach to estimating the parameters of a model by seeking a set of parameters that results in the smallest squared error between the predictions of the model (yhat) and the actual outputs (y), averaged over all examples in the dataset, so-called mean squared error.
+Maximum Likelihood Estimation is a frequentist probabilistic framework that seeks a set of parameters for the model that maximize a likelihood function. We will take a closer look at this second approach.
+Under both frameworks, different optimization algorithms may be used, such as local search methods like the BFGS algorithm (or variants), and general optimization methods like stochastic gradient descent. The linear regression model is special in that an analytical solution also exists, meaning that the coefficients can be calculated directly using linear algebra, a topic that is out of the scope of this tutorial.
+For more information, see:
+- How to Solve Linear Regression Using Linear Algebra
+# Maximum Likelihood Estimation
+Maximum Likelihood Estimation, or MLE for short, is a probabilistic framework for estimating the parameters of a model.
+In Maximum Likelihood Estimation, we wish to maximize the conditional probability of observing the data (X) given a specific probability distribution and its parameters (theta), stated formally as:
+- P(X ; theta)
+Where X is, in fact, the joint probability distribution of all observations from the problem domain from 1 to n.
+- P(x1, x2, x3, …, xn ; theta)
+This resulting conditional probability is referred to as the likelihood of observing the data given the model parameters and written using the notation L() to denote the likelihood function. For example:
+- L(X ; theta)
+The joint probability distribution can be restated as the multiplication of the conditional probability for observing each example given the distribution parameters. Multiplying many small probabilities together can be unstable; as such, it is common to restate this problem as the sum of the natural log conditional probability.
+- sum i to n log(P(xi ; theta))
+Given the common use of log in the likelihood function, it is referred to as a log-likelihood function. It is also common in optimization problems to prefer to minimize the cost function rather than to maximize it. Therefore, the negative of the log-likelihood function is used, referred to generally as a Negative Log-Likelihood (NLL) function.
+- minimize -sum i to n log(P(xi ; theta))
+The Maximum Likelihood Estimation framework can be used as a basis for estimating the parameters of many different machine learning models for regression and classification predictive modeling. This includes the linear regression model.
+# Linear Regression as Maximum Likelihood
+We can frame the problem of fitting a machine learning model as the problem of probability density estimation.
+Specifically, the choice of model and model parameters is referred to as a modeling hypothesis h, and the problem involves finding h that best explains the data X. We can, therefore, find the modeling hypothesis that maximizes the likelihood function.
+- maximize sum i to n log(P(xi ; h))
+Supervised learning can be framed as a conditional probability problem of predicting the probability of the output given the input:
+- P(y | X)
+As such, we can define conditional maximum likelihood estimation for supervised machine learning as follows:
+- maximize sum i to n log(P(yi|xi ; h))
+Now we can replace h with our linear regression model.
+We can make some reasonable assumptions, such as the observations in the dataset are independent and drawn from the same probability distribution (i.i.d.), and that the target variable (y) has statistical noise with a Gaussian distribution, zero mean, and the same variance for all examples.
+With these assumptions, we can frame the problem of estimating y given X as estimating the mean value for y from a Gaussian probability distribution given X.
+The analytical form of the Gaussian function is as follows:
+- f(x) = (1 / sqrt(2 * pi * sigma^2)) * exp(- 1/(2 * sigma^2) * (y – mu)^2 )
+Where mu is the mean of the distribution and sigma^2 is the variance where the units are squared.
+We can use this function as our likelihood function, where mu is defined as the prediction from the model with a given set of coefficients (Beta) and sigma is a fixed constant.
+First, we can state the problem as the maximization of the product of the probabilities for each example in the dataset:
+- maximize product i to n (1 / sqrt(2 * pi * sigma^2)) * exp(-1/(2 * sigma^2) * (yi – h(xi, Beta))^2)
+Where xi is a given example and Beta refers to the coefficients of the linear regression model. We can transform this to a log-likelihood model as follows:
+- maximize sum i to n log (1 / sqrt(2 * pi * sigma^2)) – (1/(2 * sigma^2) * (yi – h(xi, Beta))^2)
+The calculation can be simplified further, but we will stop there for now.
+It’s interesting that the prediction is the mean of a distribution. It suggests that we can very reasonably add a bound to the prediction to give a prediction interval based on the standard deviation of the distribution, which is indeed a common practice.
+Although the model assumes a Gaussian distribution in the prediction (i.e. Gaussian noise function or error function), there is no such expectation for the inputs to the model (X).
+[the model] considers noise only in the target value of the training example and does not consider noise in the attributes describing the instances themselves.
+— Page 167, Machine Learning, 1997.
+We can apply a search procedure to maximize this log likelihood function, or invert it by adding a negative sign to the beginning and minimize the negative log-likelihood function (more common).
+This provides a solution to the linear regression model for a given dataset.
+This framework is also more general and can be used for curve fitting and provides the basis for fitting other regression models, such as artificial neural networks.
+# Least Squares and Maximum Likelihood
+Interestingly, the maximum likelihood solution to linear regression presented in the previous section can be shown to be identical to the least squares solution.
+After derivation, the least squares equation to be minimized to fit a linear regression to a dataset looks as follows:
+- minimize sum i to n (yi – h(xi, Beta))^2
+Where we are summing the squared errors between each target variable (yi) and the prediction from the model for the associated input h(xi, Beta). This is often referred to as ordinary least squares. More generally, if the value is normalized by the number of examples in the dataset (averaged) rather than summed, then the quantity is referred to as the mean squared error.
+- mse = 1/n * sum i to n (yi – yhat)^2
+Starting with the likelihood function defined in the previous section, we can show how we can remove constant elements to give the same equation as the least squares approach to solving linear regression.
+Note: this derivation is based on the example given in Chapter 6 of Machine Learning by Tom Mitchell.
+- maximize sum i to n log (1 / sqrt(2 * pi * sigma^2)) – (1/(2 * sigma^2) * (yi – h(xi, Beta))^2)
+Key to removing constants is to focus on what does not change when different models are evaluated, e.g. when h(xi, Beta) is evaluated.
+The first term of the calculation is independent of the model and can be removed to give:
+- maximize sum i to n – (1/(2 * sigma^2) * (yi – h(xi, Beta))^2)
+We can then remove the negative sign to minimize the positive quantity rather than maximize the negative quantity:
+- minimize sum i to n (1/(2 * sigma^2) * (yi – h(xi, Beta))^2)
+Finally, we can discard the remaining first term that is also independent of the model to give:
+- minimize sum i to n (yi – h(xi, Beta))^2
+We can see that this is identical to the least squares solution.
+In fact, under reasonable assumptions, an algorithm that minimizes the squared error between the target variable and the model output also performs maximum likelihood estimation.
+… under certain assumptions any learning algorithm that minimizes the squared error between the output hypothesis pre- dictions and the training data will output a maximum likelihood hypothesis.
+— Page 164, Machine Learning, 1997.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- How to Solve Linear Regression Using Linear Algebra
+- How to Implement Linear Regression From Scratch in Python
+- How To Implement Simple Linear Regression From Scratch With Python
+- Linear Regression Tutorial Using Gradient Descent for Machine Learning
+- Simple Linear Regression Tutorial for Machine Learning
+- Linear Regression for Machine Learning
+- Section 15.1 Least Squares as a Maximum Likelihood Estimator, Numerical Recipes in C: The Art of Scientific Computing, Second Edition, 1992.
+- Chapter 5 Machine Learning Basics, Deep Learning, 2016.
+- Section 2.6.3 Function Approximation, The Elements of Statistical Learning, 2016.
+- Section 6.4 Maximum Likelihood and Least-Squares Error Hypotheses, Machine Learning, 1997.
+- Section 3.1.1 Maximum likelihood and least squares, Pattern Recognition and Machine Learning, 2006.
+- Section 7.3 Maximum likelihood estimation (least squares), Machine Learning: A Probabilistic Perspective, 2012.
+- Maximum likelihood estimation, Wikipedia.
+- Likelihood function, Wikipedia.
+- Linear regression, Wikipedia.
+# Summary
+In this post, you discovered linear regression with maximum likelihood estimation.
+Specifically, you learned:
+- Linear regression is a model for predicting a numerical quantity and maximum likelihood estimation is a probabilistic framework for estimating model parameters.
+- Coefficients of a linear regression model can be estimated using a negative log-likelihood function from maximum likelihood estimation.
+- The negative log-likelihood function can be used to derive the least squares solution to linear regression.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Probability for Machine Learning!
+
+
+Discover how in my new Ebook:
+Probability for Machine Learning
+It provides self-study tutorials and end-to-end projects on:
+Bayes Theorem, Bayesian Optimization, Distributions, Maximum Likelihood, Cross-Entropy, Calibrating Models
+and much more...
+
+
+See What's Inside
+
+'''
+
+'''

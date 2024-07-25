@@ -1,0 +1,506 @@
+How to Evaluate Pixel Scaling Methods for Image Classification With CNNs
+https://machinelearningmastery.com/how-to-evaluate-pixel-scaling-methods-for-image-classification/
+2019-03-26
+Image data must be prepared before it can be used as the basis for modeling in image classification tasks.
+One aspect of preparing image data is scaling pixel values, such as normalizing the values to the range 0-1, centering, standardization, and more.
+How do you choose a good, or even best, pixel scaling method for your image classification or computer vision modeling task?
+In this tutorial, you will discover how to choose a pixel scaling method for image classification with deep learning methods.
+After completing this tutorial, you will know:
+- A procedure for choosing a pixel scaling method using experimentation and empirical results on a specific dataset.
+- How to implement standard pixel scaling methods for preparing image data for modeling.
+- How to work through a case study for choosing a pixel scaling method for a standard image classification problem.
+Kick-start your project with my new book Deep Learning for Computer Vision, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Evaluate Pixel Scaling Methods for Image Classification With Convolutional Neural NetworksPhoto by Andres Alvarado, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into 6 parts; they are:
+- Procedure for Choosing a Pixel Scaling Method
+- Choose Dataset: MNIST Image Classification
+- Choose Model: Convolutional Neural Network
+- Choose Pixel Scaling Methods
+- Run Experiment
+- Analyze Results
+# Procedure for Choosing a Pixel Scaling Method
+Given a new image classification task, what pixel scaling methods should be used?
+There are many ways to answer this question; for example:
+- Use techniques reportedly used for similar problems in research papers.
+- Use heuristics from blog posts, courses, or books.
+- Use your favorite technique.
+- Use the simplest technique.
+- …
+Instead, I recommend using experimentation in order to discover what works best for your specific dataset.
+This can be achieved using the following process:
+- Step 1: Choose Dataset. This may be the entire training dataset or a small subset. The idea is to complete the experiments quickly and get a result.
+- Step 2: Choose Model. Design a model that is skillful, but not necessarily the best model for the problem. Some parallel prototyping of models may be required.
+- Step 3: Choose Pixel Scaling Methods. List 3-5 data preparation schemes for evaluation of your problem.
+- Step 4: Run Experiment. Run the experiments in such a way that the results are robust and representative, ideally repeat each experiment multiple times.
+- Step 5: Analyze Results. Compare methods both in terms of the speed of learning and mean performance across repeated experiments.
+The experimental approach will use a non-optimized model and perhaps a subset of training data, both of which may add noise to the decision you must make.
+Therefore, you are looking for a signal that one data preparation scheme for your images is clearly better than the others; if this is not the case for your dataset, then the simplest (least computationally complex) technique should be used, such as pixel normalization.
+A clear signal of a superior pixel scaling method may be seen in one of two ways:
+- Faster Learning. Learning curves clearly show that a model learns faster with a given data preparation scheme.
+- Better Accuracy. Mean model performance clearly shows better accuracy with a given data preparation scheme.
+Now that we have a procedure for choosing a pixel scaling method for image data, let’s look at an example. We will use the MNIST image classification task fit with a CNN and evaluate a range of standard pixel scaling methods.
+# Step 1. Choose Dataset: MNIST Image Classification
+The MNIST problem, or MNIST for short, is an image classification problem comprised of 70,000 images of handwritten digits.
+The goal of the problem is to classify a given image of a handwritten digit as an integer from 0 to 9. As such, it is a multiclass image classification problem.
+It is a standard dataset for evaluating machine learning and deep learning algorithms. Best results for the dataset are about 99.79% accurate, or an error rate of about 0.21% (e.g. less than 1%).
+This dataset is provided as part of the Keras library and can be automatically downloaded (if needed) and loaded into memory by a call to the keras.datasets.mnist.load_data() function.
+The function returns two tuples: one for the training inputs and outputs and one for the test inputs and outputs. For example:
+We can load the MNIST dataset and summarize it.
+The complete example is listed below.
+Running the example first loads the dataset into memory. Then the shape of the training and test datasets is reported.
+We can see that all images are 28 by 28 pixels with a single channel for grayscale images. There are 60,000 images for the training dataset and 10,000 for the test dataset.
+We can also see that pixel values are integer values between 0 and 255 and that the mean and standard deviation of the pixel values are similar between the two datasets.
+The dataset is relatively small; we will use the entire train and test dataset
+Now that we are familiar with MNIST and how to load the dataset, let’s review some pixel scaling methods.
+# Step 2. Choose Model: Convolutional Neural Network
+We will use a convolutional neural network model to evaluate the different pixel scaling methods.
+A CNN is expected to perform very well on this problem, although the model chosen for this experiment does not have to perform well or best for the problem. Instead, it must be skillful (better than random) and must allow the impact of different data preparation schemes to be differentiated in terms of speed of learning and/or model performance.
+As such, the model must have sufficient capacity to learn the problem.
+We will demonstrate the baseline model on the MNIST problem.
+First, the dataset must be loaded and the shape of the train and test dataset expanded to add a channel dimension, set to one as we only have a single black and white channel.
+Next, we will normalize the pixel values for this example and one hot encode the target values, required for multiclass classification.
+The model is defined as a convolutional layer followed by a max pooling layer; this combination is repeated again, then the filter maps are flattened, interpreted by a fully connected layer and followed by an output layer.
+The ReLU activation function is used for hidden layers and the softmax activation function is used for the output layer. Enough filter maps and nodes are specified to provide sufficient capacity to learn the problem.
+The Adam variation of stochastic gradient descent is used to find the model weights. The categorical cross entropy loss function is used, required for multi-class classification, and classification accuracy is monitored during training.
+The model is fit for five training epochs and a large batch size of 128 images is used.
+Once fit, the model is evaluated on the test dataset.
+The complete example is listed below and will easily run on the CPU in about a minute.
+Running the example shows that the model is capable of learning the problem well and quickly.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In fact, the performance of the model on the test dataset on this run is 99%, or a 1% error rate. This is not state of the art (by design), but is not terribly far from state of the art either.
+
+# Step 3. Choose Pixel Scaling Methods
+Neural network models often cannot be trained on raw pixel values, such as pixel values in the range of 0 to 255.
+The reason is that the network uses a weighted sum of inputs, and for the network to both be stable and train effectively, weights should be kept small.
+Instead, the pixel values must be scaled prior to training. There are perhaps three main approaches to scaling pixel values; they are:
+- Normalization: pixel values are scaled to the range 0-1.
+- Centering: the mean pixel value is subtracted from each pixel value resulting in a distribution of pixel values centered on a mean of zero.
+- Standardization: the pixel values are scaled to a standard Gaussian with a mean of zero and a standard deviation of one.
+Traditionally, sigmoid activation functions were used and inputs that sum to 0 (zero mean) were preferred. This may or may not still be the case with the wide adoption of ReLU and similar activation functions.
+Further, in centering and standardization, the mean or mean and standard deviation can be calculated across a channel, an image, a mini-batch, or the entire training dataset. This may add additional variations on a chosen scaling method that may be evaluated.
+Normalization is often the default approach as we can assume pixel values are always in the range 0-255, making the procedure very simple and efficient to implement.
+Centering is often promoted as the preferred approach as it was used in many popular papers, although the mean can be calculated per image (global) or channel (local) and across the batch of images or the entire training dataset, and often the procedure described in a paper does not specify exactly which variation was used.
+We will experiment with the three approaches listed above, namely normalization, centering, and standardization. The mean for centering and the mean and standard deviation for standardization will be calculated across the entire training dataset.
+Other variations you could explore include:
+- Calculating statistics for each channel (for color images).
+- Calculating statistics for each image.
+- Calculating statistics for each batch.
+- Normalizing after centering or standardizing.
+The example below implements the three chosen pixel scaling methods and demonstrate their effect on the MNIST dataset.
+Running the example first normalizes the dataset and reports the min, max, mean, and standard deviation for the train and test dataset.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+This is then repeated for the centering and standardization data preparation schemes. The results provide evidence that the scaling procedures are indeed implemented correctly.
+
+# Step 4. Run Experiment
+Now that we have defined the dataset, the model, and the data preparation schemes to evaluate, we are ready to define and run the experiment.
+Each model takes about one minute to run on the CPU, so we don’t want to the experiment to take too long. We will evaluate each of the three data preparation schemes and each scheme will be evaluated 10 times, meaning that about 30 minutes will be required to complete the experiment on modern hardware.
+We can define a function to load the dataset afresh when needed.
+We can also define a function to define and compile our model ready to fit on the problem.
+We already have functions for preparing the pixel data for the train and test datasets.
+Finally, we can define a function called repeated_evaluation() that takes the name of the data preparation function to call to prepare the data and will load the dataset and repeatedly define the model, prepare the dataset, fit, and evaluate the model. It will return a list of accuracy scores that can be used to summarize the performance of the model under the chosen data preparation scheme.
+The repeated_evaluation() function can then be called for each of the three data preparation schemes and the mean and standard deviation of model performance under the scheme can be reported.
+We can also create a box and whisker plot to summarize and compare the distribution of accuracy scores for each scheme.
+Tying all of this together, the complete example of running the experiment to compare pixel scaling methods on the MNIST dataset is listed below.
+Running the example may take about 30 minutes on the CPU.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+The accuracy is reported for each repeated evaluation of the model and the mean and standard deviation of accuracy scores are repeated at the end of each run.
+
+Box and Whisker Plot of CNN Performance on MNIST With Different Pixel Scaling Methods
+
+# Step 5. Analyze Results
+For brevity, we will only look at model performance in the comparison of data preparation schemes. An extension to this study would also look at learning rates under each pixel scaling method.
+The results of the experiments show that there is little or no difference (at the chosen precision) between pixel normalization and standardization with the chosen model on the MNIST dataset.
+From these results, I would use normalization over standardization on this dataset with this model because of the good results and because of the simplicity of normalization as compared to standardization.
+These are useful results in that they show that the default heuristic to center pixel values prior to modeling would not be good advice for this dataset.
+Sadly, the box and whisker plot does not make a comparison between the spread of accuracy scores easy as some terrible outlier scores for the centering scaling method squash the distributions.
+# Extensions
+This section lists some ideas for extending the tutorial that you may wish to explore.
+- Batch-Wise Scaling. Update the study to calculate scaling statistics per batch instead of across the entire training dataset and see if that makes a difference to the choice of scaling method.
+- Learning Curves. Update the study to collect a few learning curves for each data scaling method and compare the speed of learning.
+- CIFAR. Repeat the study on the CIFAR-10 dataset and add pixel scaling methods that support global (scale across all channels) and local (scaling per channel) approaches.
+If you explore any of these extensions, I’d love to know.
+Post your findings in the comments below.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- MNIST database, Wikipedia.
+- MNIST, Classification datasets results.
+- MNIST database of handwritten digits, Keras API.
+# Summary
+In this tutorial, you discovered how to choose a pixel scaling method for image classification with deep learning methods.
+Specifically, you learned:
+- A procedure for choosing a pixel scaling method using experimentation and empirical results on a specific dataset.
+- How to implement standard pixel scaling methods for preparing image data for modeling.
+- How to work through a case study for choosing a pixel scaling method for a standard image classification problem.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+
+'''
+# example of loading the MNIST dataset
+from keras.datasets import mnist
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+# load and summarize the MNIST dataset
+from keras.datasets import mnist
+# load dataset
+(train_images, train_labels), (test_images, test_labels) = mnist.load_data()
+# summarize dataset shape
+print('Train', train_images.shape, train_labels.shape)
+print('Test', (test_images.shape, test_labels.shape))
+# summarize pixel values
+print('Train', train_images.min(), train_images.max(), train_images.mean(), train_images.std())
+print('Train', test_images.min(), test_images.max(), test_images.mean(), test_images.std())
+Train (60000, 28, 28) (60000,)
+Test ((10000, 28, 28), (10000,))
+Train 0 255 33.318421449829934 78.56748998339798
+Train 0 255 33.791224489795916 79.17246322228644
+# load dataset
+(trainX, trainY), (testX, testY) = mnist.load_data()
+# reshape dataset to have a single channel
+width, height, channels = trainX.shape[1], trainX.shape[2], 1
+trainX = trainX.reshape((trainX.shape[0], width, height, channels))
+testX = testX.reshape((testX.shape[0], width, height, channels))
+# normalize pixel values
+trainX = trainX.astype('float32') / 255
+testX = testX.astype('float32') / 255
+# one hot encode target values
+trainY = to_categorical(trainY)
+testY = to_categorical(testY)
+# define model
+model = Sequential()
+model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(width, height, channels)))
+model.add(MaxPooling2D((2, 2)))
+model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(MaxPooling2D((2, 2)))
+model.add(Flatten())
+model.add(Dense(64, activation='relu'))
+model.add(Dense(10, activation='softmax'))
+# compile model
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+# fit model
+model.fit(trainX, trainY, epochs=5, batch_size=128)
+# evaluate model
+_, acc = model.evaluate(testX, testY, verbose=0)
+print(acc)
+# baseline cnn model for the mnist problem
+from keras.datasets import mnist
+from keras.utils import to_categorical
+from keras.models import Sequential
+from keras.layers import Conv2D
+from keras.layers import MaxPooling2D
+from keras.layers import Dense
+from keras.layers import Flatten
+# load dataset
+(trainX, trainY), (testX, testY) = mnist.load_data()
+# reshape dataset to have a single channel
+width, height, channels = trainX.shape[1], trainX.shape[2], 1
+trainX = trainX.reshape((trainX.shape[0], width, height, channels))
+testX = testX.reshape((testX.shape[0], width, height, channels))
+# normalize pixel values
+trainX = trainX.astype('float32') / 255
+testX = testX.astype('float32') / 255
+# one hot encode target values
+trainY = to_categorical(trainY)
+testY = to_categorical(testY)
+# define model
+model = Sequential()
+model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(width, height, channels)))
+model.add(MaxPooling2D((2, 2)))
+model.add(Conv2D(64, (3, 3), activation='relu'))
+model.add(MaxPooling2D((2, 2)))
+model.add(Flatten())
+model.add(Dense(64, activation='relu'))
+model.add(Dense(10, activation='softmax'))
+# compile model
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+# fit model
+model.fit(trainX, trainY, epochs=5, batch_size=128)
+# evaluate model
+_, acc = model.evaluate(testX, testY, verbose=0)
+print(acc)
+60000/60000 [==============================] - 13s 220us/step - loss: 0.2321 - acc: 0.9323
+Epoch 2/5
+60000/60000 [==============================] - 12s 204us/step - loss: 0.0628 - acc: 0.9810
+Epoch 3/5
+60000/60000 [==============================] - 13s 208us/step - loss: 0.0446 - acc: 0.9861
+Epoch 4/5
+60000/60000 [==============================] - 13s 209us/step - loss: 0.0340 - acc: 0.9895
+Epoch 5/5
+60000/60000 [==============================] - 12s 208us/step - loss: 0.0287 - acc: 0.9908
+0.99
+# demonstrate pixel scaling methods on mnist dataset
+from keras.datasets import mnist
+
+# normalize images
+def prep_normalize(train, test):
+	# convert from integers to floats
+	train_norm = train.astype('float32')
+	test_norm = test.astype('float32')
+	# normalize to range 0-1
+	train_norm = train_norm / 255.0
+	test_norm = test_norm / 255.0
+	# return normalized images
+	return train_norm, test_norm
+
+# center images
+def prep_center(train, test):
+	# convert from integers to floats
+	train_cent = train.astype('float32')
+	test_cent = test.astype('float32')
+	# calculate statistics
+	m = train_cent.mean()
+	# center datasets
+	train_cent = train_cent - m
+	test_cent = test_cent - m
+	# return normalized images
+	return train_cent, test_cent
+
+# standardize images
+def prep_standardize(train, test):
+	# convert from integers to floats
+	train_stan = train.astype('float32')
+	test_stan = test.astype('float32')
+	# calculate statistics
+	m = train_stan.mean()
+	s = train_stan.std()
+	# center datasets
+	train_stan = (train_stan - m) / s
+	test_stan = (test_stan - m) / s
+	# return normalized images
+	return train_stan, test_stan
+
+# load dataset
+(train_images, train_labels), (test_images, test_labels) = mnist.load_data()
+# normalize
+trainX, testX = prep_normalize(train_images, test_images)
+print('normalization')
+print('Train', trainX.min(), trainX.max(), trainX.mean(), trainX.std())
+print('Test', testX.min(), testX.max(), testX.mean(), testX.std())
+# center
+trainX, testX = prep_center(train_images, test_images)
+print('center')
+print('Train', trainX.min(), trainX.max(), trainX.mean(), trainX.std())
+print('Test', testX.min(), testX.max(), testX.mean(), testX.std())
+# standardize
+trainX, testX = prep_standardize(train_images, test_images)
+print('standardize')
+print('Train', trainX.min(), trainX.max(), trainX.mean(), trainX.std())
+print('Test', testX.min(), testX.max(), testX.mean(), testX.std())
+normalization
+Train 0.0 1.0 0.13066062 0.30810776
+Test 0.0 1.0 0.13251467 0.31048027
+
+center
+Train -33.318447 221.68155 -1.9512918e-05 78.567444
+Test -33.318447 221.68155 0.47278798 79.17245
+
+standardize
+Train -0.42407447 2.8215446 -3.4560264e-07 0.9999998
+Test -0.42407447 2.8215446 0.0060174568 1.0077008
+# load train and test dataset
+def load_dataset():
+	# load dataset
+	(trainX, trainY), (testX, testY) = mnist.load_data()
+	# reshape dataset to have a single channel
+	width, height, channels = trainX.shape[1], trainX.shape[2], 1
+	trainX = trainX.reshape((trainX.shape[0], width, height, channels))
+	testX = testX.reshape((testX.shape[0], width, height, channels))
+	# one hot encode target values
+	trainY = to_categorical(trainY)
+	testY = to_categorical(testY)
+	return trainX, trainY, testX, testY
+# define cnn model
+def define_model():
+	model = Sequential()
+	model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(width, height, channels)))
+	model.add(MaxPooling2D((2, 2)))
+	model.add(Conv2D(64, (3, 3), activation='relu'))
+	model.add(MaxPooling2D((2, 2)))
+	model.add(Flatten())
+	model.add(Dense(64, activation='relu'))
+	model.add(Dense(10, activation='softmax'))
+	# compile model
+	model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+	return model
+# repeated evaluation of model with data prep scheme
+def repeated_evaluation(datapre_func, n_repeats=10):
+	# prepare data
+	trainX, trainY, testX, testY = load_dataset()
+	# repeated evaluation
+	scores = list()
+	for i in range(n_repeats):
+		# define model
+		model = define_model()
+		# prepare data
+		prep_trainX, prep_testX = datapre_func(trainX, testX)
+		# fit model
+		model.fit(prep_trainX, trainY, epochs=5, batch_size=64, verbose=0)
+		# evaluate model
+		_, acc = model.evaluate(prep_testX, testY, verbose=0)
+		# store result
+		scores.append(acc)
+		print('> %d: %.3f' % (i, acc * 100.0))
+	return scores
+all_scores = list()
+# normalization
+scores = repeated_evaluation(prep_normalize)
+print('Normalization: %.3f (%.3f)' % (mean(scores), std(scores)))
+all_scores.append(scores)
+# center
+scores = repeated_evaluation(prep_center)
+print('Centered: %.3f (%.3f)' % (mean(scores), std(scores)))
+all_scores.append(scores)
+# standardize
+scores = repeated_evaluation(prep_standardize)
+print('Standardized: %.3f (%.3f)' % (mean(scores), std(scores)))
+all_scores.append(scores)
+# box and whisker plots of results
+pyplot.boxplot(all_scores, labels=['norm', 'cent', 'stan'])
+pyplot.show()
+# comparison of training-set based pixel scaling methods on MNIST
+from numpy import mean
+from numpy import std
+from matplotlib import pyplot
+from keras.datasets import mnist
+from keras.utils import to_categorical
+from keras.models import Sequential
+from keras.layers import Conv2D
+from keras.layers import MaxPooling2D
+from keras.layers import Dense
+from keras.layers import Flatten
+
+# load train and test dataset
+def load_dataset():
+	# load dataset
+	(trainX, trainY), (testX, testY) = mnist.load_data()
+	# reshape dataset to have a single channel
+	width, height, channels = trainX.shape[1], trainX.shape[2], 1
+	trainX = trainX.reshape((trainX.shape[0], width, height, channels))
+	testX = testX.reshape((testX.shape[0], width, height, channels))
+	# one hot encode target values
+	trainY = to_categorical(trainY)
+	testY = to_categorical(testY)
+	return trainX, trainY, testX, testY
+
+# define cnn model
+def define_model():
+	model = Sequential()
+	model.add(Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)))
+	model.add(MaxPooling2D((2, 2)))
+	model.add(Conv2D(64, (3, 3), activation='relu'))
+	model.add(MaxPooling2D((2, 2)))
+	model.add(Flatten())
+	model.add(Dense(64, activation='relu'))
+	model.add(Dense(10, activation='softmax'))
+	# compile model
+	model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+	return model
+
+# normalize images
+def prep_normalize(train, test):
+	# convert from integers to floats
+	train_norm = train.astype('float32')
+	test_norm = test.astype('float32')
+	# normalize to range 0-1
+	train_norm = train_norm / 255.0
+	test_norm = test_norm / 255.0
+	# return normalized images
+	return train_norm, test_norm
+
+# center images
+def prep_center(train, test):
+	# convert from integers to floats
+	train_cent = train.astype('float32')
+	test_cent = test.astype('float32')
+	# calculate statistics
+	m = train_cent.mean()
+	# center datasets
+	train_cent = train_cent - m
+	test_cent = test_cent - m
+	# return normalized images
+	return train_cent, test_cent
+
+# standardize images
+def prep_standardize(train, test):
+	# convert from integers to floats
+	train_stan = train.astype('float32')
+	test_stan = test.astype('float32')
+	# calculate statistics
+	m = train_stan.mean()
+	s = train_stan.std()
+	# center datasets
+	train_stan = (train_stan - m) / s
+	test_stan = (test_stan - m) / s
+	# return normalized images
+	return train_stan, test_stan
+
+# repeated evaluation of model with data prep scheme
+def repeated_evaluation(datapre_func, n_repeats=10):
+	# prepare data
+	trainX, trainY, testX, testY = load_dataset()
+	# repeated evaluation
+	scores = list()
+	for i in range(n_repeats):
+		# define model
+		model = define_model()
+		# prepare data
+		prep_trainX, prep_testX = datapre_func(trainX, testX)
+		# fit model
+		model.fit(prep_trainX, trainY, epochs=5, batch_size=64, verbose=0)
+		# evaluate model
+		_, acc = model.evaluate(prep_testX, testY, verbose=0)
+		# store result
+		scores.append(acc)
+		print('> %d: %.3f' % (i, acc * 100.0))
+	return scores
+
+all_scores = list()
+# normalization
+scores = repeated_evaluation(prep_normalize)
+print('Normalization: %.3f (%.3f)' % (mean(scores), std(scores)))
+all_scores.append(scores)
+# center
+scores = repeated_evaluation(prep_center)
+print('Centered: %.3f (%.3f)' % (mean(scores), std(scores)))
+all_scores.append(scores)
+# standardize
+scores = repeated_evaluation(prep_standardize)
+print('Standardized: %.3f (%.3f)' % (mean(scores), std(scores)))
+all_scores.append(scores)
+# box and whisker plots of results
+pyplot.boxplot(all_scores, labels=['norm', 'cent', 'stan'])
+pyplot.show()
+> 0: 98.930
+> 1: 98.960
+> 2: 98.910
+> 3: 99.050
+> 4: 99.040
+> 5: 98.800
+> 6: 98.880
+> 7: 99.020
+> 8: 99.100
+> 9: 99.050
+Normalization: 0.990 (0.001)
+> 0: 98.570
+> 1: 98.530
+> 2: 98.230
+> 3: 98.110
+> 4: 98.840
+> 5: 98.720
+> 6: 9.800
+> 7: 98.170
+> 8: 98.710
+> 9: 10.320
+Centered: 0.808 (0.354)
+> 0: 99.150
+> 1: 98.820
+> 2: 99.000
+> 3: 98.850
+> 4: 99.140
+> 5: 99.050
+> 6: 99.120
+> 7: 99.100
+> 8: 98.940
+> 9: 99.110
+Standardized: 0.990 (0.001
+'''

@@ -1,0 +1,207 @@
+How to Develop LARS Regression Models in Python
+https://machinelearningmastery.com/lars-regression-with-python/
+2020-10-15
+Regression is a modeling task that involves predicting a numeric value given an input.
+Linear regression is the standard algorithm for regression that assumes a linear relationship between inputs and the target variable. An extension to linear regression involves adding penalties to the loss function during training that encourage simpler models that have smaller coefficient values. These extensions are referred to as regularized linear regression or penalized linear regression.
+Lasso Regression is a popular type of regularized linear regression that includes an L1 penalty. This has the effect of shrinking the coefficients for those input variables that do not contribute much to the prediction task.
+Least Angle Regression or LARS for short provides an alternate, efficient way of fitting a Lasso regularized regression model that does not require any hyperparameters.
+In this tutorial, you will discover how to develop and evaluate LARS Regression models in Python.
+After completing this tutorial, you will know:
+- LARS Regression provides an alternate way to train a Lasso regularized linear regression model that adds a penalty to the loss function during training.
+- How to evaluate a LARS Regression model and use a final model to make predictions for new data.
+- How to configure the LARS Regression model for a new dataset automatically using a cross-validation version of the estimator.
+Let’s get started.
+How to Develop LARS Regression Models in PythonPhoto by Nicolas Raymond, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- LARS Regression
+- Example of LARS Regression
+- Tuning LARS Hyperparameters
+# LARS Regression
+Linear regression refers to a model that assumes a linear relationship between input variables and the target variable.
+With a single input variable, this relationship is a line, and with higher dimensions, this relationship can be thought of as a hyperplane that connects the input variables to the target variable. The coefficients of the model are found via an optimization process that seeks to minimize the sum squared error between the predictions (yhat) and the expected target values (y).
+- loss = sum i=0 to n (y_i – yhat_i)^2
+A problem with linear regression is that estimated coefficients of the model can become large, making the model sensitive to inputs and possibly unstable. This is particularly true for problems with few observations (samples) or more input predictors (p) than variables than samples (n)  (so-called p >> n problems).
+One approach to address the stability of regression models is to change the loss function to include additional costs for a model that has large coefficients. Linear regression models that use these modified loss functions during training are referred to collectively as penalized linear regression.
+A popular penalty is to penalize a model based on the sum of the absolute coefficient values. This is called the L1 penalty. An L1 penalty minimizes the size of all coefficients and allows some coefficients to be minimized to the value zero, which removes the predictor from the model.
+- l1_penalty = sum j=0 to p abs(beta_j)
+An L1 penalty minimizes the size of all coefficients and allows any coefficient to go to the value of zero, effectively removing input features from the model. This acts as a type of automatic feature selection method.
+… a consequence of penalizing the absolute values is that some parameters are actually set to 0 for some value of lambda. Thus the lasso yields models that simultaneously use regularization to improve the model and to conduct feature selection.
+— Page 125, Applied Predictive Modeling, 2013.
+This penalty can be added to the cost function for linear regression and is referred to as Least Absolute Shrinkage And Selection Operator (LASSO), or more commonly, “Lasso” (with title case) for short.
+The Lasso trains the model using a least-squares loss training procedure.
+Least Angle Regression, LAR or LARS for short, is an alternative approach to solving the optimization problem of fitting the penalized model. Technically, LARS is a forward stepwise version of feature selection for regression that can be adapted for the Lasso model.
+Unlike the Lasso, it does not require a hyperparameter that controls the weighting of the penalty in the loss function. Instead, the weighting is discovered automatically by LARS.
+… least angle regression (LARS), is a broad framework that encompasses the lasso and similar models. The LARS model can be used to fit lasso models more efficiently, especially in high-dimensional problems.
+— Page 126, Applied Predictive Modeling, 2013.
+Now that we are familiar with LARS penalized regression, let’s look at a worked example.
+# Example of LARS Regression
+In this section, we will demonstrate how to use the LARS Regression algorithm.
+First, let’s introduce a standard regression dataset. We will use the housing dataset.
+The housing dataset is a standard machine learning dataset comprising 506 rows of data with 13 numerical input variables and a numerical target variable.
+Using a test harness of repeated stratified 10-fold cross-validation with three repeats, a naive model can achieve a mean absolute error (MAE) of about 6.6. A top-performing model can achieve a MAE on this same test harness of about 1.9. This provides the bounds of expected performance on this dataset.
+The dataset involves predicting the house price given details of the house’s suburb in the American city of Boston.
+- Housing Dataset (housing.csv)
+- Housing Description (housing.names)
+No need to download the dataset; we will download it automatically as part of our worked examples.
+The example below downloads and loads the dataset as a Pandas DataFrame and summarizes the shape of the dataset and the first five rows of data.
+Running the example confirms the 506 rows of data and 13 input variables and a single numeric target variable (14 in total). We can also see that all input variables are numeric.
+The scikit-learn Python machine learning library provides an implementation of the LARS penalized regression algorithm via the Lars class.
+We can evaluate the LARS Regression model on the housing dataset using repeated 10-fold cross-validation and report the average mean absolute error (MAE) on the dataset.
+Running the example evaluates the LARS Regression algorithm on the housing dataset and reports the average MAE across the three repeats of 10-fold cross-validation.
+Your specific results may vary given the stochastic nature of the learning algorithm. Consider running the example a few times.
+In this case, we can see that the model achieved a MAE of about 3.432.
+We may decide to use the LARS Regression as our final model and make predictions on new data.
+This can be achieved by fitting the model on all available data and calling the predict() function, passing in a new row of data.
+We can demonstrate this with a complete example, listed below.
+Running the example fits the model and makes a prediction for the new rows of data.
+Your specific results may vary given the stochastic nature of the learning algorithm. Try running the example a few times.
+Next, we can look at configuring the model hyperparameters.
+# Tuning LARS Hyperparameters
+As part of the LARS training algorithm, it automatically discovers the best value for the lambda hyperparameter used in the Lasso algorithm.
+This hyperparameter is referred to as the “alpha” argument in the scikit-learn implementation of Lasso and LARS.
+Nevertheless, the process of automatically discovering the best model and alpha hyperparameter is still based on a single training dataset.
+An alternative approach is to fit the model on multiple subsets of the training dataset and choose the best internal model configuration across the folds, in this case, the value of alpha. Generally, this is referred to as a cross-validation estimator.
+The scikit-learn libraries offer a cross-validation version of the LARS for finding a more robust value for alpha via the LarsCV class.
+The example below demonstrates how to fit a LarsCV model and report the alpha value found via cross-validation
+Running the example fits the LarsCV model using repeated cross-validation and reports an optimal alpha value found across the runs.
+This version of the LARS model may prove more robust in practice.
+We can evaluate it using the same procedure we did in the previous section, although in this case, each model fit is based on the hyperparameters found via repeated k-fold cross-validation internally (e.g. cross-validation of a cross-validation estimator).
+The complete example is listed below.
+Running the example will evaluate the cross-validated estimation of model hyperparameters using repeated cross-validation.
+Your specific results may vary given the stochastic nature of the learning algorithm. Try running the example a few times.
+In this case, we can see that we achieved slightly better results with 3.374 vs. 3.432 in the previous section.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- The Elements of Statistical Learning, 2016.
+- Applied Predictive Modeling, 2013.
+- Linear Models, scikit-learn.
+- sklearn.linear_model.Lars API.
+- sklearn.linear_model.Lars API.
+- Least-angle regression, Wikipedia.
+# Summary
+In this tutorial, you discovered how to develop and evaluate LARS Regression models in Python.
+Specifically, you learned:
+- LARS Regression provides an alternate way to train a Lasso regularized linear regression model that adds a penalty to the loss function during training.
+- How to evaluate a LARS Regression model and use a final model to make predictions for new data.
+- How to configure the LARS Regression model for a new dataset automatically using a cross-validation version of the estimator.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Discover Fast Machine Learning in Python!
+...with just a few lines of scikit-learn code
+Learn how in my new Ebook:
+Machine Learning Mastery With Python
+Covers self-study tutorials and end-to-end projects like:
+Loading data, visualization, modeling, tuning, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+# load and summarize the housing dataset
+from pandas import read_csv
+from matplotlib import pyplot
+# load dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+dataframe = read_csv(url, header=None)
+# summarize shape
+print(dataframe.shape)
+# summarize first few lines
+print(dataframe.head())
+(506, 14)
+        0     1     2   3      4      5   ...  8      9     10      11    12    13
+0  0.00632  18.0  2.31   0  0.538  6.575  ...   1  296.0  15.3  396.90  4.98  24.0
+1  0.02731   0.0  7.07   0  0.469  6.421  ...   2  242.0  17.8  396.90  9.14  21.6
+2  0.02729   0.0  7.07   0  0.469  7.185  ...   2  242.0  17.8  392.83  4.03  34.7
+3  0.03237   0.0  2.18   0  0.458  6.998  ...   3  222.0  18.7  394.63  2.94  33.4
+4  0.06905   0.0  2.18   0  0.458  7.147  ...   3  222.0  18.7  396.90  5.33  36.2
+
+[5 rows x 14 columns]
+
+# define model
+model = Lars()
+# evaluate an lars regression model on the dataset
+from numpy import mean
+from numpy import std
+from numpy import absolute
+from pandas import read_csv
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedKFold
+from sklearn.linear_model import Lars
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+dataframe = read_csv(url, header=None)
+data = dataframe.values
+X, y = data[:, :-1], data[:, -1]
+# define model
+model = Lars()
+# define model evaluation method
+cv = RepeatedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='neg_mean_absolute_error', cv=cv, n_jobs=-1)
+# force scores to be positive
+scores = absolute(scores)
+print('Mean MAE: %.3f (%.3f)' % (mean(scores), std(scores)))
+Mean MAE: 3.432 (0.552)
+# make a prediction with a lars regression model on the dataset
+from pandas import read_csv
+from sklearn.linear_model import Lars
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+dataframe = read_csv(url, header=None)
+data = dataframe.values
+X, y = data[:, :-1], data[:, -1]
+# define model
+model = Lars()
+# fit model
+model.fit(X, y)
+# define new data
+row = [0.00632,18.00,2.310,0,0.5380,6.5750,65.20,4.0900,1,296.0,15.30,396.90,4.98]
+# make a prediction
+yhat = model.predict([row])
+# summarize prediction
+print('Predicted: %.3f' % yhat)
+Predicted: 29.904
+# use automatically configured the lars regression algorithm
+from numpy import arange
+from pandas import read_csv
+from sklearn.linear_model import LarsCV
+from sklearn.model_selection import RepeatedKFold
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+dataframe = read_csv(url, header=None)
+data = dataframe.values
+X, y = data[:, :-1], data[:, -1]
+# define model evaluation method
+cv = RepeatedKFold(n_splits=10, n_repeats=3, random_state=1)
+# define model
+model = LarsCV(cv=cv, n_jobs=-1)
+# fit model
+model.fit(X, y)
+# summarize chosen configuration
+print('alpha: %f' % model.alpha_)
+alpha: 0.001623
+# evaluate an lars cross-validation regression model on the dataset
+from numpy import mean
+from numpy import std
+from numpy import absolute
+from pandas import read_csv
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedKFold
+from sklearn.linear_model import LarsCV
+# load the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/housing.csv'
+dataframe = read_csv(url, header=None)
+data = dataframe.values
+X, y = data[:, :-1], data[:, -1]
+# define model evaluation method
+cv = RepeatedKFold(n_splits=10, n_repeats=3, random_state=1)
+# define model
+model = LarsCV(cv=cv, n_jobs=-1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='neg_mean_absolute_error', cv=cv, n_jobs=-1)
+# force scores to be positive
+scores = absolute(scores)
+print('Mean MAE: %.3f (%.3f)' % (mean(scores), std(scores)))
+Mean MAE: 3.374 (0.558)
+'''

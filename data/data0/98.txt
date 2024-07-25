@@ -1,0 +1,387 @@
+A Gentle Introduction to Pooling Layers for Convolutional Neural Networks
+https://machinelearningmastery.com/pooling-layers-for-convolutional-neural-networks/
+2019-04-21
+Convolutional layers in a convolutional neural network summarize the presence of features in an input image.
+A problem with the output feature maps is that they are sensitive to the location of the features in the input. One approach to address this sensitivity is to down sample the feature maps. This has the effect of making the resulting down sampled feature maps more robust to changes in the position of the feature in the image, referred to by the technical phrase “local translation invariance.”
+Pooling layers provide an approach to down sampling feature maps by summarizing the presence of features in patches of the feature map. Two common pooling methods are average pooling and max pooling that summarize the average presence of a feature and the most activated presence of a feature respectively.
+In this tutorial, you will discover how the pooling operation works and how to implement it in convolutional neural networks.
+After completing this tutorial, you will know:
+- Pooling is required to down sample the detection of features in feature maps.
+- How to calculate and implement average and maximum pooling in a convolutional neural network.
+- How to use global pooling in a convolutional neural network.
+Kick-start your project with my new book Deep Learning for Computer Vision, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+A Gentle Introduction to Pooling Layers for Convolutional Neural NetworksPhoto by Nicholas A. Tonelli, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into five parts; they are:
+- Pooling
+- Detecting Vertical Lines
+- Average Pooling Layers
+- Max Pooling Layers
+- Global Pooling Layers
+# Pooling Layers
+Convolutional layers in a convolutional neural network systematically apply learned filters to input images in order to create feature maps that summarize the presence of those features in the input.
+Convolutional layers prove very effective, and stacking convolutional layers in deep models allows layers close to the input to learn low-level features (e.g. lines) and layers deeper in the model to learn high-order or more abstract features, like shapes or specific objects.
+A limitation of the feature map output of convolutional layers is that they record the precise position of features in the input. This means that small movements in the position of the feature in the input image will result in a different feature map. This can happen with re-cropping, rotation, shifting, and other minor changes to the input image.
+A common approach to addressing this problem from signal processing is called down sampling. This is where a lower resolution version of an input signal is created that still contains the large or important structural elements, without the fine detail that may not be as useful to the task.
+Down sampling can be achieved with convolutional layers by changing the stride of the convolution across the image. A more robust and common approach is to use a pooling layer.
+A pooling layer is a new layer added after the convolutional layer. Specifically, after a nonlinearity (e.g. ReLU) has been applied to the feature maps output by a convolutional layer; for example the layers in a model may look as follows:
+- Input Image
+- Convolutional Layer
+- Nonlinearity
+- Pooling Layer
+The addition of a pooling layer after the convolutional layer is a common pattern used for ordering layers within a convolutional neural network that may be repeated one or more times in a given model.
+The pooling layer operates upon each feature map separately to create a new set of the same number of pooled feature maps.
+Pooling involves selecting a pooling operation, much like a filter to be applied to feature maps. The size of the pooling operation or filter is smaller than the size of the feature map; specifically, it is almost always 2×2 pixels applied with a stride of 2 pixels.
+This means that the pooling layer will always reduce the size of each feature map by a factor of 2, e.g. each dimension is halved, reducing the number of pixels or values in each feature map to one quarter the size. For example, a pooling layer applied to a feature map of 6×6 (36 pixels) will result in an output pooled feature map of 3×3 (9 pixels).
+The pooling operation is specified, rather than learned. Two common functions used in the pooling operation are:
+- Average Pooling: Calculate the average value for each patch on the feature map.
+- Maximum Pooling (or Max Pooling): Calculate the maximum value for each patch of the feature map.
+The result of using a pooling layer and creating down sampled or pooled feature maps is a summarized version of the features detected in the input. They are useful as small changes in the location of the feature in the input detected by the convolutional layer will result in a pooled feature map with the feature in the same location. This capability added by pooling is called the model’s invariance to local translation.
+In all cases, pooling helps to make the representation become approximately invariant to small translations of the input. Invariance to translation means that if we translate the input by a small amount, the values of most of the pooled outputs do not change.
+— Page 342, Deep Learning, 2016.
+Now that we are familiar with the need and benefit of pooling layers, let’s look at some specific examples.
+# Detecting Vertical Lines
+Before we look at some examples of pooling layers and their effects, let’s develop a small example of an input image and convolutional layer to which we can later add and evaluate pooling layers.
+In this example, we define a single input image or sample that has one channel and is an 8 pixel by 8 pixel square with all 0 values and a two-pixel wide vertical line in the center.
+Next, we can define a model that expects input samples to have the shape (8, 8, 1) and has a single hidden convolutional layer with a single filter with the shape of 3 pixels by 3 pixels.
+A rectified linear activation function, or ReLU for short, is then applied to each value in the feature map. This is a simple and effective nonlinearity, that in this case will not change the values in the feature map, but is present because we will later add subsequent pooling layers and pooling is added after the nonlinearity applied to the feature maps, e.g. a best practice.
+The filter is initialized with random weights as part of the initialization of the model.
+Instead, we will hard code our own 3×3 filter that will detect vertical lines. That is the filter will strongly activate when it detects a vertical line and weakly activate when it does not. We expect that by applying this filter across the input image that the output feature map will show that the vertical line was detected.
+Next, we can apply the filter to our input image by calling the predict() function on the model.
+The result is a four-dimensional output with one batch, a given number of rows and columns, and one filter, or [batch, rows, columns, filters]. We can print the activations in the single feature map to confirm that the line was detected.
+Tying all of this together, the complete example is listed below.
+Running the example first summarizes the structure of the model.
+Of note is that the single hidden convolutional layer will take the 8×8 pixel input image and will produce a feature map with the dimensions of 6×6.
+We can also see that the layer has 10 parameters: that is nine weights for the filter (3×3) and one weight for the bias.
+Finally, the single feature map is printed.
+We can see from reviewing the numbers in the 6×6 matrix that indeed the manually specified filter detected the vertical line in the middle of our input image.
+We can now look at some common approaches to pooling and how they impact the output feature maps.
+# Average Pooling Layer
+On two-dimensional feature maps, pooling is typically applied in 2×2 patches of the feature map with a stride of (2,2).
+Average pooling involves calculating the average for each patch of the feature map. This means that each 2×2 square of the feature map is down sampled to the average value in the square.
+For example, the output of the line detector convolutional filter in the previous section was a 6×6 feature map. We can look at applying the average pooling operation to the first line of that feature map manually.
+The first line for pooling (first two rows and six columns) of the output feature map were as follows:
+The first pooling operation is applied as follows:
+Given the stride of two, the operation is moved along two columns to the left and the average is calculated:
+Again, the operation is moved along two columns to the left and the average is calculated:
+That’s it for the first line of pooling operations. The result is the first line of the average pooling operation:
+Given the (2,2) stride, the operation would then be moved down two rows and back to the first column and the process continued.
+Because the downsampling operation halves each dimension, we will expect the output of pooling applied to the 6×6 feature map to be a new 3×3 feature map. Given the horizontal symmetry of the feature map input, we would expect each row to have the same average pooling values. Therefore, we would expect the resulting average pooling of the detected line feature map from the previous section to look as follows:
+We can confirm this by updating the example from the previous section to use average pooling.
+This can be achieved in Keras by using the AveragePooling2D layer. The default pool_size (e.g. like the kernel size or filter size) of the layer is (2,2) and the default strides is None, which in this case means using the pool_size as the strides, which will be (2,2).
+The complete example with average pooling is listed below.
+Running the example first summarizes the model.
+We can see from the model summary that the input to the pooling layer will be a single feature map with the shape (6,6) and that the output of the average pooling layer will be a single feature map with each dimension halved, with the shape (3,3).
+Applying the average pooling results in a new feature map that still detects the line, although in a down sampled manner, exactly as we expected from calculating the operation manually.
+Average pooling works well, although it is more common to use max pooling.
+# Max Pooling Layer
+Maximum pooling, or max pooling, is a pooling operation that calculates the maximum, or largest, value in each patch of each feature map.
+The results are down sampled or pooled feature maps that highlight the most present feature in the patch, not the average presence of the feature in the case of average pooling. This has been found to work better in practice than average pooling for computer vision tasks like image classification.
+In a nutshell, the reason is that features tend to encode the spatial presence of some pattern or concept over the different tiles of the feature map (hence, the term feature map), and it’s more informative to look at the maximal presence of different features than at their average presence.
+— Page 129, Deep Learning with Python, 2017.
+We can make the max pooling operation concrete by again applying it to the output feature map of the line detector convolutional operation and manually calculate the first row of the pooled feature map.
+The first line for pooling (first two rows and six columns) of the output feature map were as follows:
+The first max pooling operation is applied as follows:
+Given the stride of two, the operation is moved along two columns to the left and the max is calculated:
+Again, the operation is moved along two columns to the left and the max is calculated:
+That’s it for the first line of pooling operations.
+The result is the first line of the max pooling operation:
+Again, given the horizontal symmetry of the feature map provided for pooling, we would expect the pooled feature map to look as follows:
+It just so happens that the chosen line detector image and feature map produce the same output when downsampled with average pooling and maximum pooling.
+The maximum pooling operation can be added to the worked example by adding the MaxPooling2D layer provided by the Keras API.
+The complete example of vertical line detection with max pooling is listed below.
+Running the example first summarizes the model.
+We can see, as we might expect by now, that the output of the max pooling layer will be a single feature map with each dimension halved, with the shape (3,3).
+Applying the max pooling results in a new feature map that still detects the line, although in a down sampled manner.
+
+# Global Pooling Layers
+There is another type of pooling that is sometimes used called global pooling.
+Instead of down sampling patches of the input feature map, global pooling down samples the entire feature map to a single value. This would be the same as setting the pool_size to the size of the input feature map.
+Global pooling can be used in a model to aggressively summarize the presence of a feature in an image. It is also sometimes used in models as an alternative to using a fully connected layer to transition from feature maps to an output prediction for the model.
+Both global average pooling and global max pooling are supported by Keras via the GlobalAveragePooling2D and GlobalMaxPooling2D classes respectively.
+For example, we can add global max pooling to the convolutional model used for vertical line detection.
+The outcome will be a single value that will summarize the strongest activation or presence of the vertical line in the input image.
+The complete code listing is provided below.
+Running the example first summarizes the model
+We can see that, as expected, the output of the global pooling layer is a single value that summarizes the presence of the feature in the single feature map.
+Next, the output of the model is printed showing the effect of global max pooling on the feature map, printing the single largest activation.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Crash Course in Convolutional Neural Networks for Machine Learning
+- Chapter 9: Convolutional Networks, Deep Learning, 2016.
+- Chapter 5: Deep Learning for Computer Vision, Deep Learning with Python, 2017.
+- Keras Convolutional Layers API
+- Keras Pooling Layers API
+# Summary
+In this tutorial, you discovered how the pooling operation works and how to implement it in convolutional neural networks.
+Specifically, you learned:
+- Pooling is required to down sample the detection of features in feature maps.
+- How to calculate and implement average and maximum pooling in a convolutional neural network.
+- How to use global pooling in a convolutional neural network.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+
+'''
+# define input data
+data = [[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0]]
+data = asarray(data)
+data = data.reshape(1, 8, 8, 1)
+# create model
+model = Sequential()
+model.add(Conv2D(1, (3,3), activation='relu', input_shape=(8, 8, 1)))
+# summarize model
+model.summary()
+# define a vertical line detector
+detector = [[[[0]],[[1]],[[0]]],
+            [[[0]],[[1]],[[0]]],
+            [[[0]],[[1]],[[0]]]]
+weights = [asarray(detector), asarray([0.0])]
+# store the weights in the model
+model.set_weights(weights)
+# apply filter to input data
+yhat = model.predict(data)
+# enumerate rows
+for r in range(yhat.shape[1]):
+	# print each column in the row
+	print([yhat[0,r,c,0] for c in range(yhat.shape[2])])
+# example of vertical line detection with a convolutional layer
+from numpy import asarray
+from keras.models import Sequential
+from keras.layers import Conv2D
+# define input data
+data = [[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0]]
+data = asarray(data)
+data = data.reshape(1, 8, 8, 1)
+# create model
+model = Sequential()
+model.add(Conv2D(1, (3,3), activation='relu', input_shape=(8, 8, 1)))
+# summarize model
+model.summary()
+# define a vertical line detector
+detector = [[[[0]],[[1]],[[0]]],
+            [[[0]],[[1]],[[0]]],
+            [[[0]],[[1]],[[0]]]]
+weights = [asarray(detector), asarray([0.0])]
+# store the weights in the model
+model.set_weights(weights)
+# apply filter to input data
+yhat = model.predict(data)
+# enumerate rows
+for r in range(yhat.shape[1]):
+	# print each column in the row
+	print([yhat[0,r,c,0] for c in range(yhat.shape[2])])
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #
+=================================================================
+conv2d_1 (Conv2D)            (None, 6, 6, 1)           10
+=================================================================
+Total params: 10
+Trainable params: 10
+Non-trainable params: 0
+_________________________________________________________________
+
+[0.0, 0.0, 3.0, 3.0, 0.0, 0.0]
+[0.0, 0.0, 3.0, 3.0, 0.0, 0.0]
+[0.0, 0.0, 3.0, 3.0, 0.0, 0.0]
+[0.0, 0.0, 3.0, 3.0, 0.0, 0.0]
+[0.0, 0.0, 3.0, 3.0, 0.0, 0.0]
+[0.0, 0.0, 3.0, 3.0, 0.0, 0.0]
+[0.0, 0.0, 3.0, 3.0, 0.0, 0.0]
+[0.0, 0.0, 3.0, 3.0, 0.0, 0.0]
+average(0.0, 0.0) = 0.0
+        0.0, 0.0
+average(3.0, 3.0) = 3.0
+        3.0, 3.0
+average(0.0, 0.0) = 0.0
+        0.0, 0.0
+[0.0, 3.0, 0.0]
+[0.0, 3.0, 0.0]
+[0.0, 3.0, 0.0]
+[0.0, 3.0, 0.0]
+# create model
+model = Sequential()
+model.add(Conv2D(1, (3,3), activation='relu', input_shape=(8, 8, 1)))
+model.add(AveragePooling2D())
+# example of average pooling
+from numpy import asarray
+from keras.models import Sequential
+from keras.layers import Conv2D
+from keras.layers import AveragePooling2D
+# define input data
+data = [[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0]]
+data = asarray(data)
+data = data.reshape(1, 8, 8, 1)
+# create model
+model = Sequential()
+model.add(Conv2D(1, (3,3), activation='relu', input_shape=(8, 8, 1)))
+model.add(AveragePooling2D())
+# summarize model
+model.summary()
+# define a vertical line detector
+detector = [[[[0]],[[1]],[[0]]],
+            [[[0]],[[1]],[[0]]],
+            [[[0]],[[1]],[[0]]]]
+weights = [asarray(detector), asarray([0.0])]
+# store the weights in the model
+model.set_weights(weights)
+# apply filter to input data
+yhat = model.predict(data)
+# enumerate rows
+for r in range(yhat.shape[1]):
+	# print each column in the row
+	print([yhat[0,r,c,0] for c in range(yhat.shape[2])])
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #
+=================================================================
+conv2d_1 (Conv2D)            (None, 6, 6, 1)           10
+_________________________________________________________________
+average_pooling2d_1 (Average (None, 3, 3, 1)           0
+=================================================================
+Total params: 10
+Trainable params: 10
+Non-trainable params: 0
+_________________________________________________________________
+
+[0.0, 3.0, 0.0]
+[0.0, 3.0, 0.0]
+[0.0, 3.0, 0.0]
+[0.0, 0.0, 3.0, 3.0, 0.0, 0.0]
+[0.0, 0.0, 3.0, 3.0, 0.0, 0.0]
+max(0.0, 0.0) = 0.0
+    0.0, 0.0
+max(3.0, 3.0) = 3.0
+    3.0, 3.0
+max(0.0, 0.0) = 0.0
+    0.0, 0.0
+[0.0, 3.0, 0.0]
+[0.0, 3.0, 0.0]
+[0.0, 3.0, 0.0]
+[0.0, 3.0, 0.0]
+# create model
+model = Sequential()
+model.add(Conv2D(1, (3,3), activation='relu', input_shape=(8, 8, 1)))
+model.add(MaxPooling2D())
+# example of max pooling
+from numpy import asarray
+from keras.models import Sequential
+from keras.layers import Conv2D
+from keras.layers import MaxPooling2D
+# define input data
+data = [[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0]]
+data = asarray(data)
+data = data.reshape(1, 8, 8, 1)
+# create model
+model = Sequential()
+model.add(Conv2D(1, (3,3), activation='relu', input_shape=(8, 8, 1)))
+model.add(MaxPooling2D())
+# summarize model
+model.summary()
+# define a vertical line detector
+detector = [[[[0]],[[1]],[[0]]],
+            [[[0]],[[1]],[[0]]],
+            [[[0]],[[1]],[[0]]]]
+weights = [asarray(detector), asarray([0.0])]
+# store the weights in the model
+model.set_weights(weights)
+# apply filter to input data
+yhat = model.predict(data)
+# enumerate rows
+for r in range(yhat.shape[1]):
+	# print each column in the row
+	print([yhat[0,r,c,0] for c in range(yhat.shape[2])])
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #
+=================================================================
+conv2d_1 (Conv2D)            (None, 6, 6, 1)           10
+_________________________________________________________________
+max_pooling2d_1 (MaxPooling2 (None, 3, 3, 1)           0
+=================================================================
+Total params: 10
+Trainable params: 10
+Non-trainable params: 0
+_________________________________________________________________
+
+[0.0, 3.0, 0.0]
+[0.0, 3.0, 0.0]
+[0.0, 3.0, 0.0]
+# create model
+model = Sequential()
+model.add(Conv2D(1, (3,3), activation='relu', input_shape=(8, 8, 1)))
+model.add(GlobalMaxPooling2D())
+# example of using global max pooling
+from numpy import asarray
+from keras.models import Sequential
+from keras.layers import Conv2D
+from keras.layers import GlobalMaxPooling2D
+# define input data
+data = [[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0],
+		[0, 0, 0, 1, 1, 0, 0, 0]]
+data = asarray(data)
+data = data.reshape(1, 8, 8, 1)
+# create model
+model = Sequential()
+model.add(Conv2D(1, (3,3), activation='relu', input_shape=(8, 8, 1)))
+model.add(GlobalMaxPooling2D())
+# summarize model
+model.summary()
+# # define a vertical line detector
+detector = [[[[0]],[[1]],[[0]]],
+            [[[0]],[[1]],[[0]]],
+            [[[0]],[[1]],[[0]]]]
+weights = [asarray(detector), asarray([0.0])]
+# store the weights in the model
+model.set_weights(weights)
+# apply filter to input data
+yhat = model.predict(data)
+# enumerate rows
+print(yhat)
+_________________________________________________________________
+Layer (type)                 Output Shape              Param #
+=================================================================
+conv2d_1 (Conv2D)            (None, 6, 6, 1)           10
+_________________________________________________________________
+global_max_pooling2d_1 (Glob (None, 1)                 0
+=================================================================
+Total params: 10
+Trainable params: 10
+Non-trainable params: 0
+_________________________________________________________________
+
+[[3.]]
+'''

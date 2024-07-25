@@ -1,0 +1,207 @@
+A Gentle Introduction to the BFGS Optimization Algorithm
+https://machinelearningmastery.com/bfgs-optimization-in-python/
+2021-05-18
+The Broyden, Fletcher, Goldfarb, and Shanno, or BFGS Algorithm, is a local search optimization algorithm.
+It is a type of second-order optimization algorithm, meaning that it makes use of the second-order derivative of an objective function and belongs to a class of algorithms referred to as Quasi-Newton methods that approximate the second derivative (called the Hessian) for optimization problems where the second derivative cannot be calculated.
+The BFGS algorithm is perhaps one of the most widely used second-order algorithms for numerical optimization and is commonly used to fit machine learning algorithms such as the logistic regression algorithm.
+In this tutorial, you will discover the BFGS second-order optimization algorithm.
+After completing this tutorial, you will know:
+- Second-order optimization algorithms are algorithms that make use of the second-order derivative, called the Hessian matrix for multivariate objective functions.
+- The BFGS algorithm is perhaps the most popular second-order algorithm for numerical optimization and belongs to a group called Quasi-Newton methods.
+- How to minimize objective functions using the BFGS and L-BFGS-B algorithms in Python.
+
+Kick-start your project with my new book Optimization for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+
+A Gentle Introduction to the BFGS Optimization AlgorithmPhoto by Timo Newton-Syms, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Second-Order Optimization Algorithms
+- BFGS Optimization Algorithm
+- Worked Example of BFGS
+# Second-Order Optimization Algorithms
+Optimization involves finding values for input parameters that maximize or minimize an objective function.
+Newton-method optimization algorithms are those algorithms that make use of the second derivative of the objective function.
+You may recall from calculus that the first derivative of a function is the rate of change or curvature of the function at a specific point. The derivative can be followed downhill (or uphill) by an optimization algorithm toward the minima of the function (the input values that result in the smallest output of the objective function).
+Algorithms that make use of the first derivative are called first-order optimization algorithms. An example of a first-order algorithm is the gradient descent optimization algorithm.
+- First-Order Methods: Optimization algorithms that make use of the first-order derivative to find the optima of an objective function.
+The second-order derivative is the derivative of the derivative, or the rate of change of the rate of change.
+The second derivative can be followed to more efficiently locate the optima of the objective function. This makes sense more generally, as the more information we have about the objective function, the easier it may be to optimize it.
+The second-order derivative allows us to know both which direction to move (like the first-order) but also estimate how far to move in that direction, called the step size.
+Second-order information, on the other hand, allows us to make a quadratic approximation of the objective function and approximate the right step size to reach a local minimum …
+— Page 87, Algorithms for Optimization, 2019.
+Algorithms that make use of the second-order derivative are referred to as second-order optimization algorithms.
+- Second-Order Methods: Optimization algorithms that make use of the second-order derivative to find the optima of an objective function.
+An example of a second-order optimization algorithm is Newton’s method.
+When an objective function has more than one input variable, the input variables together may be thought of as a vector, which may be familiar from linear algebra.
+The gradient is the generalization of the derivative to multivariate functions. It captures the local slope of the function, allowing us to predict the effect of taking a small step from a point in any direction.
+— Page 21, Algorithms for Optimization, 2019.
+Similarly, the first derivative of multiple input variables may also be a vector, where each element is called a partial derivative. This vector of partial derivatives is referred to as the gradient.
+- Gradient: Vector of partial first derivatives for multiple input variables of an objective function.
+This idea generalizes to the second-order derivatives of the multivariate inputs, which is a matrix containing the second derivatives called the Hessian matrix.
+- Hessian: Matrix of partial second-order derivatives for multiple input variables of an objective function.
+The Hessian matrix is square and symmetric if the second derivatives are all continuous at the point where we are calculating the derivatives. This is often the case when solving real-valued optimization problems and an expectation when using many second-order methods.
+The Hessian of a multivariate function is a matrix containing all of the second derivatives with respect to the input. The second derivatives capture information about the local curvature of the function.
+— Page 21, Algorithms for Optimization, 2019.
+As such, it is common to describe second-order optimization algorithms making use of or following the Hessian to the optima of the objective function.
+Now that we have a high-level understanding of second-order optimization algorithms, let’s take a closer look at the BFGS algorithm.
+# BFGS Optimization Algorithm
+BFGS is a second-order optimization algorithm.
+It is an acronym, named for the four co-discovers of the algorithm: Broyden, Fletcher, Goldfarb, and Shanno.
+It is a local search algorithm, intended for convex optimization problems with a single optima.
+The BFGS algorithm is perhaps best understood as belonging to a group of algorithms that are an extension to Newton’s Method optimization algorithm, referred to as Quasi-Newton Methods.
+Newton’s method is a second-order optimization algorithm that makes use of the Hessian matrix.
+A limitation of Newton’s method is that it requires the calculation of the inverse of the Hessian matrix. This is a computationally expensive operation and may not be stable depending on the properties of the objective function.
+Quasi-Newton methods are second-order optimization algorithms that approximate the inverse of the Hessian matrix using the gradient, meaning that the Hessian and its inverse do not need to be available or calculated precisely for each step of the algorithm.
+Quasi-Newton methods are among the most widely used methods for nonlinear optimization. They are incorporated in many software libraries, and they are effective in solving a wide variety of small to midsize problems, in particular when the Hessian is hard to compute.
+— Page 411, Linear and Nonlinear Optimization, 2009.
+The main difference between different Quasi-Newton optimization algorithms is the specific way in which the approximation of the inverse Hessian is calculated.
+The BFGS algorithm is one specific way for updating the calculation of the inverse Hessian, instead of recalculating it every iteration. It, or its extensions, may be one of the most popular Quasi-Newton or even second-order optimization algorithms used for numerical optimization.
+The most popular quasi-Newton algorithm is the BFGS method, named for its discoverers Broyden, Fletcher, Goldfarb, and Shanno.
+— Page 136, Numerical Optimization, 2006.
+A benefit of using the Hessian, when available, is that it can be used to determine both the direction and the step size to move in order to change the input parameters to minimize (or maximize) the objective function.
+Quasi-Newton methods like BFGS approximate the inverse Hessian, which can then be used to determine the direction to move, but we no longer have the step size.
+The BFGS algorithm addresses this by using a line search in the chosen direction to determine how far to move in that direction.
+For the derivation and calculations used by the BFGS algorithm, I recommend the resources in the further reading section at the end of this tutorial.
+The size of the Hessian and its inverse is proportional to the number of input parameters to the objective function. As such, the size of the matrix can become very large for hundreds, thousand, or millions of parameters.
+… the BFGS algorithm must store the inverse Hessian matrix, M, that requires O(n2) memory, making BFGS impractical for most modern deep learning models that typically have millions of parameters.
+— Page 317, Deep Learning, 2016.
+Limited Memory BFGS (or L-BFGS) is an extension to the BFGS algorithm that addresses the cost of having a large number of parameters. It does this by not requiring that the entire approximation of the inverse matrix be stored, by assuming a simplification of the inverse Hessian in the previous iteration of the algorithm (used in the approximation).
+Now that we are familiar with the BFGS algorithm from a high-level, let’s look at how we might make use of it.
+# Worked Example of BFGS
+In this section, we will look at some examples of using the BFGS optimization algorithm.
+We can implement the BFGS algorithm for optimizing arbitrary functions in Python using the minimize() SciPy function.
+The function takes a number of arguments, but most importantly, we can specify the name of the objective function as the first argument, the starting point for the search as the second argument, and specify the “method” argument as ‘BFGS‘. The name of the function used to calculate the derivative of the objective function can be specified via the “jac” argument.
+Let’s look at an example.
+First, we can define a simple two-dimensional objective function, a bowl function, e.g. x^2. It is simple the sum of the squared input variables with an optima at f(0, 0) = 0.0.
+Next, let’s define a function for the derivative of the function, which is [x*2, y*2].
+We will define the bounds of the function as a box with the range -5 and 5 in each dimension.
+The starting point of the search will be a randomly generated position in the search domain.
+We can then apply the BFGS algorithm to find the minima of the objective function by specifying the name of the objective function, the initial point, the method we want to use (BFGS), and the name of the derivative function.
+We can then review the result reporting a message as to whether the algorithm finished successfully or not and the total number of evaluations of the objective function that were performed.
+Finally, we can report the input variables that were found and their evaluation against the objective function.
+Tying this together, the complete example is listed below.
+Running the example applies the BFGS algorithm to our objective function and reports the results.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that four iterations of the algorithm were performed and a solution very close to the optima f(0.0, 0.0) = 0.0 was discovered, at least to a useful level of precision.
+The minimize() function also supports the L-BFGS algorithm that has lower memory requirements than BFGS.
+Specifically, the L-BFGS-B version of the algorithm where the -B suffix indicates a “boxed” version of the algorithm, where the bounds of the domain can be specified.
+This can be achieved by specifying the “method” argument as “L-BFGS-B“.
+The complete example with this update is listed below.
+Running the example application applies the L-BFGS-B algorithm to our objective function and reports the results.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+Again, we can see that the minima to the function is found in very few evaluations.
+It might be a fun exercise to increase the dimensions of the test problem to millions of parameters and compare the memory usage and run time of the two algorithms.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Algorithms for Optimization, 2019.
+- Deep Learning, 2016.
+- Numerical Optimization, 2006.
+- Linear and Nonlinear Optimization, 2009.
+- scipy.optimize.minimize API.
+- Broyden–Fletcher–Goldfarb–Shanno algorithm, Wikipedia.
+- Limited-memory BFGS, Wikipedia.
+# Summary
+In this tutorial, you discovered the BFGS second-order optimization algorithm.
+Specifically, you learned:
+- Second-order optimization algorithms are algorithms that make use of the second-order derivative, called the Hessian matrix for multivariate objective functions.
+- The BFGS algorithm is perhaps the most popular second-order algorithm for numerical optimization and belongs to a group called Quasi-Newton methods.
+- How to minimize objective functions using the BFGS and L-BFGS-B algorithms in Python.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Modern Optimization Algorithms!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Optimization for Machine Learning
+It provides self-study tutorials with full working code on:
+Gradient Descent, Genetic Algorithms, Hill Climbing, Curve Fitting, RMSProp, Adam,
+and much more...
+See What's Inside
+
+'''
+
+# perform the bfgs algorithm search
+result = minimize(objective, pt, method='BFGS', jac=derivative)
+# objective function
+def objective(x):
+	return x[0]**2.0 + x[1]**2.0
+# derivative of the objective function
+def derivative(x):
+	return [x[0] * 2, x[1] * 2]
+
+# define range for input
+r_min, r_max = -5.0, 5.0
+
+# define the starting point as a random sample from the domain
+pt = r_min + rand(2) * (r_max - r_min)
+
+# perform the bfgs algorithm search
+result = minimize(objective, pt, method='BFGS', jac=derivative)
+
+# summarize the result
+print('Status : %s' % result['message'])
+print('Total Evaluations: %d' % result['nfev'])
+
+# evaluate solution
+solution = result['x']
+evaluation = objective(solution)
+print('Solution: f(%s) = %.5f' % (solution, evaluation))
+# bfgs algorithm local optimization of a convex function
+from scipy.optimize import minimize
+from numpy.random import rand
+
+# objective function
+def objective(x):
+	return x[0]**2.0 + x[1]**2.0
+
+# derivative of the objective function
+def derivative(x):
+	return [x[0] * 2, x[1] * 2]
+
+# define range for input
+r_min, r_max = -5.0, 5.0
+# define the starting point as a random sample from the domain
+pt = r_min + rand(2) * (r_max - r_min)
+# perform the bfgs algorithm search
+result = minimize(objective, pt, method='BFGS', jac=derivative)
+# summarize the result
+print('Status : %s' % result['message'])
+print('Total Evaluations: %d' % result['nfev'])
+# evaluate solution
+solution = result['x']
+evaluation = objective(solution)
+print('Solution: f(%s) = %.5f' % (solution, evaluation))
+Status: Optimization terminated successfully.
+Total Evaluations: 4
+Solution: f([0.00000000e+00 1.11022302e-16]) = 0.00000
+
+# perform the l-bfgs-b algorithm search
+result = minimize(objective, pt, method='L-BFGS-B', jac=derivative)
+# l-bfgs-b algorithm local optimization of a convex function
+from scipy.optimize import minimize
+from numpy.random import rand
+
+# objective function
+def objective(x):
+	return x[0]**2.0 + x[1]**2.0
+
+# derivative of the objective function
+def derivative(x):
+	return [x[0] * 2, x[1] * 2]
+
+# define range for input
+r_min, r_max = -5.0, 5.0
+# define the starting point as a random sample from the domain
+pt = r_min + rand(2) * (r_max - r_min)
+# perform the l-bfgs-b algorithm search
+result = minimize(objective, pt, method='L-BFGS-B', jac=derivative)
+# summarize the result
+print('Status : %s' % result['message'])
+print('Total Evaluations: %d' % result['nfev'])
+# evaluate solution
+solution = result['x']
+evaluation = objective(solution)
+print('Solution: f(%s) = %.5f' % (solution, evaluation))
+Status : b'CONVERGENCE: NORM_OF_PROJECTED_GRADIENT_<=_PGTOL'
+Total Evaluations: 3
+Solution: f([-1.33226763e-15 1.33226763e-15]) = 0.00000
+'''

@@ -1,0 +1,265 @@
+How to Develop and Evaluate Naive Classifier Strategies Using Probability
+https://machinelearningmastery.com/how-to-develop-and-evaluate-naive-classifier-strategies-using-probability/
+2019-09-05
+A Naive Classifier is a simple classification model that assumes little to nothing about the problem and the performance of which provides a baseline by which all other models evaluated on a dataset can be compared.
+There are different strategies that can be used for a naive classifier, and some are better than others, depending on the dataset and the choice of performance measures. The most common performance measure is classification accuracy and common naive classification strategies, including randomly guessing class labels, randomly choosing labels from a training dataset, and using a majority class label.
+It is useful to develop a small probability framework to calculate the expected performance of a given naive classification strategy and to perform experiments to confirm the theoretical expectations. These exercises provide an intuition both for the behavior of naive classification algorithms in general, and the importance of establishing a performance baseline for a classification task.
+In this tutorial, you will discover how to develop and evaluate naive classification strategies for machine learning.
+After completing this tutorial, you will know:
+- The performance of naive classification models provides a baseline by which all other models can be deemed skillful or not.
+- The majority class classifier achieves better accuracy than other naive classifier models such as random guessing and predicting a randomly selected observed class label.
+- Naive classifier strategies can be used on predictive modeling projects via the DummyClassifier class in the scikit-learn library.
+Kick-start your project with my new book Probability for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Develop and Evaluate Naive Classifier Strategies Using ProbabilityPhoto by Richard Leonard, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into five parts; they are:
+- Naive Classifier
+- Predict a Random Guess
+- Predict a Randomly Selected Class
+- Predict the Majority Class
+- Naive Classifiers in scikit-learn
+# Naive Classifier
+Classification predictive modeling problems involve predicting a class label given an input to the model.
+Classification models are fit on a training dataset and evaluated on a test dataset, and performance is often reported as a fraction of the number of correct predictions compared to the total number of predictions made, called accuracy.
+Given a classification model, how do you know if the model has skill or not?
+This is a common question on every classification predictive modeling project. The answer is to compare the results of a given classifier model to a baseline or naive classifier model.
+A naive classifier model is one that does not use any sophistication in order to make a prediction, typically making a random or constant prediction. Such models are naive because they don’t use any knowledge about the domain or any learning in order to make a prediction.
+The performance of a baseline classifier on a classification task provides a lower bound on the expected performance of all other models on the problem. For example, if a classification model performs better than a naive classifier, then it has some skill. If a classifier model performs worse than the naive classifier, it does not have any skill.
+What classifier should be used as the naive classifier?
+This is a common area of confusion for beginners, and different naive classifiers are adopted.
+Some common choices include:
+- Predict a random class.
+- Predict a randomly selected class from the training dataset.
+- Predict the majority class from the training dataset.
+The problem is, not all naive classifiers are created equal, and some perform better than others. As such, we should use the best-performing naive classifier on all of our classification predictive modeling projects.
+We can use simple probability to evaluate the performance of different naive classifier models and confirm the one strategy that should always be used as the native classifier.
+Before we start evaluating different strategies, let’s define a contrived two-class classification problem. To make it interesting, we will assume that the number of observations is not equal for each class (e.g. the problem is imbalanced) with 25 examples for class-0 and 75 examples for class-1.
+We can make this concrete with a small example in Python, listed below.
+Running the example creates the dataset and summarizes the fraction of examples that belong to each class, showing 25% and 75% for class-0 and class-1 as we might intuitively expect.
+Finally, we can define a probabilistic model for evaluating naive classification strategies.
+In this case, we are interested in calculating the classification accuracy of a given binary classification model.
+- P(yhat = y)
+This can be calculated as the probability of the model predicting each class value multiplied by the probability of observing each class occurrence.
+- P(yhat = y) = P(yhat = 0) * P(y = 0) + P(yhat = 1) * P(y = 1)
+This calculates the expected performance of a model on a dataset. It provides a very simple probabilistic model that we can use to calculate the expected performance of a naive classifier model in general.
+Next, we will use this contrived prediction problem to explore different strategies for a naive classifier.
+# Predict a Random Guess
+Perhaps the simplest strategy is to randomly guess one of the available classes for each prediction that is required.
+We will call this the random-guess strategy.
+Using our probabilistic model, we can calculate how well this model is expected to perform on average on our contrived dataset.
+A random guess for each class is a uniform probability distribution over each possible class label, or in the case of a two-class problem, a probability of 0.5 for each class. Also, we know the expected probability of the values for class-0 and class-1 for our dataset because we contrived the problem; they are 0.25 and 0.75 respectively. Therefore, we calculate the average performance of this strategy as follows:
+- P(yhat = y) = P(yhat = 0) * P(y = 0) + P(yhat = 1) * P(y = 1)
+- P(yhat = y) = 0.5 * 0.25 + 0.5 * 0.75
+- P(yhat = y) = 0.125 + 0.375
+- P(yhat = y) = 0.5
+This calculation suggests that the performance of predicting a uniformly random class label on our contrived problem is 0.5 or 50% classification accuracy.
+This might be surprising, which is good as it highlights the benefit of systematically calculating the expected performance of a naive strategy.
+We can confirm that this estimation is correct with a small experiment.
+The strategy can be implemented as a function that randomly selects a 0 or 1 for each prediction required.
+This can then be called for each prediction required in the dataset and the accuracy can be evaluated
+That is a single trial, but the accuracy will be different each time the strategy is used.
+To counter this issue, we can repeat the experiment 1,000 times and report the average performance of the strategy. We would expect the average performance to match our expected performance calculated above.
+The complete example is listed below.
+Running the example performs 1,000 trials of our experiment and reports the mean accuracy of the strategy.
+Your specific result will vary given the stochastic nature of the algorithm.
+In this case, we can see that the expected performance very closely matches the calculated performance. Given the law of large numbers, the more trials of this experiment we perform, the closer our estimate will get to the theoretical value we calculated.
+This is a good start, but what if we use some basic information about the composition of the training dataset in the strategy. We will explore that next.
+# Predict a Randomly Selected Class
+Another naive classifier approach is to make use of the training dataset in some way.
+Perhaps the simplest approach would be to use the observations in the training dataset as predictions. Specifically, we can randomly select observations in the training set and return them for each requested prediction.
+This makes sense, and we may expect this primitive use of the training dataset would result in a slightly better naive accuracy than randomly guessing.
+We can find out by calculating the expected performance of the approach using our probabilistic framework.
+If we select examples from the training dataset with a uniform probability distribution, we will draw examples from each class with the same probability of their occurrence in the training dataset. That is, we will draw examples of class-0 with a probability of 25% and class-1 with a probability of 75%. This too will be the probability of the independent predictions by the model.
+With this knowledge, we can plug-in these values into the probabilistic model.
+- P(yhat = y) = P(yhat = 0) * P(y = 0) + P(yhat = 1) * P(y = 1)
+- P(yhat = y) = 0.25 * 0.25 + 0.75 * 0.75
+- P(yhat = y) = 0.0625 + 0.5625
+- P(yhat = y) = 0.625
+The result suggests that using a uniformly randomly selected class from the training dataset as a prediction results in a better naive classifier than simply predicting a uniformly random class on this dataset, showing 62.5% instead of 50%, or a 12.2% lift.
+Not bad!
+Let’s confirm our calculations again with a small simulation.
+The random_class() function below implements this naive classifier strategy by selecting and returning a random class label from the training dataset.
+We can then use the same framework from the previous section to evaluate the model 1,000 times and report the average classification accuracy across those trials. We would expect that this empirical estimate would match our expected value, or be very close to it.
+The complete example is listed below.
+Running the example performs 1,000 trials of our experiment and reports the mean accuracy of the strategy.
+Your specific result will vary given the stochastic nature of the algorithm.
+In this case, we can see that the expected performance again very closely matches the calculated performance: 62.4% in the simulation vs. 62.5% that we calculated above.
+Perhaps we can do better than a uniform distribution when predicting a class label. We will explore this in the next section.
+# Predict the Majority Class
+In the previous section, we explored a strategy that selected a class label based on a uniform probability distribution over the observed label in the training dataset.
+This allowed the predicted probability distribution to match the observed probability distribution for each class and an improvement over a uniform distribution of class labels. A downside to this imbalanced dataset, in particular, is one class is expected above the other to a greater degree and randomly predicting classes, even in a biased way, leads to too many incorrect predictions.
+Instead, we can predict the majority class and be assured of achieving an accuracy that is at least as high as the composition of the majority class in the training dataset.
+That is, if 75% of the examples in the training set are class-1, and we predicted class-1 for all examples, then we know that we would at least achieve an accuracy of 75%, an improvement over randomly selecting a class as we did in the previous section.
+We can confirm this by calculating the expected performance of the approach using our probability model.
+The probability of this naive classification strategy predicting class-0 would be 0.0 (impossible), and the probability of predicting class-1 is 1.0 (certain). Therefore:
+- P(yhat = y) = P(yhat = 0) * P(y = 0) + P(yhat = 1) * P(y = 1)
+- P(yhat = y) = 0.0 * 0.25 + 1.0 * 0.75
+- P(yhat = y) = 0.0 + 0.75
+- P(yhat = y) = 0.75
+This confirms our expectations and suggests that this strategy would give a further lift of 12.5% over the previous strategy on this specific dataset.
+Again, we can confirm this approach with a simulation.
+The majority class can be calculated statistically using the mode; that is, the most common observation in a distribution.
+The mode() SciPy function can be used. It returns two values, the first of which is the mode that we can return. The majority_class() function below implements this naive classifier.
+We can then evaluate the strategy on the contrived dataset. We do not need to repeat the experiment multiple times as there is no random component to the strategy, and the algorithm will give the same performance on the same dataset every time.
+The complete example is listed below.
+Running the example reports the accuracy of the majority class naive classifier on the dataset.
+The accuracy matches the expected value calculated by the probability framework of 75% and the composition of the training dataset.
+This majority class naive classifier is the method that should be used to calculate a baseline performance on your classification predictive modeling problems.
+It works just as well for those datasets with an equal number of class labels, and for problems with more than two class labels, e.g. multi-class classification problems.
+Now that we have discovered the best-performing naive classifier model, we can see how we might use it in our next project.
+# Naive Classifiers in scikit-learn
+The scikit-learn machine learning library provides an implementation of the majority class naive classification algorithm that you can use on your next classification predictive modeling project.
+It is provided as part of the DummyClassifier class.
+To use the naive classifier, the class must be defined and the “strategy” argument set to “most_frequent” to ensure that the majority class is predicted. The class can then be fit on a training dataset and used to make predictions on a test dataset or other resampling model evaluation strategy.
+In fact, the DummyClassifier is flexible and allows the other two naive classifiers to be used.
+Specifically, setting “strategy” to “uniform” will perform the random guess strategy that we tested first, and setting “strategy” to “stratified” will perform the randomly selected class strategy that we tested second.
+- Random Guess: Set the “strategy” argument to “uniform“.
+- Select Random Class: Set the “strategy” argument to “stratified“.
+- Majority Class: Set the “strategy” argument to “most_frequent“.
+We can confirm that the DummyClassifier performs as expected with the majority class naive classification strategy by testing it on our contrived dataset.
+The complete example is listed below.
+Running the example prepares the dataset, then defines and fits the DummyClassifier on the dataset using the majority class strategy.
+Evaluating the classification accuracy of the predictions from the model confirms that the model performs as expected, achieving a score of 75%.
+This example provides a starting point for calculating the naive classifier baseline performance on your own classification predictive modeling projects in the future.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- What is the chance level accuracy in unbalanced classification problems?
+- Do Not Use Random Guessing As Your Baseline Classifier
+- sklearn.dummy.DummyClassifier API
+# Summary
+In this tutorial, you discovered how to develop and evaluate naive classification strategies for machine learning.
+Specifically, you learned:
+- The performance of naive classification models provides a baseline by which all other models can be deemed skillful or not.
+- The majority class classifier achieves better accuracy than other naive classifier models, such as random guessing and predicting a randomly selected observed class label.
+- Naive classifier strategies can be used on predictive modeling projects via the DummyClassifier class in the scikit-learn library.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Probability for Machine Learning!
+
+
+Discover how in my new Ebook:
+Probability for Machine Learning
+It provides self-study tutorials and end-to-end projects on:
+Bayes Theorem, Bayesian Optimization, Distributions, Maximum Likelihood, Cross-Entropy, Calibrating Models
+and much more...
+
+
+See What's Inside
+
+'''
+# summarize a test dataset
+# define dataset
+class0 = [0 for _ in range(25)]
+class1 = [1 for _ in range(75)]
+y = class0 + class1
+# summarize distribution
+print('Class 0: %.3f' % (len(class0) / len(y) * 100))
+print('Class 1: %.3f' % (len(class1) / len(y) * 100))
+Class 0: 25.000
+Class 1: 75.000
+# guess random class
+def random_guess():
+	if random() < 0.5:
+		return 0
+	return 1
+
+yhat = [random_guess() for _ in range(len(y))]
+acc = accuracy_score(y, yhat)
+# example of a random guess naive classifier
+from numpy import mean
+from numpy.random import random
+from sklearn.metrics import accuracy_score
+
+# guess random class
+def random_guess():
+	if random() < 0.5:
+		return 0
+	return 1
+
+# define dataset
+class0 = [0 for _ in range(25)]
+class1 = [1 for _ in range(75)]
+y = class0 + class1
+# average performance over many repeats
+results = list()
+for _ in range(1000):
+	yhat = [random_guess() for _ in range(len(y))]
+	acc = accuracy_score(y, yhat)
+	results.append(acc)
+print('Mean: %.3f' % mean(results))
+Mean: 0.499
+# predict a randomly selected class
+def random_class(y):
+	return y[randint(len(y))]
+# example of selecting a random class naive classifier
+from numpy import mean
+from numpy.random import randint
+from sklearn.metrics import accuracy_score
+
+# predict a randomly selected class
+def random_class(y):
+	return y[randint(len(y))]
+
+# define dataset
+class0 = [0 for _ in range(25)]
+class1 = [1 for _ in range(75)]
+y = class0 + class1
+# average over many repeats
+results = list()
+for _ in range(1000):
+	yhat = [random_class(y) for _ in range(len(y))]
+	acc = accuracy_score(y, yhat)
+	results.append(acc)
+print('Mean: %.3f' % mean(results))
+Mean: 0.624
+# predict the majority class
+def majority_class(y):
+	return mode(y)[0]
+# example of a majority class naive classifier
+from scipy.stats import mode
+from sklearn.metrics import accuracy_score
+
+# predict the majority class
+def majority_class(y):
+	return mode(y)[0]
+
+# define dataset
+class0 = [0 for _ in range(25)]
+class1 = [1 for _ in range(75)]
+y = class0 + class1
+# make predictions
+yhat = [majority_class(y) for _ in range(len(y))]
+# calculate accuracy
+accuracy = accuracy_score(y, yhat)
+print('Accuracy: %.3f' % accuracy)
+Accuracy: 0.750
+
+# define model
+model = DummyClassifier(strategy='most_frequent')
+# fit model
+model.fit(X, y)
+# make predictions
+yhat = model.predict(X)
+# example of the majority class naive classifier in scikit-learn
+from numpy import asarray
+from sklearn.dummy import DummyClassifier
+from sklearn.metrics import accuracy_score
+# define dataset
+X = asarray([0 for _ in range(100)])
+class0 = [0 for _ in range(25)]
+class1 = [1 for _ in range(75)]
+y = asarray(class0 + class1)
+# reshape data for sklearn
+X = X.reshape((len(X), 1))
+# define model
+model = DummyClassifier(strategy='most_frequent')
+# fit model
+model.fit(X, y)
+# make predictions
+yhat = model.predict(X)
+# calculate accuracy
+accuracy = accuracy_score(y, yhat)
+print('Accuracy: %.3f' % accuracy)
+Accuracy: 0.750
+'''

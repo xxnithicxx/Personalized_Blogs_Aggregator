@@ -1,0 +1,378 @@
+How to Calibrate Probabilities for Imbalanced Classification
+https://machinelearningmastery.com/probability-calibration-for-imbalanced-classification/
+2020-02-25
+Many machine learning models are capable of predicting a probability or probability-like scores for class membership.
+Probabilities provide a required level of granularity for evaluating and comparing models, especially on imbalanced classification problems where tools like ROC Curves are used to interpret predictions and the ROC AUC metric is used to compare model performance, both of which use probabilities.
+Unfortunately, the probabilities or probability-like scores predicted by many models are not calibrated. This means that they may be over-confident in some cases and under-confident in other cases. Worse still, the severely skewed class distribution present in imbalanced classification tasks may result in even more bias in the predicted probabilities as they over-favor predicting the majority class.
+As such, it is often a good idea to calibrate the predicted probabilities for nonlinear machine learning models prior to evaluating their performance. Further, it is good practice to calibrate probabilities in general when working with imbalanced datasets, even of models like logistic regression that predict well-calibrated probabilities when the class labels are balanced.
+In this tutorial, you will discover how to calibrate predicted probabilities for imbalanced classification.
+After completing this tutorial, you will know:
+- Calibrated probabilities are required to get the most out of models for imbalanced classification problems.
+- How to calibrate predicted probabilities for nonlinear models like SVMs, decision trees, and KNN.
+- How to grid search different probability calibration methods on a dataset with a skewed class distribution.
+Kick-start your project with my new book Imbalanced Classification with Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Calibrate Probabilities for Imbalanced ClassificationPhoto by Dennis Jarvis, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into five parts; they are:
+- Problem of Uncalibrated Probabilities
+- How to Calibrate Probabilities
+- SVM With Calibrated Probabilities
+- Decision Tree With Calibrated Probabilities
+- Grid Search Probability Calibration with KNN
+# Problem of Uncalibrated Probabilities
+Many machine learning algorithms can predict a probability or a probability-like score that indicates class membership.
+For example, logistic regression can predict the probability of class membership directly and support vector machines can predict a score that is not a probability but could be interpreted as a probability.
+The probability can be used as a measure of uncertainty on those problems where a probabilistic prediction is required. This is particularly the case in imbalanced classification, where crisp class labels are often insufficient both in terms of evaluating and selecting a model. The predicted probability provides the basis for more granular model evaluation and selection, such as through the use of ROC and Precision-Recall diagnostic plots, metrics like ROC AUC, and techniques like threshold moving.
+As such, using machine learning models that predict probabilities is generally preferred when working on imbalanced classification tasks. The problem is that few machine learning models have calibrated probabilities.
+… to be usefully interpreted as probabilities, the scores should be calibrated.
+— Page 57, Learning from Imbalanced Data Sets, 2018.
+Calibrated probabilities means that the probability reflects the likelihood of true events.
+This might be confusing if you consider that in classification, we have class labels that are correct or not instead of probabilities. To clarify, recall that in binary classification, we are predicting a negative or positive case as class 0 or 1. If 100 examples are predicted with a probability of 0.8, then 80 percent of the examples will have class 1 and 20 percent will have class 0, if the probabilities are calibrated. Here, calibration is the concordance of predicted probabilities with the occurrence of positive cases.
+Uncalibrated probabilities suggest that there is a bias in the probability scores, meaning the probabilities are overconfident or under-confident in some cases.
+- Calibrated Probabilities. Probabilities match the true likelihood of events.
+- Uncalibrated Probabilities. Probabilities are over-confident and/or under-confident.
+This is common for machine learning models that are not trained using a probabilistic framework and for training data that has a skewed distribution, like imbalanced classification tasks.
+There are two main causes for uncalibrated probabilities; they are:
+- Algorithms not trained using a probabilistic framework.
+- Biases in the training data.
+Few machine learning algorithms produce calibrated probabilities. This is because for a model to predict calibrated probabilities, it must explicitly be trained under a probabilistic framework, such as maximum likelihood estimation. Some examples of algorithms that provide calibrated probabilities include:
+- Logistic Regression.
+- Linear Discriminant Analysis.
+- Naive Bayes.
+- Artificial Neural Networks.
+Many algorithms either predict a probability-like score or a class label and must be coerced in order to produce a probability-like score. As such, these algorithms often require their “probabilities” to be calibrated prior to use. Examples include:
+- Support Vector Machines.
+- Decision Trees.
+- Ensembles of Decision Trees (bagging, random forest, gradient boosting).
+- k-Nearest Neighbors.
+A bias in the training dataset, such as a skew in the class distribution, means that the model will naturally predict a higher probability for the majority class than the minority class on average.
+The problem is, models may overcompensate and give too much focus to the majority class. This even applies to models that typically produce calibrated probabilities like logistic regression.
+… class probability estimates attained via supervised learning in imbalanced scenarios systematically underestimate the probabilities for minority class instances, despite ostensibly good overall calibration.
+— Class Probability Estimates are Unreliable for Imbalanced Data (and How to Fix Them), 2012.
+
+
+
+
+# How to Calibrate Probabilities
+Probabilities are calibrated by rescaling their values so they better match the distribution observed in the training data.
+… we desire that the estimated class probabilities are reflective of the true underlying probability of the sample. That is, the predicted class probability (or probability-like value) needs to be well-calibrated. To be well-calibrated, the probabilities must effectively reflect the true likelihood of the event of interest.
+— Page 249, Applied Predictive Modeling, 2013.
+Probability predictions are made on training data and the distribution of probabilities is compared to the expected probabilities and adjusted to provide a better match. This often involves splitting a training dataset and using one portion to train the model and another portion as a validation set to scale the probabilities.
+There are two main techniques for scaling predicted probabilities; they are Platt scaling and isotonic regression.
+- Platt Scaling. Logistic regression model to transform probabilities.
+- Isotonic Regression. Weighted least-squares regression model to transform probabilities.
+Platt scaling is a simpler method and was developed to scale the output from a support vector machine to probability values. It involves learning a logistic regression model to perform the transform of scores to calibrated probabilities. Isotonic regression is a more complex weighted least squares regression model. It requires more training data, although it is also more powerful and more general. Here, isotonic simply refers to monotonically increasing mapping of the original probabilities to the rescaled values.
+Platt Scaling is most effective when the distortion in the predicted probabilities is sigmoid-shaped. Isotonic Regression is a more powerful calibration method that can correct any monotonic distortion.
+— Predicting Good Probabilities With Supervised Learning, 2005.
+The scikit-learn library provides access to both Platt scaling and isotonic regression methods for calibrating probabilities via the CalibratedClassifierCV class.
+This is a wrapper for a model (like an SVM). The preferred scaling technique is defined via the “method” argument, which can be ‘sigmoid‘ (Platt scaling) or ‘isotonic‘ (isotonic regression).
+Cross-validation is used to scale the predicted probabilities from the model, set via the “cv” argument. This means that the model is fit on the training set and calibrated on the test set, and this process is repeated k-times for the k-folds where predicted probabilities are averaged across the runs.
+Setting the “cv” argument depends on the amount of data available, although values such as 3 or 5 can be used. Importantly, the split is stratified, which is important when using probability calibration on imbalanced datasets that often have very few examples of the positive class.
+Now that we know how to calibrate probabilities, let’s look at some examples of calibrating probability for models on an imbalanced classification dataset.
+# SVM With Calibrated Probabilities
+In this section, we will review how to calibrate the probabilities for an SVM model on an imbalanced classification dataset.
+First, let’s define a dataset using the make_classification() function. We will generate 10,000 examples, 99 percent of which will belong to the negative case (class 0) and 1 percent will belong to the positive case (class 1).
+Next, we can define an SVM with default hyperparameters. This means that the model is not tuned to the dataset, but will provide a consistent basis of comparison.
+We can then evaluate this model on the dataset using repeated stratified k-fold cross-validation with three repeats of 10-folds.
+We will evaluate the model using ROC AUC and calculate the mean score across all repeats and folds. The ROC AUC will make use of the uncalibrated probability-like scores provided by the SVM.
+Tying this together, the complete example is listed below.
+Running the example evaluates the SVM with uncalibrated probabilities on the imbalanced classification dataset.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the SVM achieved a ROC AUC of about 0.804.
+Next, we can try using the CalibratedClassifierCV class to wrap the SVM model and predict calibrated probabilities.
+We are using stratified 10-fold cross-validation to evaluate the model; that means 9,000 examples are used for train and 1,000 for test on each fold.
+With CalibratedClassifierCV and 3-folds, the 9,000 examples of one fold will be split into 6,000 for training the model and 3,000 for calibrating the probabilities. This does not leave many examples of the minority class, e.g. 90/10 in 10-fold cross-validation, then 60/30 for calibration.
+When using calibration, it is important to work through these numbers based on your chosen model evaluation scheme and either adjust the number of folds to ensure the datasets are sufficiently large or even switch to a simpler train/test split instead of cross-validation if needed. Experimentation might be required.
+We will define the SVM model as before, then define the CalibratedClassifierCV with isotonic regression, then evaluate the calibrated model via repeated stratified k-fold cross-validation.
+Because SVM probabilities are not calibrated by default, we would expect that calibrating them would result in an improvement to the ROC AUC that explicitly evaluates a model based on their probabilities.
+Tying this together, the full example below of evaluating SVM with calibrated probabilities is listed below.
+Running the example evaluates the SVM with calibrated probabilities on the imbalanced classification dataset.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the SVM achieved a lift in ROC AUC from about 0.804 to about 0.875.
+Probability calibration can be evaluated in conjunction with other modifications to the algorithm or dataset to address the skewed class distribution.
+For example, SVM provides the “class_weight” argument that can be set to “balanced” to adjust the margin to favor the minority class. We can include this change to SVM and calibrate the probabilities, and we might expect to see a further lift in model skill; for example:
+Tying this together, the complete example of a class weighted SVM with calibrated probabilities is listed below.
+Running the example evaluates the class-weighted SVM with calibrated probabilities on the imbalanced classification dataset.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the SVM achieved a further lift in ROC AUC from about 0.875 to about 0.966.
+
+# Decision Tree With Calibrated Probabilities
+Decision trees are another highly effective machine learning that does not naturally produce probabilities.
+Instead, class labels are predicted directly and a probability-like score can be estimated based on the distribution of examples in the training dataset that fall into the leaf of the tree that is predicted for the new example. As such, the probability scores from a decision tree should be calibrated prior to being evaluated and used to select a model.
+We can define a decision tree using the DecisionTreeClassifier scikit-learn class.
+The model can be evaluated with uncalibrated probabilities on our synthetic imbalanced classification dataset.
+The complete example is listed below.
+Running the example evaluates the decision tree with uncalibrated probabilities on the imbalanced classification dataset.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the decision tree achieved a ROC AUC of about 0.842.
+We can then evaluate the same model using the calibration wrapper.
+In this case, we will use the Platt Scaling method configured by setting the “method” argument to “sigmoid“.
+The complete example of evaluating the decision tree with calibrated probabilities for imbalanced classification is listed below.
+Running the example evaluates the decision tree with calibrated probabilities on the imbalanced classification dataset.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the decision tree achieved a lift in ROC AUC from about 0.842 to about 0.859.
+
+# Grid Search Probability Calibration With KNN
+Probability calibration can be sensitive to both the method and the way in which the method is employed.
+As such, it is a good idea to test a suite of different probability calibration methods on your model in order to discover what works best for your dataset. One approach is to treat the calibration method and cross-validation folds as hyperparameters and tune them. In this section, we will look at using a grid search to tune these hyperparameters.
+The k-nearest neighbor, or KNN, algorithm is another nonlinear machine learning algorithm that predicts a class label directly and must be modified to produce a probability-like score. This often involves using the distribution of class labels in the neighborhood.
+We can evaluate a KNN with uncalibrated probabilities on our synthetic imbalanced classification dataset using the KNeighborsClassifier class with a default neighborhood size of 5.
+The complete example is listed below.
+Running the example evaluates the KNN with uncalibrated probabilities on the imbalanced classification dataset.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the KNN achieved a ROC AUC of about 0.864.
+Knowing that the probabilities are dependent on the neighborhood size and are uncalibrated, we would expect that some calibration would improve the performance of the model using ROC AUC.
+Rather than spot-checking one configuration of the CalibratedClassifierCV class, we will instead use the GridSearchCV to grid search different configurations.
+First, the model and calibration wrapper are defined as before.
+We will test both “sigmoid” and “isotonic” “method” values, and different “cv” values in [2,3,4]. Recall that “cv” controls the split of the training dataset that is used to estimate the calibrated probabilities.
+We can define the grid of parameters as a dict with the names of the arguments to the CalibratedClassifierCV we want to tune and provide lists of values to try. This will test 3 * 2 or 6 different combinations.
+We can then define the GridSearchCV with the model and grid of parameters and use the same repeated stratified k-fold cross-validation we used before to evaluate each parameter combination.
+Once evaluated, we will then summarize the configuration found with the highest ROC AUC, then list the results for all combinations.
+Tying this together, the complete example of grid searching probability calibration for imbalanced classification with a KNN model is listed below.
+Running the example evaluates the KNN with a suite of different types of calibrated probabilities on the imbalanced classification dataset.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the best result was achieved with a “cv” of 2 and an “isotonic” value for “method” achieving a mean ROC AUC of about 0.895, a lift from 0.864 achieved with no calibration.
+This provides a template that you can use to evaluate different probability calibration configurations on your own models.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- How and When to Use a Calibrated Classification Model with scikit-learn
+- Predicting Good Probabilities With Supervised Learning, 2005.
+- Class Probability Estimates are Unreliable for Imbalanced Data (and How to Fix Them), 2012.
+- Learning from Imbalanced Data Sets, 2018.
+- Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+- Applied Predictive Modeling, 2013.
+- sklearn.calibration.CalibratedClassifierCV API.
+- sklearn.svm.SVC API.
+- sklearn.tree.DecisionTreeClassifier API.
+- sklearn.neighbors.KNeighborsClassifier API.
+- sklearn.model_selection.GridSearchCV API.
+- Calibration (statistics), Wikipedia.
+- Probabilistic classification, Wikipedia.
+- Platt scaling, Wikipedia.
+- Isotonic regression, Wikipedia.
+# Summary
+In this tutorial, you discovered how to calibrate predicted probabilities for imbalanced classification.
+Specifically, you learned:
+- Calibrated probabilities are required to get the most out of models for imbalanced classification problems.
+- How to calibrate predicted probabilities for nonlinear models like SVMs, decision trees, and KNN.
+- How to grid search different probability calibration methods on datasets with a skewed class distribution.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Imbalanced Classification!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Imbalanced Classification with Python
+It provides self-study tutorials and end-to-end projects on:
+Performance Metrics, Undersampling Methods, SMOTE, Threshold Moving, Probability Calibration, Cost-Sensitive Algorithms
+and much more...
+See What's Inside
+
+'''
+
+# example of wrapping a model with probability calibration
+model = ...
+calibrated = CalibratedClassifierCV(model, method='sigmoid', cv=3)
+
+# generate dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=4)
+
+# define model
+model = SVC(gamma='scale')
+
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+# summarize performance
+print('Mean ROC AUC: %.3f' % mean(scores))
+# evaluate svm with uncalibrated probabilities for imbalanced classification
+from numpy import mean
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.svm import SVC
+# generate dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=4)
+# define model
+model = SVC(gamma='scale')
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+# summarize performance
+print('Mean ROC AUC: %.3f' % mean(scores))
+Mean ROC AUC: 0.804
+
+# define model
+model = SVC(gamma='scale')
+# wrap the model
+calibrated = CalibratedClassifierCV(model, method='isotonic', cv=3)
+# evaluate svm with calibrated probabilities for imbalanced classification
+from numpy import mean
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.svm import SVC
+# generate dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=4)
+# define model
+model = SVC(gamma='scale')
+# wrap the model
+calibrated = CalibratedClassifierCV(model, method='isotonic', cv=3)
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(calibrated, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+# summarize performance
+print('Mean ROC AUC: %.3f' % mean(scores))
+Mean ROC AUC: 0.875
+
+# define model
+model = SVC(gamma='scale', class_weight='balanced')
+# evaluate weighted svm with calibrated probabilities for imbalanced classification
+from numpy import mean
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.svm import SVC
+# generate dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=4)
+# define model
+model = SVC(gamma='scale', class_weight='balanced')
+# wrap the model
+calibrated = CalibratedClassifierCV(model, method='isotonic', cv=3)
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(calibrated, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+# summarize performance
+print('Mean ROC AUC: %.3f' % mean(scores))
+Mean ROC AUC: 0.966
+# evaluate decision tree with uncalibrated probabilities for imbalanced classification
+from numpy import mean
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.tree import DecisionTreeClassifier
+# generate dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=4)
+# define model
+model = DecisionTreeClassifier()
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+# summarize performance
+print('Mean ROC AUC: %.3f' % mean(scores))
+Mean ROC AUC: 0.842
+
+# wrap the model
+calibrated = CalibratedClassifierCV(model, method='sigmoid', cv=3)
+# decision tree with calibrated probabilities for imbalanced classification
+from numpy import mean
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.tree import DecisionTreeClassifier
+# generate dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=4)
+# define model
+model = DecisionTreeClassifier()
+# wrap the model
+calibrated = CalibratedClassifierCV(model, method='sigmoid', cv=3)
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(calibrated, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+# summarize performance
+print('Mean ROC AUC: %.3f' % mean(scores))
+Mean ROC AUC: 0.859
+# evaluate knn with uncalibrated probabilities for imbalanced classification
+from numpy import mean
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.neighbors import KNeighborsClassifier
+# generate dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=4)
+# define model
+model = KNeighborsClassifier()
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+# summarize performance
+print('Mean ROC AUC: %.3f' % mean(scores))
+Mean ROC AUC: 0.864
+
+# define model
+model = KNeighborsClassifier()
+# wrap the model
+calibrated = CalibratedClassifierCV(model)
+
+# define grid
+param_grid = dict(cv=[2,3,4], method=['sigmoid','isotonic'])
+
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# define grid search
+grid = GridSearchCV(estimator=calibrated, param_grid=param_grid, n_jobs=-1, cv=cv, scoring='roc_auc')
+# execute the grid search
+grid_result = grid.fit(X, y)
+# report the best configuration
+print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+# report all configurations
+means = grid_result.cv_results_['mean_test_score']
+stds = grid_result.cv_results_['std_test_score']
+params = grid_result.cv_results_['params']
+for mean, stdev, param in zip(means, stds, params):
+    print("%f (%f) with: %r" % (mean, stdev, param))
+# grid search probability calibration with knn for imbalance classification
+from numpy import mean
+from sklearn.datasets import make_classification
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.calibration import CalibratedClassifierCV
+# generate dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=4)
+# define model
+model = KNeighborsClassifier()
+# wrap the model
+calibrated = CalibratedClassifierCV(model)
+# define grid
+param_grid = dict(cv=[2,3,4], method=['sigmoid','isotonic'])
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# define grid search
+grid = GridSearchCV(estimator=calibrated, param_grid=param_grid, n_jobs=-1, cv=cv, scoring='roc_auc')
+# execute the grid search
+grid_result = grid.fit(X, y)
+# report the best configuration
+print("Best: %f using %s" % (grid_result.best_score_, grid_result.best_params_))
+# report all configurations
+means = grid_result.cv_results_['mean_test_score']
+stds = grid_result.cv_results_['std_test_score']
+params = grid_result.cv_results_['params']
+for mean, stdev, param in zip(means, stds, params):
+    print("%f (%f) with: %r" % (mean, stdev, param))
+Best: 0.895120 using {'cv': 2, 'method': 'isotonic'}
+0.895084 (0.062358) with: {'cv': 2, 'method': 'sigmoid'}
+0.895120 (0.062488) with: {'cv': 2, 'method': 'isotonic'}
+0.885221 (0.061373) with: {'cv': 3, 'method': 'sigmoid'}
+0.881924 (0.064351) with: {'cv': 3, 'method': 'isotonic'}
+0.881865 (0.065708) with: {'cv': 4, 'method': 'sigmoid'}
+0.875320 (0.067663) with: {'cv': 4, 'method': 'isotonic'}
+'''

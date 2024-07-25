@@ -1,0 +1,346 @@
+Tune XGBoost Performance With Learning Curves
+https://machinelearningmastery.com/tune-xgboost-performance-with-learning-curves/
+2021-03-28
+XGBoost is a powerful and effective implementation of the gradient boosting ensemble algorithm.
+It can be challenging to configure the hyperparameters of XGBoost models, which often leads to using large grid search experiments that are both time consuming and computationally expensive.
+An alternate approach to configuring XGBoost models is to evaluate the performance of the model each iteration of the algorithm during training and to plot the results as learning curves. These learning curve plots provide a diagnostic tool that can be interpreted and suggest specific changes to model hyperparameters that may lead to improvements in predictive performance.
+In this tutorial, you will discover how to plot and interpret learning curves for XGBoost models in Python.
+After completing this tutorial, you will know:
+- Learning curves provide a useful diagnostic tool for understanding the training dynamics of supervised learning models like XGBoost.
+- How to configure XGBoost to evaluate datasets each iteration and plot the results as learning curves.
+- How to interpret and use learning curve plots to improve XGBoost model performance.
+Let’s get started.
+Tune XGBoost Performance With Learning CurvesPhoto by Bernard Spragg. NZ, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into four parts; they are:
+- Extreme Gradient Boosting
+- Learning Curves
+- Plot XGBoost Learning Curve
+- Tune XGBoost Model Using Learning Curves
+# Extreme Gradient Boosting
+Gradient boosting refers to a class of ensemble machine learning algorithms that can be used for classification or regression predictive modeling problems.
+Ensembles are constructed from decision tree models. Trees are added one at a time to the ensemble and fit to correct the prediction errors made by prior models. This is a type of ensemble machine learning model referred to as boosting.
+Models are fit using any arbitrary differentiable loss function and gradient descent optimization algorithm. This gives the technique its name, “gradient boosting,” as the loss gradient is minimized as the model is fit, much like a neural network.
+For more on gradient boosting, see the tutorial:
+- A Gentle Introduction to the Gradient Boosting Algorithm for Machine Learning
+Extreme Gradient Boosting, or XGBoost for short, is an efficient open-source implementation of the gradient boosting algorithm. As such, XGBoost is an algorithm, an open-source project, and a Python library.
+It was initially developed by Tianqi Chen and was described by Chen and Carlos Guestrin in their 2016 paper titled “XGBoost: A Scalable Tree Boosting System.”
+It is designed to be both computationally efficient (e.g. fast to execute) and highly effective, perhaps more effective than other open-source implementations.
+The two main reasons to use XGBoost are execution speed and model performance.
+XGBoost dominates structured or tabular datasets on classification and regression predictive modeling problems. The evidence is that it is the go-to algorithm for competition winners on the Kaggle competitive data science platform.
+Among the 29 challenge winning solutions 3 published at Kaggle’s blog during 2015, 17 solutions used XGBoost. […] The success of the system was also witnessed in KDDCup 2015, where XGBoost was used by every winning team in the top-10.
+— XGBoost: A Scalable Tree Boosting System, 2016.
+For more on XGBoost and how to install and use the XGBoost Python API, see the tutorial:
+- Extreme Gradient Boosting (XGBoost) Ensemble in Python
+Now that we are familiar with what XGBoost is and why it is important, let’s take a closer look at learning curves.
+# Learning Curves
+Generally, a learning curve is a plot that shows time or experience on the x-axis and learning or improvement on the y-axis.
+Learning curves are widely used in machine learning for algorithms that learn (optimize their internal parameters) incrementally over time, such as deep learning neural networks.
+The metric used to evaluate learning could be maximizing, meaning that better scores (larger numbers) indicate more learning. An example would be classification accuracy.
+It is more common to use a score that is minimizing, such as loss or error whereby better scores (smaller numbers) indicate more learning and a value of 0.0 indicates that the training dataset was learned perfectly and no mistakes were made.
+During the training of a machine learning model, the current state of the model at each step of the training algorithm can be evaluated. It can be evaluated on the training dataset to give an idea of how well the model is “learning.” It can also be evaluated on a hold-out validation dataset that is not part of the training dataset. Evaluation on the validation dataset gives an idea of how well the model is “generalizing.”
+It is common to create dual learning curves for a machine learning model during training on both the training and validation datasets.
+The shape and dynamics of a learning curve can be used to diagnose the behavior of a machine learning model, and in turn, perhaps suggest the type of configuration changes that may be made to improve learning and/or performance.
+There are three common dynamics that you are likely to observe in learning curves; they are:
+- Underfit.
+- Overfit.
+- Good Fit.
+Most commonly, learning curves are used to diagnose overfitting behavior of a model that can be addressed by tuning the hyperparameters of the model.
+Overfitting refers to a model that has learned the training dataset too well, including the statistical noise or random fluctuations in the training dataset.
+The problem with overfitting is that the more specialized the model becomes to training data, the less well it is able to generalize to new data, resulting in an increase in generalization error. This increase in generalization error can be measured by the performance of the model on the validation dataset.
+For more on learning curves, see the tutorial:
+- How to use Learning Curves to Diagnose Machine Learning Model Performance
+Now that we are familiar with learning curves, let’s look at how we might plot learning curves for XGBoost models.
+# Plot XGBoost Learning Curve
+In this section, we will plot the learning curve for an XGBoost model.
+First, we need a dataset to use as the basis for fitting and evaluating the model.
+We will use a synthetic binary (two-class) classification dataset in this tutorial.
+The make_classification() scikit-learn function can be used to create a synthetic classification dataset. In this case, we will use 50 input features (columns) and generate 10,000 samples (rows). The seed for the pseudo-random number generator is fixed to ensure the same base “problem” is used each time samples are generated.
+The example below generates the synthetic classification dataset and summarizes the shape of the generated data.
+Running the example generates the data and reports the size of the input and output components, confirming the expected shape.
+Next, we can fit an XGBoost model on this dataset and plot learning curves.
+First, we must split the dataset into one portion that will be used to train the model (train) and another portion that will not be used to train the model, but will be held back and used to evaluate the model each step of the training algorithm (test set or validation set).
+We can then define an XGBoost classification model with default hyperparameters.
+Next, the model can be fit on the dataset.
+In this case, we must specify to the training algorithm that we want it to evaluate the performance of the model on the train and test sets each iteration (e.g. after each new tree is added to the ensemble).
+To do this we must specify the datasets to evaluate and the metric to evaluate.
+The dataset must be specified as a list of tuples, where each tuple contains the input and output columns of a dataset and each element in the list is a different dataset to evaluate, e.g. the train and the test sets.
+There are many metrics we may want to evaluate, although given that it is a classification task, we will evaluate the log loss (cross-entropy) of the model which is a minimizing score (lower values are better).
+This can be achieved by specifying the “eval_metric” argument when calling fit() and providing it the name of the metric we will evaluate ‘logloss‘. We can also specify the datasets to evaluate via the “eval_set” argument. The fit() function takes the training dataset as the first two arguments as per normal.
+Once the model is fit, we can evaluate its performance as the classification accuracy on the test dataset.
+We can then retrieve the metrics calculated for each dataset via a call to the evals_result() function.
+This returns a dictionary organized first by dataset (‘validation_0‘ and ‘validation_1‘) and then by metric (‘logloss‘).
+We can create line plots of metrics for each dataset.
+And that’s it.
+Tying all of this together, the complete example of fitting an XGBoost model on the synthetic classification task and plotting learning curves is listed below.
+Running the example fits the XGBoost model, retrieves the calculated metrics, and plots learning curves.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+First, the model performance is reported, showing that the model achieved a classification accuracy of about 94.5% on the hold-out test set.
+The plot shows learning curves for the train and test dataset where the x-axis is the number of iterations of the algorithm (or the number of trees added to the ensemble) and the y-axis is the logloss of the model. Each line shows the logloss per iteration for a given dataset.
+From the learning curves, we can see that the performance of the model on the training dataset (blue line) is better or has lower loss than the performance of the model on the test dataset (orange line), as we might generally expect.
+Learning Curves for the XGBoost Model on the Synthetic Classification Dataset
+Now that we know how to plot learning curves for XGBoost models, let’s look at how we might use the curves to improve model performance.
+# Tune XGBoost Model Using Learning Curves
+We can use the learning curves as a diagnostic tool.
+The curves can be interpreted and used as the basis for suggesting specific changes to the model configuration that might result in better performance.
+The model and result in the previous section can be used as a baseline and starting point.
+Looking at the plot, we can see that both curves are sloping down and suggest that more iterations (adding more trees) may result in a further decrease in loss.
+Let’s try it out.
+We can increase the number of iterations of the algorithm via the “n_estimators” hyperparameter that defaults to 100. Let’s increase it to 500.
+The complete example is listed below.
+Running the example fits and evaluates the model and plots the learning curves of model performance.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+We can see that more iterations have resulted in a lift in accuracy from about 94.5% to about 95.8%.
+We can see from the learning curves that indeed the additional iterations of the algorithm caused the curves to continue to drop and then level out after perhaps 150 iterations, where they remain reasonably flat.
+Learning Curves for the XGBoost Model With More Iterations
+The long flat curves may suggest that the algorithm is learning too fast and we may benefit from slowing it down.
+This can be achieved using the learning rate, which limits the contribution of each tree added to the ensemble. This can be controlled via the “eta” hyperparameter and defaults to the value of 0.3. We can try a smaller value, such as 0.05.
+The complete example is listed below.
+Running the example fits and evaluates the model and plots the learning curves of model performance.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+We can see that the smaller learning rate has made the accuracy worse, dropping from about 95.8% to about 95.1%.
+We can see from the learning curves that indeed learning has slowed right down. The curves suggest that we can continue to add more iterations and perhaps achieve better performance as the curves would have more opportunity to continue to decrease.
+Learning Curves for the XGBoost Model With Smaller Learning Rate
+Let’s try increasing the number of iterations from 500 to 2,000.
+The complete example is listed below.
+Running the example fits and evaluates the model and plots the learning curves of model performance.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+We can see that more iterations have given the algorithm more space to improve, achieving an accuracy of 96.1%, the best so far.
+The learning curves again show a stable convergence of the algorithm with a steep decrease and long flattening out.
+Learning Curves for the XGBoost Model With Smaller Learning Rate and Many Iterations
+We could repeat the process of decreasing the learning rate and increasing the number of iterations to see if further improvements are possible.
+Another approach to slowing down learning is to add regularization in the form of reducing the number of samples and features (rows and columns) used to construct each tree in the ensemble.
+In this case, we will try halving the number of samples and features respectively via the “subsample” and “colsample_bytree” hyperparameters.
+The complete example is listed below.
+Running the example fits and evaluates the model and plots the learning curves of model performance.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+We can see that the addition of regularization has resulted in a further improvement, bumping accuracy from about 96.1% to about 96.6%.
+The curves suggest that regularization has  slowed learning and that perhaps increasing the number of iterations may result in further improvements.
+Learning Curves for the XGBoost Model with Regularization
+This process can continue, and I am interested to see what you can come up with.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- A Gentle Introduction to the Gradient Boosting Algorithm for Machine Learning
+- Extreme Gradient Boosting (XGBoost) Ensemble in Python
+- How to use Learning Curves to Diagnose Machine Learning Model Performance
+- Avoid Overfitting By Early Stopping With XGBoost In Python
+- XGBoost: A Scalable Tree Boosting System, 2016.
+- xgboost.XGBClassifier API.
+- xgboost.XGBRegressor API.
+- XGBoost: Learning Task Parameters
+# Summary
+In this tutorial, you discovered how to plot and interpret learning curves for XGBoost models in Python.
+Specifically, you learned:
+- Learning curves provide a useful diagnostic tool for understanding the training dynamics of supervised learning models like XGBoost.
+- How to configure XGBoost to evaluate datasets each iteration and plot the results as learning curves.
+- How to interpret and use learning curve plots to improve XGBoost model performance.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Discover The Algorithm Winning Competitions!
+...with just a few lines of Python
+Discover how in my new Ebook:
+XGBoost With Python
+It covers self-study tutorials like:
+Algorithm Fundamentals, Scaling, Hyperparameters, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+# test classification dataset
+from sklearn.datasets import make_classification
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=50, n_informative=50, n_redundant=0, random_state=1)
+# summarize the dataset
+print(X.shape, y.shape)
+(10000, 50) (10000,)
+
+# split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.50, random_state=1)
+
+# define the model
+model = XGBClassifier()
+
+# define the datasets to evaluate each iteration
+evalset = [(X_train, y_train), (X_test,y_test)]
+
+# fit the model
+model.fit(X_train, y_train, eval_metric='logloss', eval_set=evalset)
+
+# evaluate performance
+yhat = model.predict(X_test)
+score = accuracy_score(y_test, yhat)
+print('Accuracy: %.3f' % score)
+
+# retrieve performance metrics
+results = model.evals_result()
+
+# plot learning curves
+pyplot.plot(results['validation_0']['logloss'], label='train')
+pyplot.plot(results['validation_1']['logloss'], label='test')
+# show the legend
+pyplot.legend()
+# show the plot
+pyplot.show()
+# plot learning curve of an xgboost model
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from xgboost import XGBClassifier
+from matplotlib import pyplot
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=50, n_informative=50, n_redundant=0, random_state=1)
+# split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.50, random_state=1)
+# define the model
+model = XGBClassifier()
+# define the datasets to evaluate each iteration
+evalset = [(X_train, y_train), (X_test,y_test)]
+# fit the model
+model.fit(X_train, y_train, eval_metric='logloss', eval_set=evalset)
+# evaluate performance
+yhat = model.predict(X_test)
+score = accuracy_score(y_test, yhat)
+print('Accuracy: %.3f' % score)
+# retrieve performance metrics
+results = model.evals_result()
+# plot learning curves
+pyplot.plot(results['validation_0']['logloss'], label='train')
+pyplot.plot(results['validation_1']['logloss'], label='test')
+# show the legend
+pyplot.legend()
+# show the plot
+pyplot.show()
+Accuracy: 0.945
+
+# define the model
+model = XGBClassifier(n_estimators=500)
+# plot learning curve of an xgboost model
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from xgboost import XGBClassifier
+from matplotlib import pyplot
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=50, n_informative=50, n_redundant=0, random_state=1)
+# split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.50, random_state=1)
+# define the model
+model = XGBClassifier(n_estimators=500)
+# define the datasets to evaluate each iteration
+evalset = [(X_train, y_train), (X_test,y_test)]
+# fit the model
+model.fit(X_train, y_train, eval_metric='logloss', eval_set=evalset)
+# evaluate performance
+yhat = model.predict(X_test)
+score = accuracy_score(y_test, yhat)
+print('Accuracy: %.3f' % score)
+# retrieve performance metrics
+results = model.evals_result()
+# plot learning curves
+pyplot.plot(results['validation_0']['logloss'], label='train')
+pyplot.plot(results['validation_1']['logloss'], label='test')
+# show the legend
+pyplot.legend()
+# show the plot
+pyplot.show()
+Accuracy: 0.958
+
+# define the model
+model = XGBClassifier(n_estimators=500, eta=0.05)
+# plot learning curve of an xgboost model
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from xgboost import XGBClassifier
+from matplotlib import pyplot
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=50, n_informative=50, n_redundant=0, random_state=1)
+# split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.50, random_state=1)
+# define the model
+model = XGBClassifier(n_estimators=500, eta=0.05)
+# define the datasets to evaluate each iteration
+evalset = [(X_train, y_train), (X_test,y_test)]
+# fit the model
+model.fit(X_train, y_train, eval_metric='logloss', eval_set=evalset)
+# evaluate performance
+yhat = model.predict(X_test)
+score = accuracy_score(y_test, yhat)
+print('Accuracy: %.3f' % score)
+# retrieve performance metrics
+results = model.evals_result()
+# plot learning curves
+pyplot.plot(results['validation_0']['logloss'], label='train')
+pyplot.plot(results['validation_1']['logloss'], label='test')
+# show the legend
+pyplot.legend()
+# show the plot
+pyplot.show()
+Accuracy: 0.951
+
+# define the model
+model = XGBClassifier(n_estimators=2000, eta=0.05)
+# plot learning curve of an xgboost model
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from xgboost import XGBClassifier
+from matplotlib import pyplot
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=50, n_informative=50, n_redundant=0, random_state=1)
+# split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.50, random_state=1)
+# define the model
+model = XGBClassifier(n_estimators=2000, eta=0.05)
+# define the datasets to evaluate each iteration
+evalset = [(X_train, y_train), (X_test,y_test)]
+# fit the model
+model.fit(X_train, y_train, eval_metric='logloss', eval_set=evalset)
+# evaluate performance
+yhat = model.predict(X_test)
+score = accuracy_score(y_test, yhat)
+print('Accuracy: %.3f' % score)
+# retrieve performance metrics
+results = model.evals_result()
+# plot learning curves
+pyplot.plot(results['validation_0']['logloss'], label='train')
+pyplot.plot(results['validation_1']['logloss'], label='test')
+# show the legend
+pyplot.legend()
+# show the plot
+pyplot.show()
+Accuracy: 0.961
+
+# define the model
+model = XGBClassifier(n_estimators=2000, eta=0.05, subsample=0.5, colsample_bytree=0.5)
+# plot learning curve of an xgboost model
+from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from xgboost import XGBClassifier
+from matplotlib import pyplot
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=50, n_informative=50, n_redundant=0, random_state=1)
+# split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.50, random_state=1)
+# define the model
+model = XGBClassifier(n_estimators=2000, eta=0.05, subsample=0.5, colsample_bytree=0.5)
+# define the datasets to evaluate each iteration
+evalset = [(X_train, y_train), (X_test,y_test)]
+# fit the model
+model.fit(X_train, y_train, eval_metric='logloss', eval_set=evalset)
+# evaluate performance
+yhat = model.predict(X_test)
+score = accuracy_score(y_test, yhat)
+print('Accuracy: %.3f' % score)
+# retrieve performance metrics
+results = model.evals_result()
+# plot learning curves
+pyplot.plot(results['validation_0']['logloss'], label='train')
+pyplot.plot(results['validation_1']['logloss'], label='test')
+# show the legend
+pyplot.legend()
+# show the plot
+pyplot.show()
+Accuracy: 0.966
+'''

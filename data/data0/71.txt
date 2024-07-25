@@ -1,0 +1,111 @@
+The Model Performance Mismatch Problem (and what to do about it)
+https://machinelearningmastery.com/the-model-performance-mismatch-problem/
+2018-04-17
+The procedure when evaluating machine learning models is to fit and evaluate them on training data, then verify that the model has good skill on a held-back test dataset.
+Often, you will get a very promising performance when evaluating the model on the training dataset and poor performance when evaluating the model on the test set.
+In this post, you will discover techniques and issues to consider when you encounter this common problem.
+After reading this post, you will know:
+- The problem of model performance mismatch that may occur when evaluating machine learning algorithms.
+- The causes of overfitting, under-representative data samples, and stochastic algorithms.
+- Ways to harden your test harness to avoid the problem in the first place.
+This post was based on a reader question; thanks! Keep the questions coming!
+Let’s get started.
+The Model Performance Mismatch Problem (and what to do about it)Photo by Arapaoa Moffat, some rights reserved.
+# Overview
+This post is divided into 4 parts; they are:
+- Model Evaluation
+- Model Performance Mismatch
+- Possible Causes and Remedies
+- More Robust Test Harness
+# Model Evaluation
+When developing a model for a predictive modeling problem, you need a test harness.
+The test harness defines how the sample of data from the domain will be used to evaluate and compare candidate models for your predictive modeling problem.
+There are many ways to structure a test harness, and no single best way for all projects.
+One popular approach is to use a portion of data for fitting and tuning the model and a portion for providing an objective estimate of the skill of the tuned model on out-of-sample data.
+The data sample is split into a training and test dataset. The model is evaluated on the training dataset using a resampling method such as k-fold cross-validation, and the set itself may be further divided into a validation dataset used to tune the hyperparameters of the model.
+The test set is held back and used to evaluate and compare tuned models.
+For more on training, validation, and test sets, see the post:
+- What is the Difference Between Test and Validation Datasets?
+# Model Performance Mismatch
+The resampling method will give you an estimate of the skill of your model on unseen data by using the training dataset.
+The test dataset provides a second data point and ideally an objective idea of how well the model is expected to perform, corroborating the estimated model skill.
+What if the estimate of model skill on the training dataset does not match the skill of the model on the test dataset?
+The scores will not match in general. We do expect some differences because some small overfitting of the training dataset is inevitable given hyperparameter tuning, making the training scores optimistic.
+But what if the difference is worryingly large?
+- Which score do you trust?
+- Can you still compare models using the test dataset?
+- Is the model tuning process invalidated?
+It is a challenging and very common situation in applied machine learning.
+We can call this concern the “model performance mismatch” problem.
+Note: ideas of “large differences” in model performance are relative to your chosen performance measures, datasets, and models. We cannot talk objectively about differences in general, only relative differences that you must interpret yourself.
+# Possible Causes and Remedies
+There are many possible causes for the model performance mismatch problem.
+Ultimately, your goal is to have a test harness that you know allows you to make good decisions regarding which model and model configuration to use as a final model.
+In this section, we will look at some possible causes, diagnostics, and techniques you can use to investigate the problem.
+Let’s look at three main areas: model overfitting, the quality of the data sample, and the stochastic nature of the learning algorithm.
+Perhaps the most common cause is that you have overfit the training data.
+You have hit upon a model, a set of model hyperparameters, a view of the data, or a combination of these elements and more that just so happens to give a good skill estimate on the training dataset.
+The use of k-fold cross-validation will help to some degree. The use of tuning models with a separate dataset too will help. Nevertheless, it is possible to keep pushing and overfit on the training dataset.
+If this is the case, the test skill may be more representative of the true skill of the chosen model and configuration.
+One simple (but not easy) way to diagnose whether you have overfit the training dataset, is to get another data point on model skill. Evaluate the chosen model on another set of data. For example, some ideas to try include:
+- Try a k-fold cross-validation evaluation of the model on the test dataset.
+- Try a fit of the model on the training dataset and an evaluation on the test and a new data sample.
+If you’re overfit, you have options.
+- Perhaps you can scrap your current training dataset and collect a new training dataset.
+- Perhaps you can re-split your sample into train/test in a softer approach to getting a new training dataset.
+I would suggest that the results that you have obtained to-date are suspect and should be re-considered. Especially those where you may have spent too long tuning.
+Overfitting may be the ultimate cause for the discrepancy in model scores, though it may not be the area to attack first.
+It is possible that your training or test datasets are an unrepresentative sample of data from the domain.
+This means that the sample size is too small or the examples in the sample do not effectively “cover” the cases observed in the broader domain.
+This can be obvious to spot if you see noisy model performance results. For example:
+- A large variance on cross-validation scores.
+- A large variance on similar model types on the test dataset.
+In addition, you will see the discrepancy between train and test scores.
+Another good second test is to check summary statistics for each variable on the train and test sets, and ideally on the cross-validation folds. You are looking for a large variance in sample means and standard deviation.
+The remedy is often to get a larger and more representative sample of data from the domain. Alternately, to use more discriminating methods in preparing the data sample and splits. Think stratified k-fold cross validation, but applied to input variables in an attempt to maintain population means and standard deviations for real-valued variables in addition to the distribution of categorical variables.
+Often when I see overfitting on a project, it is because the test harness is not as robust as it should be, not because of hill climbing the test dataset.
+It is possible that you are seeing a discrepancy in model scores because of the stochastic nature of the algorithm.
+Many machine learning algorithms involve a stochastic component. For example, the random initial weights in a neural network, the shuffling of data and in turn the gradient updates in stochastic gradient descent, and much more.
+This means, that each time the same algorithm is run on the same data, different sequences of random numbers are used and, in turn, a different model with different skill will result.
+You can learn more about this in the post:
+- Embrace Randomness in Machine Learning
+This issue can be seen by the variance in model skill scores from cross-validation, much like having an unrepresentative data sample.
+The difference here is that the variance can be cleared up by repeating the model evaluation process, e.g. cross-validation, in order to control for the randomness in training the model.
+This is often called the multiple repeats k-fold cross-validation and is used for neural networks and stochastic optimization algorithms, when resources permit.
+I have more on this approach to evaluating models in the post:
+- How to Evaluate the Skill of Deep Learning Models
+# More Robust Test Harness
+A lot of these problems can be addressed early by designing a robust test harness and then gathering evidence to demonstrate that indeed your test harness is robust.
+This might include running experiments before you get started evaluating models for real. Experiments such:
+- A sensitivity analysis of train/test splits.
+- A sensitivity analysis of k values for cross-validation.
+- A sensitivity analysis of a given model’s behavior.
+- A sensitivity analysis on the number of repeats.
+On this last point, see the post:
+- Estimate the Number of Experiment Repeats for Stochastic Machine Learning Algorithms
+You are looking for:
+- Low variance and consistent mean in evaluation scores between tests in a cross-validation.
+- Correlated population means between model scores on train and test sets.
+Use statistical tools like standard error and significance tests if needed.
+Use a modern and un-tuned model that performs well in general for such testing, such as random forest.
+- If you discover a difference in skill scores between training and test sets, and it is consistent, that may be fine. You know what to expect.
+- If you measure a variance in mean skill scores within a given test, you have error bars you can use to interpret the results.
+I would go so far as to say that without a robust test harness, the results you achieve will be a mess. You will not be able to effectively interpret them. There will be an element of risk (or fraud, if you’re an academic) in the presentation of the outcomes from a fragile test harness. And reproducibility/robustness is a massive problem in numerical fields like applied machine learning.
+Finally, avoid using the test dataset too much. Once you have strong evidence that your harness is robust, do not touch the test dataset until it comes time for final model selection.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- What is the Difference Between Test and Validation Datasets?
+- Embrace Randomness in Machine Learning
+- Estimate the Number of Experiment Repeats for Stochastic Machine Learning Algorithms
+- How to Evaluate the Skill of Deep Learning Models
+# Summary
+In this post, you discovered the model performance mismatch problem where model performance differs greatly between training and test sets, and techniques to diagnose and address the issue.
+Specifically, you learned:
+- The problem of model performance mismatch that may occur when evaluating machine learning algorithms.
+- The causes of overfitting, under-representative data samples, and stochastic algorithms.
+- Ways to harden your test harness to avoid the problem in the first place.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+'''
+
+'''

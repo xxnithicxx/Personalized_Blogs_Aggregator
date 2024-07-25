@@ -1,0 +1,288 @@
+How to Reduce Generalization Error With Activity Regularization in Keras
+https://machinelearningmastery.com/how-to-reduce-generalization-error-in-deep-neural-networks-with-activity-regularization-in-keras/
+2018-11-29
+Activity regularization provides an approach to encourage a neural network to learn sparse features or internal representations of raw observations.
+It is common to seek sparse learned representations in autoencoders, called sparse autoencoders, and in encoder-decoder models, although the approach can also be used generally to reduce overfitting and improve a model’s ability to generalize to new observations.
+In this tutorial, you will discover the Keras API for adding activity regularization to deep learning neural network models.
+After completing this tutorial, you will know:
+- How to create vector norm regularizers using the Keras API.
+- How to add activity regularization to MLP, CNN, and RNN layers using the Keras API.
+- How to reduce overfitting by adding activity regularization to an existing model.
+Kick-start your project with my new book Better Deep Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Updated Oct/2019: Updated for Keras 2.3 and TensorFlow 2.0.
+How to Reduce Generalization Error in Deep Neural Networks With Activity Regularization in KerasPhoto by Johan Neven, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Activity Regularization in Keras
+- Activity Regularization on Layers
+- Activity Regularization Case Study
+# Activity Regularization in Keras
+Keras supports activity regularization.
+There are three different regularization techniques supported, each provided as a class in the keras.regularizers module:
+- l1: Activity is calculated as the sum of absolute values.
+- l2: Activity is calculated as the sum of the squared values.
+- l1_l2: Activity is calculated as the sum of absolute and sum of the squared values.
+Each of the l1 and l2 regularizers takes a single hyperparameter that controls the amount that each activity contributes to the sum. The l1_l2 regularizer takes two hyperparameters, one for each of the l1 and l2 methods.
+The regularizer class must be imported and then instantiated; for example:
+
+# Activity Regularization on Layers
+Activity regularization is specified on a layer in Keras.
+This can be achieved by setting the activity_regularizer argument on the layer to an instantiated and configured regularizer class.
+The regularizer is applied to the output of the layer, but you have control over what the “output” of the layer actually means. Specifically, you have flexibility as to whether the layer output means that the regularization is applied before or after the ‘activation‘ function.
+For example, you can specify the function and the regularization on the layer, in which case activation regularization is applied to the output of the activation function, in this case, rectified linear activation function or ReLU.
+Alternately, you can specify a linear activation function (the default, that does not perform any transform) which means that the activation regularization is applied on the raw outputs, then, the activation function can be added as a subsequent layer.
+The latter is probably the preferred usage of activation regularization as described in “Deep Sparse Rectifier Neural Networks” in order to allow the model to learn to take activations to a true zero value in conjunction with the rectified linear activation function. Nevertheless, the two possible uses of activation regularization may be explored in order to discover what works best for your specific model and dataset.
+Let’s take a look at how activity regularization can be used with some common layer types.
+The example below sets l1 norm activity regularization on a Dense fully connected layer.
+
+The example below sets l1 norm activity regularization on a Conv2D convolutional layer.
+
+The example below sets l1 norm activity regularization on an LSTM recurrent layer.
+Now that we know how to use the activity regularization API, let’s look at a worked example.
+# Activity Regularization Case Study
+In this section, we will demonstrate how to use activity regularization to reduce overfitting of an MLP on a simple binary classification problem.
+Although activity regularization is most often used to encourage sparse learned representations in autoencoder and encoder-decoder models, it can also be used directly within normal neural networks to achieve the same effect and improve the generalization of the model.
+This example provides a template for applying activity regularization to your own neural network for classification and regression problems.
+We will use a standard binary classification problem that defines two two-dimensional concentric circles of observations, one circle for each class.
+Each observation has two input variables with the same scale and a class output value of either 0 or 1. This dataset is called the “circles” dataset because of the shape of the observations in each class when plotted.
+We can use the make_circles() function to generate observations from this problem. We will add noise to the data and seed the random number generator so that the same samples are generated each time the code is run.
+We can plot the dataset where the two variables are taken as x and y coordinates on a graph and the class value is taken as the color of the observation.
+The complete example of generating the dataset and plotting it is listed below.
+Running the example creates a scatter plot showing the concentric circles shape of the observations in each class.
+We can see the noise in the dispersal of the points making the circles less obvious.
+Scatter Plot of Circles Dataset with Color Showing the Class Value of Each Sample
+This is a good test problem because the classes cannot be separated by a line, e.g. are not linearly separable, requiring a nonlinear method such as a neural network to address.
+We have only generated 100 samples, which is small for a neural network, providing the opportunity to overfit the training dataset and have higher error on the test dataset: a good case for using regularization.
+Further, the samples have noise, giving the model an opportunity to learn aspects of the samples that don’t generalize.
+We can develop an MLP model to address this binary classification problem.
+The model will have one hidden layer with more nodes that may be required to solve this problem, providing an opportunity to overfit. We will also train the model for longer than is required to ensure the model overfits.
+Before we define the model, we will split the dataset into train and test sets, using 30 examples to train the model and 70 to evaluate the fit model’s performance.
+Next, we can define the model.
+The hidden layer uses 500 nodes and the rectified linear activation function. A sigmoid activation function is used in the output layer in order to predict class values of 0 or 1.
+The model is optimized using the binary cross entropy loss function, suitable for binary classification problems and the efficient Adam version of gradient descent.
+The defined model is then fit on the training data for 4,000 epochs and the default batch size of 32.
+We will also use the test dataset as a validation dataset.
+We can evaluate the performance of the model on the test dataset and report the result.
+Finally, we will plot the performance of the model on both the train and test set each epoch.
+If the model does indeed overfit the training dataset, we would expect the line plot of accuracy on the training set to continue to increase and the test set to rise and then fall again as the model learns statistical noise in the training dataset.
+We can tie all of these pieces together, the complete example is listed below.
+Running the example reports the model performance on the train and test datasets.
+We can see that the model has better performance on the training dataset than the test dataset, one possible sign of overfitting.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+Because the model is severely overfit, we generally would not expect much, if any, variance in the accuracy across repeated runs of the model on the same dataset.
+A figure is created showing line plots of the model accuracy on the train and test sets.
+We can see the expected shape of an overfit model where test accuracy increases to a point and then begins to decrease again.
+Line Plots of Accuracy on Train and Test Datasets While Training Showing an Overfit
+We can update the example to use activation regularization.
+There are a few different regularization methods to choose from, but it is probably a good idea to use the most common, which is the L1 vector norm.
+This regularization has the effect of encouraging a sparse representation (lots of zeros), which is supported by the rectified linear activation function that permits true zero values.
+We can do this by using the keras.regularizers.l1 class in Keras.
+We will configure the layer to use the linear activation function so that we can regularize the raw outputs, then add a relu activation layer after the regularized outputs of the layer. We will set the regularization hyperparameter to 1E-4 or 0.0001, found with a little trial and error.
+The complete updated example with the L1 norm constraint is listed below:
+Running the example reports the model performance on the train and test datasets.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+We can see that activity regularization resulted in a slight drop in accuracy on the training dataset down from 100% to 96% and a lift in accuracy on the test set up from 78% to 82%.
+Reviewing the line plot of train and test accuracy, we can see that it no longer appears that the model has overfit the training dataset.
+Model accuracy on both the train and test sets continues to increase to a plateau.
+Line Plots of Accuracy on Train and Test Datasets While Training With Activity Regularization
+For completeness, we can compare results to a version of the model where activity regularization is applied after the relu activation function.
+The complete example is listed below.
+Running the example reports the model performance on the train and test datasets.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+We can see that, at least on this problem and with this model, activation regularization after the activation function did not improve generalization error; in fact, it made it worse.
+Reviewing the line plot of train and test accuracy, we can see that indeed the model still shows the signs of having overfit the training dataset.
+Line Plots of Accuracy on Train and Test Datasets While Training With Activity Regularization, Still Overfit
+This suggests that it may be worth experimenting with both approaches for implementing activity regularization with your own dataset, to confirm that you are getting the most out of the method.
+# Extensions
+This section lists some ideas for extending the tutorial that you may wish to explore.
+- Report Activation Mean. Update the example to calculate the mean activation of the regularized layer and confirm that indeed the activations have been made more sparse.
+- Grid Search. Update the example to grid search different values for the regularization hyperparameter.
+- Alternate Norm. Update the example to evaluate the L2 or L1_L2 vector norm for regularizing the hidden layer outputs.
+- Repeated Evaluation. Update the example to fit and evaluate the model multiple times and report the mean and standard deviation of model performance.
+If you explore any of these extensions, I’d love to know.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Gentle Introduction to Vector Norms in Machine Learning
+- Building Autoencoders in Keras
+- Keras Regularizers API
+- Keras Core Layers API
+- Keras Convolutional Layers API
+- Keras Recurrent Layers API
+- sklearn.datasets.make_circles
+# Summary
+In this tutorial, you discovered the Keras API for adding activity regularization to deep learning neural network models.
+Specifically, you learned:
+- How to create vector norm regularizers using the Keras API.
+- How to add activity regularization to MLP, CNN, and RNN layers using the Keras API.
+- How to reduce overfitting by adding an activity regularization to an existing model.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop Better Deep Learning Models Today!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Better Deep Learning
+It provides self-study tutorials on topics like: weight decay, batch normalization, dropout, model stacking and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+# import regularizer
+from keras.regularizers import l1
+# instantiate regularizer
+reg = l1(0.001)
+
+model.add(Dense(32, activation='relu', activity_regularizer=l1(0.001)))
+...
+
+model.add(Dense(32, activation='linear', activity_regularizer=l1(0.001)))
+model.add(Activation('relu'))
+...
+# example of l1 norm on activity from a dense layer
+from keras.layers import Dense
+from keras.regularizers import l1
+...
+model.add(Dense(32, activity_regularizer=l1(0.001)))
+...
+# example of l1 norm on activity from a cnn layer
+from keras.layers import Conv2D
+from keras.regularizers import l1
+...
+model.add(Conv2D(32, (3,3), activity_regularizer=l1(0.001)))
+...
+# example of l1 norm on activity from an lstm layer
+from keras.layers import LSTM
+from keras.regularizers import l1
+...
+model.add(LSTM(32, activity_regularizer=l1(0.001)))
+...
+# generate 2d classification dataset
+X, y = make_circles(n_samples=100, noise=0.1, random_state=1)
+# generate two circles dataset
+from sklearn.datasets import make_circles
+from matplotlib import pyplot
+from pandas import DataFrame
+# generate 2d classification dataset
+X, y = make_circles(n_samples=100, noise=0.1, random_state=1)
+# scatter plot, dots colored by class value
+df = DataFrame(dict(x=X[:,0], y=X[:,1], label=y))
+colors = {0:'red', 1:'blue'}
+fig, ax = pyplot.subplots()
+grouped = df.groupby('label')
+for key, group in grouped:
+    group.plot(ax=ax, kind='scatter', x='x', y='y', label=key, color=colors[key])
+pyplot.show()
+# generate 2d classification dataset
+X, y = make_circles(n_samples=100, noise=0.1, random_state=1)
+# split into train and test
+n_train = 30
+trainX, testX = X[:n_train, :], X[n_train:, :]
+trainy, testy = y[:n_train], y[n_train:]
+# define model
+model = Sequential()
+model.add(Dense(500, input_dim=2, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+# fit model
+history = model.fit(trainX, trainy, validation_data=(testX, testy), epochs=4000, verbose=0)
+# evaluate the model
+_, train_acc = model.evaluate(trainX, trainy, verbose=0)
+_, test_acc = model.evaluate(testX, testy, verbose=0)
+print('Train: %.3f, Test: %.3f' % (train_acc, test_acc))
+# plot history
+pyplot.plot(history.history['accuracy'], label='train')
+pyplot.plot(history.history['val_accuracy'], label='test')
+pyplot.legend()
+pyplot.show()
+# mlp overfit on the two circles dataset
+from sklearn.datasets import make_circles
+from keras.layers import Dense
+from keras.models import Sequential
+from matplotlib import pyplot
+# generate 2d classification dataset
+X, y = make_circles(n_samples=100, noise=0.1, random_state=1)
+# split into train and test
+n_train = 30
+trainX, testX = X[:n_train, :], X[n_train:, :]
+trainy, testy = y[:n_train], y[n_train:]
+# define model
+model = Sequential()
+model.add(Dense(500, input_dim=2, activation='relu'))
+model.add(Dense(1, activation='sigmoid'))
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+# fit model
+history = model.fit(trainX, trainy, validation_data=(testX, testy), epochs=4000, verbose=0)
+# evaluate the model
+_, train_acc = model.evaluate(trainX, trainy, verbose=0)
+_, test_acc = model.evaluate(testX, testy, verbose=0)
+print('Train: %.3f, Test: %.3f' % (train_acc, test_acc))
+# plot history
+pyplot.plot(history.history['accuracy'], label='train')
+pyplot.plot(history.history['val_accuracy'], label='test')
+pyplot.legend()
+pyplot.show()
+Train: 1.000, Test: 0.786
+model.add(Dense(500, input_dim=2, activation='linear', activity_regularizer=l1(0.0001)))
+model.add(Activation('relu'))
+# mlp overfit on the two circles dataset with activation regularization
+from sklearn.datasets import make_circles
+from keras.layers import Dense
+from keras.models import Sequential
+from keras.regularizers import l1
+from keras.layers import Activation
+from matplotlib import pyplot
+# generate 2d classification dataset
+X, y = make_circles(n_samples=100, noise=0.1, random_state=1)
+# split into train and test
+n_train = 30
+trainX, testX = X[:n_train, :], X[n_train:, :]
+trainy, testy = y[:n_train], y[n_train:]
+# define model
+model = Sequential()
+model.add(Dense(500, input_dim=2, activation='linear', activity_regularizer=l1(0.0001)))
+model.add(Activation('relu'))
+model.add(Dense(1, activation='sigmoid'))
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+# fit model
+history = model.fit(trainX, trainy, validation_data=(testX, testy), epochs=4000, verbose=0)
+# evaluate the model
+_, train_acc = model.evaluate(trainX, trainy, verbose=0)
+_, test_acc = model.evaluate(testX, testy, verbose=0)
+print('Train: %.3f, Test: %.3f' % (train_acc, test_acc))
+# plot history
+pyplot.plot(history.history['accuracy'], label='train')
+pyplot.plot(history.history['val_accuracy'], label='test')
+pyplot.legend()
+pyplot.show()
+Train: 0.967, Test: 0.829
+model.add(Dense(500, input_dim=2, activation='relu', activity_regularizer=l1(0.0001)))
+# mlp overfit on the two circles dataset with activation regularization
+from sklearn.datasets import make_circles
+from keras.layers import Dense
+from keras.models import Sequential
+from keras.regularizers import l1
+from matplotlib import pyplot
+# generate 2d classification dataset
+X, y = make_circles(n_samples=100, noise=0.1, random_state=1)
+# split into train and test
+n_train = 30
+trainX, testX = X[:n_train, :], X[n_train:, :]
+trainy, testy = y[:n_train], y[n_train:]
+# define model
+model = Sequential()
+model.add(Dense(500, input_dim=2, activation='relu', activity_regularizer=l1(0.0001)))
+model.add(Dense(1, activation='sigmoid'))
+model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+# fit model
+history = model.fit(trainX, trainy, validation_data=(testX, testy), epochs=4000, verbose=0)
+# evaluate the model
+_, train_acc = model.evaluate(trainX, trainy, verbose=0)
+_, test_acc = model.evaluate(testX, testy, verbose=0)
+print('Train: %.3f, Test: %.3f' % (train_acc, test_acc))
+# plot history
+pyplot.plot(history.history['accuracy'], label='train')
+pyplot.plot(history.history['val_accuracy'], label='test')
+pyplot.legend()
+pyplot.show()
+Train: 1.000, Test: 0.743
+'''

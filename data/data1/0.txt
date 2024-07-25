@@ -1,0 +1,187 @@
+How to Load Large Datasets From Directories for Deep Learning in Keras
+https://machinelearningmastery.com/how-to-load-large-datasets-from-directories-for-deep-learning-with-keras/
+2019-04-09
+There are conventions for storing and structuring your image dataset on disk in order to make it fast and efficient to load and when training and evaluating deep learning models.
+Once structured, you can use tools like the ImageDataGenerator class in the Keras deep learning library to automatically load your train, test, and validation datasets. In addition, the generator will progressively load the images in your dataset, allowing you to work with both small and very large datasets containing thousands or millions of images that may not fit into system memory.
+In this tutorial, you will discover how to structure an image dataset and how to load it progressively when fitting and evaluating a deep learning model.
+After completing this tutorial, you will know:
+- How to organize train, test, and validation image datasets into a consistent directory structure.
+- How to use the ImageDataGenerator class to progressively load the images for a given dataset.
+- How to use a prepared data generator to train, evaluate, and make predictions with a deep learning model.
+Kick-start your project with my new book Deep Learning for Computer Vision, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Dataset Directory Structure
+- Example Dataset Structure
+- How to Progressively Load Images
+# Dataset Directory Structure
+There is a standard way to lay out your image data for modeling.
+After you have collected your images, you must sort them first by dataset, such as train, test, and validation, and second by their class.
+For example, imagine an image classification problem where we wish to classify photos of cars based on their color, e.g. red cars, blue cars, etc.
+First, we have a data/ directory where we will store all of the image data.
+Next, we will have a data/train/ directory for the training dataset and a data/test/ for the holdout test dataset. We may also have a data/validation/ for a validation dataset during training.
+So far, we have:
+Under each of the dataset directories, we will have subdirectories, one for each class where the actual image files will be placed.
+For example, if we have a binary classification task for classifying photos of cars as either a red car or a blue car, we would have two classes, ‘red‘ and ‘blue‘, and therefore two class directories under each dataset directory.
+For example:
+Images of red cars would then be placed in the appropriate class directory.
+For example:
+Remember, we are not placing the same files under the red/ and blue/ directories; instead, there are different photos of red cars and blue cars respectively.
+Also recall that we require different photos in the train, test, and validation datasets.
+The filenames used for the actual images often do not matter as we will load all images with given file extensions.
+A good naming convention, if you have the ability to rename files consistently, is to use some name followed by a number with zero padding, e.g. image0001.jpg if you have thousands of images for a class.
+# Example Dataset Structure
+We can make the image dataset structure concrete with an example.
+Imagine we are classifying photographs of cars, as we discussed in the previous section. Specifically, a binary classification problem with red cars and blue cars.
+We must create the directory structure outlined in the previous section, specifically:
+Let’s actually create these directories.
+We can also put some photos in the directories.
+You can use the creative commons image search to find some images with a permissive license that you can download and use for this example.
+I will use two images:
+- Red Car, by Dennis Jarvis.
+- Blue Car, by Bill Smith.
+Red Car, by Dennis Jarvis
+Blue Car, by Bill Smith
+Download the photos to your current working directory and save the photo of the red car as ‘red_car_01.jpg‘ and the photo of the blue car as ‘blue_car_01.jpg‘.
+We must have different photos for each of the train, test, and validation datasets.
+In the interest of keeping this tutorial focused, we will re-use the same image files in each of the three datasets but pretend they are different photographs.
+Place copies of the ‘red_car_01.jpg‘ file in data/train/red/, data/test/red/, and data/validation/red/ directories.
+Now place copies of the ‘blue_car_01.jpg‘ file in data/train/blue/, data/test/blue/, and data/validation/blue/ directories.
+We now have a very basic dataset layout that looks like the following (output from the tree command):
+Below is a screenshot of the directory structure, taken from the Finder window on macOS.
+Screenshot of Image Dataset Directory and File Structure
+Now that we have a basic directory structure, let’s practice loading image data from file for use with modeling.
+# How to Progressively Load Images
+It is possible to write code to manually load image data and return data ready for modeling.
+This would include walking the directory structure for a dataset, loading image data, and returning the input (pixel arrays) and output (class integer).
+Thankfully, we don’t need to write this code. Instead, we can use the ImageDataGenerator class provided by Keras.
+The main benefit of using this class to load the data is that images are loaded for a single dataset in batches, meaning that it can be used for loading both small datasets as well as very large image datasets with thousands or millions of images.
+Instead of loading all images into memory, it will load just enough images into memory for the current and perhaps the next few mini-batches when training and evaluating a deep learning model. I refer to this as progressive loading, as the dataset is progressively loaded from file, retrieving just enough data for what is needed immediately.
+Two additional benefits of the using the ImageDataGenerator class is that it can also automatically scale pixel values of images and it can automatically generate augmented versions of images. We will leave these topics for discussion in another tutorial and instead focus on how to use the ImageDataGenerator class to load image data from file.
+The pattern for using the ImageDataGenerator class is used as follows:
+- Construct and configure an instance of the ImageDataGenerator class.
+- Retrieve an iterator by calling the flow_from_directory() function.
+- Use the iterator in the training or evaluation of a model.
+Let’s take a closer look at each step.
+The constructor for the ImageDataGenerator contains many arguments to specify how to manipulate the image data after it is loaded, including pixel scaling and data augmentation. We do not need any of these features at this stage, so configuring the ImageDataGenerator is easy.
+Next, an iterator is required to progressively load images for a single dataset.
+This requires calling the flow_from_directory() function and specifying the dataset directory, such as the train, test, or validation directory.
+The function also allows you to configure more details related to the loading of images. Of note is the ‘target_size‘ argument that allows you to load all images to a specific size, which is often required when modeling. The function defaults to square images with the size (256, 256).
+The function also allows you to specify the type of classification task via the ‘class_mode‘ argument, specifically whether it is ‘binary‘ or a multi-class classification ‘categorical‘.
+The default ‘batch_size‘ is 32, which means that 32 randomly selected images from across the classes in the dataset will be returned in each batch when training. Larger or smaller batches may be desired. You may also want to return batches in a deterministic order when evaluating a model, which you can do by setting ‘shuffle‘ to ‘False.’
+There are many other options, and I encourage you to review the API documentation.
+We can use the same ImageDataGenerator to prepare separate iterators for separate dataset directories. This is useful if we would like the same pixel scaling applied to multiple datasets (e.g. trian, test, etc.).
+Once the iterators have been prepared, we can use them when fitting and evaluating a deep learning model.
+For example, fitting a model with a data generator can be achieved by calling the fit_generator() function on the model and passing the training iterator (train_it). The validation iterator (val_it) can be specified when calling this function via the ‘validation_data‘ argument.
+The ‘steps_per_epoch‘ argument must be specified for the training iterator in order to define how many batches of images defines a single epoch.
+For example, if you have 1,000 images in the training dataset (across all classes) and a batch size of 64, then the steps_per_epoch would be about 16, or 1000/64.
+Similarly, if a validation iterator is applied, then the ‘validation_steps‘ argument must also be specified to indicate the number of batches in the validation dataset defining one epoch.
+Once the model is fit, it can be evaluated on a test dataset using the evaluate_generator() function and passing in the test iterator (test_it). The ‘steps‘ argument defines the number of batches of samples to step through when evaluating the model before stopping.
+Finally, if you want to use your fit model for making predictions on a very large dataset, you can create an iterator for that dataset as well (e.g. predict_it) and call the predict_generator() function on the model.
+Let’s use our small dataset defined in the previous section to demonstrate how to define an ImageDataGenerator instance and prepare the dataset iterators.
+A complete example is listed below.
+Running the example first creates an instance of the ImageDataGenerator with all default configuration.
+Next, three iterators are created, one for each of the train, validation, and test binary classification datasets. As each iterator is created, we can see debug messages reporting the number of images and classes discovered and prepared.
+Finally, we test out the train iterator that would be used to fit a model. The first batch of images is retrieved and we can confirm that the batch contains two images, as only two images were available. We can also confirm that the images were loaded and forced to the square dimensions of 256 rows and 256 columns of pixels and the pixel data was not scaled and remains in the range [0, 255].
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Image Preprocessing Keras API
+- Sequential Model API
+- Building powerful image classification models using very little data, Keras Blog.
+# Summary
+In this tutorial, you discovered how to structure an image dataset and how to load it progressively when fitting and evaluating a deep learning model.
+Specifically, you learned:
+- How to organize train, test, and validation image datasets into a consistent directory structure.
+- How to use the ImageDataGenerator class to progressively load the images for a given dataset.
+- How to use a prepared data generator to train, evaluate, and make predictions with a deep learning model.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+
+'''
+data/
+data/train/
+data/test/
+data/validation/
+data/
+data/train/
+data/train/red/
+data/train/blue/
+data/test/
+data/test/red/
+data/test/blue/
+data/validation/
+data/validation/red/
+data/validation/blue/
+data/train/red/car01.jpg
+data/train/red/car02.jpg
+data/train/red/car03.jpg
+...
+data/train/blue/car01.jpg
+data/train/blue/car02.jpg
+data/train/blue/car03.jpg
+...
+data/
+data/train/
+data/train/red/
+data/train/blue/
+data/test/
+data/test/red/
+data/test/blue/
+data/validation/
+data/validation/red/
+data/validation/blue/
+data
+├── test
+│   ├── blue
+│   │   └── blue_car_01.jpg
+│   └── red
+│       └── red_car_01.jpg
+├── train
+│   ├── blue
+│   │   └── blue_car_01.jpg
+│   └── red
+│       └── red_car_01.jpg
+└── validation
+    ├── blue
+    │   └── blue_car_01.jpg
+    └── red
+        └── red_car_01.jpg
+
+# create a data generator
+datagen = ImageDataGenerator()
+
+# load and iterate training dataset
+train_it = datagen.flow_from_directory('data/train/', class_mode='binary', batch_size=64)
+# load and iterate validation dataset
+val_it = datagen.flow_from_directory('data/validation/', class_mode='binary', batch_size=64)
+# load and iterate test dataset
+test_it = datagen.flow_from_directory('data/test/', class_mode='binary', batch_size=64)
+
+# define model
+model = ...
+# fit model
+model.fit_generator(train_it, steps_per_epoch=16, validation_data=val_it, validation_steps=8)
+
+# evaluate model
+loss = model.evaluate_generator(test_it, steps=24)
+
+# make a prediction
+yhat = model.predict_generator(predict_it, steps=24)
+# example of progressively loading images from file
+from keras.preprocessing.image import ImageDataGenerator
+# create generator
+datagen = ImageDataGenerator()
+# prepare an iterators for each dataset
+train_it = datagen.flow_from_directory('data/train/', class_mode='binary')
+val_it = datagen.flow_from_directory('data/validation/', class_mode='binary')
+test_it = datagen.flow_from_directory('data/test/', class_mode='binary')
+# confirm the iterator works
+batchX, batchy = train_it.next()
+print('Batch shape=%s, min=%.3f, max=%.3f' % (batchX.shape, batchX.min(), batchX.max()))
+Found 2 images belonging to 2 classes.
+Found 2 images belonging to 2 classes.
+Found 2 images belonging to 2 classes.
+Batch shape=(2, 256, 256, 3), min=0.000, max=255.000
+'''

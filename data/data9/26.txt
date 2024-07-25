@@ -1,0 +1,382 @@
+How to Use Out-of-Fold Predictions in Machine Learning
+https://machinelearningmastery.com/out-of-fold-predictions-in-machine-learning/
+2019-12-05
+Machine learning algorithms are typically evaluated using resampling techniques such as k-fold cross-validation.
+During the k-fold cross-validation process, predictions are made on test sets comprised of data not used to train the model. These predictions are referred to as out-of-fold predictions, a type of out-of-sample predictions.
+Out-of-fold predictions play an important role in machine learning in both estimating the performance of a model when making predictions on new data in the future, so-called the generalization performance of the model, and in the development of ensemble models.
+In this tutorial, you will discover a gentle introduction to out-of-fold predictions in machine learning.
+After completing this tutorial, you will know:
+- Out-of-fold predictions are a type of out-of-sample predictions made on data not used to train a model.
+- Out-of-fold predictions are most commonly used to estimate the performance of a model when making predictions on unseen data.
+- Out-of-fold predictions can be used to construct an ensemble model called a stacked generalization or stacking ensemble.
+Kick-start your project with my new book Ensemble Learning Algorithms With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Update Jan/2020: Updated for changes in scikit-learn v0.22 API.
+How to Use Out-of-Fold Predictions in Machine LearningPhotos by Gael Varoquaux, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- What Are Out-of-Fold Predictions?
+- Out-of-Fold Predictions for Evaluation
+- Out-of-Fold Predictions for Ensembles
+# What Are Out-of-Fold Predictions?
+It is common to evaluate the performance of a machine learning algorithm on a dataset using a resampling technique such as k-fold cross-validation.
+The k-fold cross-validation procedure involves splitting a training dataset into k groups, then using each of the k groups of examples on a test set while the remaining examples are used as a training set.
+This means that k different models are trained and evaluated. The performance of the model is estimated using the predictions by the models made across all k-folds.
+This procedure can be summarized as follows:
+- 1. Shuffle the dataset randomly.
+- 2. Split the dataset into k groups.
+- 3. For each unique group:
+
+a. Take the group as a holdout or test data set.
+b. Take the remaining groups as a training data set.
+c. Fit a model on the training set and evaluate it on the test set.
+d. Retain the evaluation score and discard the model.
+
+
+- a. Take the group as a holdout or test data set.
+- b. Take the remaining groups as a training data set.
+- c. Fit a model on the training set and evaluate it on the test set.
+- d. Retain the evaluation score and discard the model.
+- 4. Summarize the skill of the model using the sample of model evaluation scores.
+Importantly, each observation in the data sample is assigned to an individual group and stays in that group for the duration of the procedure. This means that each sample is given the opportunity to be used in the holdout set 1 time and used to train the model k-1 times.
+For more on the topic of k-fold cross-validation, see the tutorial:
+- A Gentle Introduction to k-fold Cross-Validation
+An out-of-fold prediction is a prediction by the model during the k-fold cross-validation procedure.
+That is, out-of-fold predictions are those predictions made on the holdout datasets during the resampling procedure. If performed correctly, there will be one prediction for each example in the training dataset.
+Sometimes, out-of-fold is summarized with the acronym OOF.
+- Out-of-Fold Predictions: Predictions made by models during the k-fold cross-validation procedure on the holdout examples.
+The notion of out-of-fold predictions is directly related to the idea of out-of-sample predictions, as the predictions in both cases are made on examples that were not used during the training of the model and can be used to estimate the performance of the model when used to make predictions on new data.
+As such, out-of-fold predictions are a type of out-of-sample prediction, although described in the context of a model evaluated using k-fold cross-validation.
+- Out-of-Sample Predictions: Predictions made by a model on data not used during the training of the model.
+Out-of-sample predictions may also be referred to as holdout predictions.
+There are two main uses for out-of-fold predictions; they are:
+- Estimate the performance of the model on unseen data.
+- Fit an ensemble model.
+Let’s take a closer look at these two cases.
+# Out-of-Fold Predictions for Evaluation
+The most common use for out-of-fold predictions is to estimate the performance of the model.
+That is, predictions on data that were not used to train the model can be made and evaluated using a scoring metric such as error or accuracy. This metric provides an estimate of the performance of the model when used to make predictions on new data, such as when the model will be used in practice to make predictions.
+Generally, predictions made on data not used to train a model provide insight into how the model will generalize to new situations. As such, scores that evaluate these predictions are referred to as the generalized performance of a machine learning model.
+There are two main approaches that these predictions can use to estimate the performance of the model.
+The first is to score the model on the predictions made during each fold, then calculate the average of those scores. For example, if we are evaluating a classification model, then classification accuracy can be calculated on each group of out-of-fold predictions, then the mean accuracy can be reported.
+- Approach 1: Estimate performance as the mean score estimated on each group of out-of-fold predictions.
+The second approach is to consider that each example appears just once in each test set. That is, each example in the training dataset has a single prediction made during the k-fold cross-validation process. As such, we can collect all predictions and compare them to their expected outcome and calculate a score directly across the entire training dataset.
+- Approach 2: Estimate performance using the aggregate of all out-of-fold predictions.
+Both are reasonable approaches and the scores that result from each procedure should be approximately equivalent.
+Calculating the mean from each group of out-of-sample predictions may be the most common approach, as the variance of the estimate can also be calculated as the standard deviation or standard error.
+The k resampled estimates of performance are summarized (usually with the mean and standard error) …
+— Page 70, Applied Predictive Modeling, 2013.
+We can demonstrate the difference between these two approaches to evaluating models using out-of-fold predictions with a small worked example.
+We will use the make_blobs() scikit-learn function to create a test binary classification problem with 1,000 examples, two classes, and 100 input features.
+The example below prepares a data sample and summarizes the shape of the input and output elements of the dataset.
+Running the example prints the shape of the input data showing 1,000 rows of data with 100 columns or input features and the corresponding classification labels.
+Next, we can use k-fold cross-validation to evaluate a KNeighborsClassifier model.
+We will use k=10 for the KFold object, the sensible default, fit a model on each training dataset, and evaluate it on each holdout fold.
+Accuracy scores will be stored in a list across each model evaluation and will report the mean and standard deviation of these scores.
+The complete example is listed below.
+Running the example reports the model classification accuracy on the holdout fold for each iteration.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+At the end of the run, the mean and standard deviation of the accuracy scores are reported.
+We can contrast this with the alternate approach that evaluates all predictions as a single group.
+Instead of evaluating the model on each holdout fold, predictions are made and stored in a list. Then, at the end of the run, the predictions are compared to the expected values for each holdout test set and a single accuracy score is reported.
+The complete example is listed below.
+
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+
+Running the example collects all of the expected and predicted values for each holdout dataset and reports a single accuracy score at the end of the run.
+Again, both approaches are comparable and it may be a matter of taste as to the method you use on your own predictive modeling problem.
+# Out-of-Fold Predictions for Ensembles
+Another common use for out-of-fold predictions is to use them in the development of an ensemble model.
+An ensemble is a machine learning model that combines the predictions from two or more models prepared on the same training dataset.
+This is a very common procedure to use when working on a machine learning competition.
+The out-of-fold predictions in aggregate provide information about how the model performs on each example in the training dataset when not used to train the model. This information can be used to train a model to correct or improve upon those predictions.
+First, the k-fold cross-validation procedure is performed on each base model of interest, and all of the out-of-fold predictions are collected. Importantly, the same split of the training data into k-folds is performed for each model. Now we have one aggregated group of out-of-sample predictions for each model, e.g. predictions for each example in the training dataset.
+- Base-Models: Models evaluated using k-fold cross-validation on the training dataset and all out-of-fold predictions are retained.
+Next, a second higher-order model, called a meta-model, is trained on the predictions made by the other models. This meta-model may or may not also take the input data for each example as input when making predictions. The job of this model is to learn how to best combine and correct the predictions made by the other models using their out-of-fold predictions.
+- Meta-Model: Model that takes the out-of-fold predictions made by one or more models as input and shows how to best combine and correct the predictions.
+For example, we may have a two-class classification predictive modeling problem and train a decision tree and a k-nearest neighbor model as the base models. Each model predicts a 0 or 1 for each example in the training dataset via out-of-fold predictions. These predictions, along with the input data, can then form a new input to the meta-model.
+- Meta-Model Input: Input portion of a given sample concatenated with the predictions made by each base model.
+- Meta-Model Output: Output portion of a given sample.
+Why use the out-of-fold predictions to train the meta-model?
+We could train each base model on the entire training dataset, then make a prediction for each example in the training dataset and use the predictions as input to the meta-model. The problem is the predictions will be optimistic because the samples were used in the training of each base model. This optimistic bias means that the predictions will be better than normal, and the meta-model will likely not learn what is required to combine and correct the predictions from the base models.
+By using out-of-fold predictions from the base model to train the meta-model, the meta-model can see and harness the expected behavior of each base model when operating on unseen data, as will be the case when the ensemble is used in practice to make predictions on new data.
+Finally, each of the base models are trained on the entire training dataset and these final models and the meta-model can be used to make predictions on new data. The performance of this ensemble can be evaluated on a separate holdout test dataset not used during training.
+This procedure can be summarized as follows:
+- 1. For each base model:
+
+a. Use k-fold cross-validation and collect out-of-fold predictions.
+b.Train meta-model on the out-of-fold predictions from all models.
+c. Train each base model on the entire training dataset.
+
+
+- a. Use k-fold cross-validation and collect out-of-fold predictions.
+- b.Train meta-model on the out-of-fold predictions from all models.
+- c. Train each base model on the entire training dataset.
+This procedure is called stacked generalization, or stacking for short. Because it is common to use a linear weighted sum as the meta-model, this procedure is sometimes called blending.
+For more on the topic of stacking, see the tutorials:
+- How to Develop a Stacking Ensemble for Deep Learning Neural Networks in Python With Keras
+- How to Implement Stacked Generalization (Stacking) From Scratch With Python
+We can make this procedure concrete with a worked example using the same dataset used in the previous section.
+First, we will split the data into training and validation datasets. The training dataset will be used to fit the submodels and meta-model, and the validation dataset will be held back from training and used at the end to evaluate the meta-model and submodels.
+In this example, we will use k-fold cross-validation to fit a DecisionTreeClassifier and KNeighborsClassifier model each cross-validation fold, and use the fit models to make out-of-fold predictions.
+The models will make predictions of probabilities instead of class labels in an attempt to provide more useful input features for the meta-model. This is a good practice.
+We will also keep track of the input data (100 features) and output data (expected label) for the out-of-fold data.
+At the end of the run, we can then construct a dataset for a meta classifier comprised of 100 input features for the input data and the two columns of predicted probabilities from the kNN and decision tree models.
+The create_meta_dataset() function below implements this, taking the out-of-fold data and predictions across the folds as input and constructs the input dataset for the meta-model.
+We can then call this function to prepare data for the meta-model.
+We can then fit each of the submodels on the entire training dataset ready for making predictions on the validation dataset.
+We can then fit the meta-model on the prepared dataset, in this case, a LogisticRegression model.
+Finally, we can use the meta-model to make predictions on the holdout dataset.
+This requires that data first pass through the sub models, the outputs used in the construction of a dataset for the meta-model, then the meta-model is used to make a prediction. We will wrap all of this up into a function named stack_prediction() that takes the models and the data for which the prediction will be made.
+We can then evaluate the submodels on the holdout dataset for reference, then use the meta-model to make a prediction on the holdout dataset and evaluate it.
+We expect that the meta-model would achieve as good or better performance on the holdout dataset than any single submodel. If this is not the case, alternate submodels or meta-models could be used on the problem instead.
+Tying this all together, the complete example is listed below.
+Running the example first reports the accuracy of the decision tree and kNN model, then the performance of the meta-model on the holdout dataset, not seen during training.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the meta-model has out-performed both submodels.
+It might be interesting to try an ablative study to re-run the example with just model1, just model2, and neither model 1 and model 2 as input to the meta-model to confirm that the predictions from the submodels are actually adding value to the meta-model.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- A Gentle Introduction to k-fold Cross-Validation
+- How to Develop a Stacking Ensemble for Deep Learning Neural Networks in Python With Keras
+- How to Implement Stacked Generalization (Stacking) From Scratch With Python
+- How to Create a Bagging Ensemble of Deep Learning Models in Keras
+- Ensemble Learning Methods for Deep Learning Neural Networks
+- Applied Predictive Modeling, 2013.
+- Cross-validation (statistics), Wikipedia.
+- Ensemble learning, Wikipedia.
+- sklearn.datasets.make_blobs API.
+- sklearn.model_selection.KFold API.
+- sklearn.neighbors.KNeighborsClassifier API.
+- sklearn.tree.DecisionTreeClassifier API.
+- sklearn.metrics.accuracy_score API.
+- sklearn.linear_model.LogisticRegression API.
+- sklearn.model_selection.train_test_split API.
+# Summary
+In this tutorial, you discovered out-of-fold predictions in machine learning.
+Specifically, you learned:
+- Out-of-fold predictions are a type of out-of-sample predictions made on data not used to train a model.
+- Out-of-fold predictions are most commonly used to estimate the performance of a model when making predictions on unseen data.
+- Out-of-fold predictions can be used to construct an ensemble model called a stacked generalization or stacking ensemble.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Modern Ensemble Learning!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Ensemble Learning Algorithms With Python
+It provides self-study tutorials with full working code on:
+Stacking, Voting, Boosting, Bagging, Blending, Super Learner,
+and much more...
+See What's Inside
+
+'''
+# example of creating a test dataset
+from sklearn.datasets import make_blobs
+# create the inputs and outputs
+X, y = make_blobs(n_samples=1000, centers=2, n_features=100, cluster_std=20)
+# summarize the shape of the arrays
+print(X.shape, y.shape)
+(1000, 100) (1000,)
+# evaluate model by averaging performance across each fold
+from numpy import mean
+from numpy import std
+from sklearn.datasets import make_blobs
+from sklearn.model_selection import KFold
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score
+# create the inputs and outputs
+X, y = make_blobs(n_samples=1000, centers=2, n_features=100, cluster_std=20)
+# k-fold cross validation
+scores = list()
+kfold = KFold(n_splits=10, shuffle=True)
+# enumerate splits
+for train_ix, test_ix in kfold.split(X):
+	# get data
+	train_X, test_X = X[train_ix], X[test_ix]
+	train_y, test_y = y[train_ix], y[test_ix]
+	# fit model
+	model = KNeighborsClassifier()
+	model.fit(train_X, train_y)
+	# evaluate model
+	yhat = model.predict(test_X)
+	acc = accuracy_score(test_y, yhat)
+	# store score
+	scores.append(acc)
+	print('> ', acc)
+# summarize model performance
+mean_s, std_s = mean(scores), std(scores)
+print('Mean: %.3f, Standard Deviation: %.3f' % (mean_s, std_s))
+>  0.95
+>  0.92
+>  0.95
+>  0.95
+>  0.91
+>  0.97
+>  0.96
+>  0.96
+>  0.98
+>  0.91
+Mean: 0.946, Standard Deviation: 0.023
+# evaluate model by calculating the score across all predictions
+from sklearn.datasets import make_blobs
+from sklearn.model_selection import KFold
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import accuracy_score
+# create the inputs and outputs
+X, y = make_blobs(n_samples=1000, centers=2, n_features=100, cluster_std=20)
+# k-fold cross validation
+data_y, data_yhat = list(), list()
+kfold = KFold(n_splits=10, shuffle=True)
+# enumerate splits
+for train_ix, test_ix in kfold.split(X):
+	# get data
+	train_X, test_X = X[train_ix], X[test_ix]
+	train_y, test_y = y[train_ix], y[test_ix]
+	# fit model
+	model = KNeighborsClassifier()
+	model.fit(train_X, train_y)
+	# make predictions
+	yhat = model.predict(test_X)
+	# store
+	data_y.extend(test_y)
+	data_yhat.extend(yhat)
+# evaluate the model
+acc = accuracy_score(data_y, data_yhat)
+print('Accuracy: %.3f' % (acc))
+Accuracy: 0.930
+
+# split
+X, X_val, y, y_val = train_test_split(X, y, test_size=0.33)
+
+# collect out of sample predictions
+data_x, data_y, knn_yhat, cart_yhat = list(), list(), list(), list()
+kfold = KFold(n_splits=10, shuffle=True)
+for train_ix, test_ix in kfold.split(X):
+	# get data
+	train_X, test_X = X[train_ix], X[test_ix]
+	train_y, test_y = y[train_ix], y[test_ix]
+	data_x.extend(test_X)
+	data_y.extend(test_y)
+	# fit and make predictions with cart
+	model1 = DecisionTreeClassifier()
+	model1.fit(train_X, train_y)
+	yhat1 = model1.predict_proba(test_X)[:, 0]
+	cart_yhat.extend(yhat1)
+	# fit and make predictions with cart
+	model2 = KNeighborsClassifier()
+	model2.fit(train_X, train_y)
+	yhat2 = model2.predict_proba(test_X)[:, 0]
+	knn_yhat.extend(yhat2)
+# create a meta dataset
+def create_meta_dataset(data_x, yhat1, yhat2):
+	# convert to columns
+	yhat1 = array(yhat1).reshape((len(yhat1), 1))
+	yhat2 = array(yhat2).reshape((len(yhat2), 1))
+	# stack as separate columns
+	meta_X = hstack((data_x, yhat1, yhat2))
+	return meta_X
+
+# construct meta dataset
+meta_X = create_meta_dataset(data_x, knn_yhat, cart_yhat)
+
+# fit final submodels
+model1 = DecisionTreeClassifier()
+model1.fit(X, y)
+model2 = KNeighborsClassifier()
+model2.fit(X, y)
+
+# construct meta classifier
+meta_model = LogisticRegression(solver='liblinear')
+meta_model.fit(meta_X, data_y)
+# make predictions with stacked model
+def stack_prediction(model1, model2, meta_model, X):
+	# make predictions
+	yhat1 = model1.predict_proba(X)[:, 0]
+	yhat2 = model2.predict_proba(X)[:, 0]
+	# create input dataset
+	meta_X = create_meta_dataset(X, yhat1, yhat2)
+	# predict
+	return meta_model.predict(meta_X)
+
+# evaluate sub models on hold out dataset
+acc1 = accuracy_score(y_val, model1.predict(X_val))
+acc2 = accuracy_score(y_val, model2.predict(X_val))
+print('Model1 Accuracy: %.3f, Model2 Accuracy: %.3f' % (acc1, acc2))
+# evaluate meta model on hold out dataset
+yhat = stack_prediction(model1, model2, meta_model, X_val)
+acc = accuracy_score(y_val, yhat)
+print('Meta Model Accuracy: %.3f' % (acc))
+# example of a stacked model for binary classification
+from numpy import hstack
+from numpy import array
+from sklearn.datasets import make_blobs
+from sklearn.model_selection import KFold
+from sklearn.model_selection import train_test_split
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+
+# create a meta dataset
+def create_meta_dataset(data_x, yhat1, yhat2):
+	# convert to columns
+	yhat1 = array(yhat1).reshape((len(yhat1), 1))
+	yhat2 = array(yhat2).reshape((len(yhat2), 1))
+	# stack as separate columns
+	meta_X = hstack((data_x, yhat1, yhat2))
+	return meta_X
+
+# make predictions with stacked model
+def stack_prediction(model1, model2, meta_model, X):
+	# make predictions
+	yhat1 = model1.predict_proba(X)[:, 0]
+	yhat2 = model2.predict_proba(X)[:, 0]
+	# create input dataset
+	meta_X = create_meta_dataset(X, yhat1, yhat2)
+	# predict
+	return meta_model.predict(meta_X)
+
+# create the inputs and outputs
+X, y = make_blobs(n_samples=1000, centers=2, n_features=100, cluster_std=20)
+# split
+X, X_val, y, y_val = train_test_split(X, y, test_size=0.33)
+# collect out of sample predictions
+data_x, data_y, knn_yhat, cart_yhat = list(), list(), list(), list()
+kfold = KFold(n_splits=10, shuffle=True)
+for train_ix, test_ix in kfold.split(X):
+	# get data
+	train_X, test_X = X[train_ix], X[test_ix]
+	train_y, test_y = y[train_ix], y[test_ix]
+	data_x.extend(test_X)
+	data_y.extend(test_y)
+	# fit and make predictions with cart
+	model1 = DecisionTreeClassifier()
+	model1.fit(train_X, train_y)
+	yhat1 = model1.predict_proba(test_X)[:, 0]
+	cart_yhat.extend(yhat1)
+	# fit and make predictions with cart
+	model2 = KNeighborsClassifier()
+	model2.fit(train_X, train_y)
+	yhat2 = model2.predict_proba(test_X)[:, 0]
+	knn_yhat.extend(yhat2)
+# construct meta dataset
+meta_X = create_meta_dataset(data_x, knn_yhat, cart_yhat)
+# fit final submodels
+model1 = DecisionTreeClassifier()
+model1.fit(X, y)
+model2 = KNeighborsClassifier()
+model2.fit(X, y)
+# construct meta classifier
+meta_model = LogisticRegression(solver='liblinear')
+meta_model.fit(meta_X, data_y)
+# evaluate sub models on hold out dataset
+acc1 = accuracy_score(y_val, model1.predict(X_val))
+acc2 = accuracy_score(y_val, model2.predict(X_val))
+print('Model1 Accuracy: %.3f, Model2 Accuracy: %.3f' % (acc1, acc2))
+# evaluate meta model on hold out dataset
+yhat = stack_prediction(model1, model2, meta_model, X_val)
+acc = accuracy_score(y_val, yhat)
+print('Meta Model Accuracy: %.3f' % (acc))
+Model1 Accuracy: 0.670, Model2 Accuracy: 0.930
+Meta-Model Accuracy: 0.955
+'''

@@ -1,0 +1,501 @@
+How to Manually Optimize Machine Learning Model Hyperparameters
+https://machinelearningmastery.com/manually-optimize-hyperparameters/
+2021-03-23
+Machine learning algorithms have hyperparameters that allow the algorithms to be tailored to specific datasets.
+Although the impact of hyperparameters may be understood generally, their specific effect on a dataset and their interactions during learning may not be known. Therefore, it is important to tune the values of algorithm hyperparameters as part of a machine learning project.
+It is common to use naive optimization algorithms to tune hyperparameters, such as a grid search and a random search. An alternate approach is to use a stochastic optimization algorithm, like a stochastic hill climbing algorithm.
+In this tutorial, you will discover how to manually optimize the hyperparameters of machine learning algorithms.
+After completing this tutorial, you will know:
+- Stochastic optimization algorithms can be used instead of grid and random search for hyperparameter optimization.
+- How to use a stochastic hill climbing algorithm to tune the hyperparameters of the Perceptron algorithm.
+- How to manually optimize the hyperparameters of the XGBoost gradient boosting algorithm.
+
+Kick-start your project with my new book Optimization for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+
+How to Manually Optimize Machine Learning Model HyperparametersPhoto by john farrell macdonald, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Manual Hyperparameter Optimization
+- Perceptron Hyperparameter Optimization
+- XGBoost Hyperparameter Optimization
+# Manual Hyperparameter Optimization
+Machine learning models have hyperparameters that you must set in order to customize the model to your dataset.
+Often, the general effects of hyperparameters on a model are known, but how to best set a hyperparameter and combinations of interacting hyperparameters for a given dataset is challenging.
+A better approach is to objectively search different values for model hyperparameters and choose a subset that results in a model that achieves the best performance on a given dataset. This is called hyperparameter optimization, or hyperparameter tuning.
+A range of different optimization algorithms may be used, although two of the simplest and most common methods are random search and grid search.
+- Random Search. Define a search space as a bounded domain of hyperparameter values and randomly sample points in that domain.
+- Grid Search. Define a search space as a grid of hyperparameter values and evaluate every position in the grid.
+Grid search is great for spot-checking combinations that are known to perform well generally. Random search is great for discovery and getting hyperparameter combinations that you would not have guessed intuitively, although it often requires more time to execute.
+For more on grid and random search for hyperparameter tuning, see the tutorial:
+- Hyperparameter Optimization With Random Search and Grid Search
+Grid and random search are primitive optimization algorithms, and it is possible to use any optimization we like to tune the performance of a machine learning algorithm. For example, it is possible to use stochastic optimization algorithms. This might be desirable when good or great performance is required and there are sufficient resources available to tune the model.
+Next, let’s look at how we might use a stochastic hill climbing algorithm to tune the performance of the Perceptron algorithm.
+# Perceptron Hyperparameter Optimization
+The Perceptron algorithm is the simplest type of artificial neural network.
+It is a model of a single neuron that can be used for two-class classification problems and provides the foundation for later developing much larger networks.
+In this section, we will explore how to manually optimize the hyperparameters of the Perceptron model.
+First, let’s define a synthetic binary classification problem that we can use as the focus of optimizing the model.
+We can use the make_classification() function to define a binary classification problem with 1,000 rows and five input variables.
+The example below creates the dataset and summarizes the shape of the data.
+Running the example prints the shape of the created dataset, confirming our expectations.
+The scikit-learn provides an implementation of the Perceptron model via the Perceptron class.
+Before we tune the hyperparameters of the model, we can establish a baseline in performance using the default hyperparameters.
+We will evaluate the model using good practices of repeated stratified k-fold cross-validation via the RepeatedStratifiedKFold class.
+The complete example of evaluating the Perceptron model with default hyperparameters on our synthetic binary classification dataset is listed below.
+Running the example reports evaluates the model and reports the mean and standard deviation of the classification accuracy.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the model with default hyperparameters achieved a classification accuracy of about 78.5 percent.
+We would hope that we can achieve better performance than this with optimized hyperparameters.
+Next, we can optimize the hyperparameters of the Perceptron model using a stochastic hill climbing algorithm.
+There are many hyperparameters that we could optimize, although we will focus on two that perhaps have the most impact on the learning behavior of the model; they are:
+- Learning Rate (eta0).
+- Regularization (alpha).
+The learning rate controls the amount the model is updated based on prediction errors and controls the speed of learning. The default value of eta is 1.0. reasonable values are larger than zero (e.g. larger than 1e-8 or 1e-10) and probably less than 1.0
+By default, the Perceptron does not use any regularization, but we will enable “elastic net” regularization which applies both L1 and L2 regularization during learning. This will encourage the model to seek small model weights and, in turn, often better performance.
+We will tune the “alpha” hyperparameter that controls the weighting of the regularization, e.g. the amount it impacts the learning. If set to 0.0, it is as though no regularization is being used. Reasonable values are between 0.0 and 1.0.
+First, we need to define the objective function for the optimization algorithm. We will evaluate a configuration using mean classification accuracy with repeated stratified k-fold cross-validation. We will seek to maximize accuracy in the configurations.
+The objective() function below implements this, taking the dataset and a list of config values. The config values (learning rate and regularization weighting) are unpacked, used to configure the model, which is then evaluated, and the mean accuracy is returned.
+Next, we need a function to take a step in the search space.
+The search space is defined by two variables (eta and alpha). A step in the search space must have some relationship to the previous values and must be bound to sensible values (e.g. between 0 and 1).
+We will use a “step size” hyperparameter that controls how far the algorithm is allowed to move from the existing configuration. A new configuration will be chosen probabilistically using a Gaussian distribution with the current value as the mean of the distribution and the step size as the standard deviation of the distribution.
+We can use the randn() NumPy function to generate random numbers with a Gaussian distribution.
+The step() function below implements this and will take a step in the search space and generate a new configuration using an existing configuration.
+Next, we need to implement the stochastic hill climbing algorithm that will call our objective() function to evaluate candidate solutions and our step() function to take a step in the search space.
+The search first generates a random initial solution, in this case with eta and alpha values in the range 0 and 1. The initial solution is then evaluated and is taken as the current best working solution.
+Next, the algorithm iterates for a fixed number of iterations provided as a hyperparameter to the search. Each iteration involves taking a step and evaluating the new candidate solution.
+If the new solution is better than the current working solution, it is taken as the new current working solution.
+At the end of the search, the best solution and its performance are then returned.
+Tying this together, the hillclimbing() function below implements the stochastic hill climbing algorithm for tuning the Perceptron algorithm, taking the dataset, objective function, number of iterations, and step size as arguments.
+We can then call the algorithm and report the results of the search.
+In this case, we will run the algorithm for 100 iterations and use a step size of 0.1, chosen after a little trial and error.
+Tying this together, the complete example of manually tuning the Perceptron algorithm is listed below.
+Running the example reports the configuration and result each time an improvement is seen during the search. At the end of the run, the best configuration and result are reported.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the best result involved using a learning rate slightly above 1 at 1.004 and a regularization weight of about 0.002 achieving a mean accuracy of about 79.1 percent, better than the default configuration that achieved an accuracy of about 78.5 percent.
+Can you get a better result?
+Let me know in the comments below.
+Now that we are familiar with how to use a stochastic hill climbing algorithm to tune the hyperparameters of a simple machine learning algorithm, let’s look at tuning a more advanced algorithm, such as XGBoost.
+# XGBoost Hyperparameter Optimization
+XGBoost is short for Extreme Gradient Boosting and is an efficient implementation of the stochastic gradient boosting machine learning algorithm.
+The stochastic gradient boosting algorithm, also called gradient boosting machines or tree boosting, is a powerful machine learning technique that performs well or even best on a wide range of challenging machine learning problems.
+First, the XGBoost library must be installed.
+You can install it using pip, as follows:
+Once installed, you can confirm that it was installed successfully and that you are using a modern version by running the following code:
+Running the code, you should see the following version number or higher.
+Although the XGBoost library has its own Python API, we can use XGBoost models with the scikit-learn API via the XGBClassifier wrapper class.
+An instance of the model can be instantiated and used just like any other scikit-learn class for model evaluation. For example:
+Before we tune the hyperparameters of XGBoost, we can establish a baseline in performance using the default hyperparameters.
+We will use the same synthetic binary classification dataset from the previous section and the same test harness of repeated stratified k-fold cross-validation.
+The complete example of evaluating the performance of XGBoost with default hyperparameters is listed below.
+Running the example evaluates the model and reports the mean and standard deviation of the classification accuracy.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the model with default hyperparameters achieved a classification accuracy of about 84.9 percent.
+We would hope that we can achieve better performance than this with optimized hyperparameters.
+Next, we can adapt the stochastic hill climbing optimization algorithm to tune the hyperparameters of the XGBoost model.
+There are many hyperparameters that we may want to optimize for the XGBoost model.
+For an overview of how to tune the XGBoost model, see the tutorial:
+- How to Configure the Gradient Boosting Algorithm
+We will focus on four key hyperparameters; they are:
+- Learning Rate (learning_rate)
+- Number of Trees (n_estimators)
+- Subsample Percentage (subsample)
+- Tree Depth (max_depth)
+The learning rate controls the contribution of each tree to the ensemble. Sensible values are less than 1.0 and slightly above 0.0 (e.g. 1e-8).
+The number of trees controls the size of the ensemble, and often, more trees is better to a point of diminishing returns. Sensible values are between 1 tree and hundreds or thousands of trees.
+The subsample percentages define the random sample size used to train each tree, defined as a percentage of the size of the original dataset. Values are between a value slightly above 0.0 (e.g. 1e-8) and 1.0
+The tree depth is the number of levels in each tree. Deeper trees are more specific to the training dataset and perhaps overfit. Shorter trees often generalize better. Sensible values are between 1 and 10 or 20.
+First, we must update the objective() function to unpack the hyperparameters of the XGBoost model, configure it, and then evaluate the mean classification accuracy.
+Next, we need to define the step() function used to take a step in the search space.
+Each hyperparameter is quite a different range, therefore, we will define the step size (standard deviation of the distribution) separately for each hyperparameter. We will also define the step sizes in line rather than as arguments to the function, to keep things simple.
+The number of trees and the depth are integers, so the stepped values are rounded.
+The step sizes chosen are arbitrary, chosen after a little trial and error.
+The updated step function is listed below.
+Finally, the hillclimbing() algorithm must be updated to define an initial solution with appropriate values.
+In this case, we will define the initial solution with sensible defaults, matching the default hyperparameters, or close to them.
+Tying this together, the complete example of manually tuning the hyperparameters of the XGBoost algorithm using a stochastic hill climbing algorithm is listed below.
+Running the example reports the configuration and result each time an improvement is seen during the search. At the end of the run, the best configuration and result are reported.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the best result involved using a learning rate of about 0.02, 52 trees, a subsample rate of about 50 percent, and a large depth of 53 levels.
+This configuration resulted in a mean accuracy of about 87.3 percent, better than the default configuration that achieved an accuracy of about 84.9 percent.
+Can you get a better result?
+Let me know in the comments below.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Hyperparameter Optimization With Random Search and Grid Search
+- How to Configure the Gradient Boosting Algorithm
+- How To Implement The Perceptron Algorithm From Scratch In Python
+- sklearn.datasets.make_classification APIs.
+- sklearn.metrics.accuracy_score APIs.
+- numpy.random.rand API.
+- sklearn.linear_model.Perceptron API.
+- Perceptron, Wikipedia.
+- XGBoost, Wikipedia.
+# Summary
+In this tutorial, you discovered how to manually optimize the hyperparameters of machine learning algorithms.
+Specifically, you learned:
+- Stochastic optimization algorithms can be used instead of grid and random search for hyperparameter optimization.
+- How to use a stochastic hill climbing algorithm to tune the hyperparameters of the Perceptron algorithm.
+- How to manually optimize the hyperparameters of the XGBoost gradient boosting algorithm.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Modern Optimization Algorithms!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Optimization for Machine Learning
+It provides self-study tutorials with full working code on:
+Gradient Descent, Genetic Algorithms, Hill Climbing, Curve Fitting, RMSProp, Adam,
+and much more...
+See What's Inside
+
+'''
+# define a binary classification dataset
+from sklearn.datasets import make_classification
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=5, n_informative=2, n_redundant=1, random_state=1)
+# summarize the shape of the dataset
+print(X.shape, y.shape)
+(1000, 5) (1000,)
+# perceptron default hyperparameters for binary classification
+from numpy import mean
+from numpy import std
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.linear_model import Perceptron
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=5, n_informative=2, n_redundant=1, random_state=1)
+# define model
+model = Perceptron()
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+# report result
+print('Mean Accuracy: %.3f (%.3f)' % (mean(scores), std(scores)))
+Mean Accuracy: 0.786 (0.069)
+# objective function
+def objective(X, y, cfg):
+	# unpack config
+	eta, alpha = cfg
+	# define model
+	model = Perceptron(penalty='elasticnet', alpha=alpha, eta0=eta)
+	# define evaluation procedure
+	cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+	# evaluate model
+	scores = cross_val_score(model, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+	# calculate mean accuracy
+	result = mean(scores)
+	return result
+# take a step in the search space
+def step(cfg, step_size):
+	# unpack the configuration
+	eta, alpha = cfg
+	# step eta
+	new_eta = eta + randn() * step_size
+	# check the bounds of eta
+	if new_eta <= 0.0:
+		new_eta = 1e-8
+	# step alpha
+	new_alpha = alpha + randn() * step_size
+	# check the bounds of alpha
+	if new_alpha < 0.0:
+		new_alpha = 0.0
+	# return the new configuration
+	return [new_eta, new_alpha]
+
+# starting point for the search
+solution = [rand(), rand()]
+# evaluate the initial point
+solution_eval = objective(X, y, solution)
+
+# take a step
+candidate = step(solution, step_size)
+# evaluate candidate point
+candidate_eval = objective(X, y, candidate)
+
+# check if we should keep the new point
+if candidate_eval >= solution_eval:
+	# store the new point
+	solution, solution_eval = candidate, candidate_eval
+	# report progress
+	print('>%d, cfg=%s %.5f' % (i, solution, solution_eval))
+# hill climbing local search algorithm
+def hillclimbing(X, y, objective, n_iter, step_size):
+	# starting point for the search
+	solution = [rand(), rand()]
+	# evaluate the initial point
+	solution_eval = objective(X, y, solution)
+	# run the hill climb
+	for i in range(n_iter):
+		# take a step
+		candidate = step(solution, step_size)
+		# evaluate candidate point
+		candidate_eval = objective(X, y, candidate)
+		# check if we should keep the new point
+		if candidate_eval >= solution_eval:
+			# store the new point
+			solution, solution_eval = candidate, candidate_eval
+			# report progress
+			print('>%d, cfg=%s %.5f' % (i, solution, solution_eval))
+	return [solution, solution_eval]
+
+# define the total iterations
+n_iter = 100
+# step size in the search space
+step_size = 0.1
+# perform the hill climbing search
+cfg, score = hillclimbing(X, y, objective, n_iter, step_size)
+print('Done!')
+print('cfg=%s: Mean Accuracy: %f' % (cfg, score))
+# manually search perceptron hyperparameters for binary classification
+from numpy import mean
+from numpy.random import randn
+from numpy.random import rand
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.linear_model import Perceptron
+
+# objective function
+def objective(X, y, cfg):
+	# unpack config
+	eta, alpha = cfg
+	# define model
+	model = Perceptron(penalty='elasticnet', alpha=alpha, eta0=eta)
+	# define evaluation procedure
+	cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+	# evaluate model
+	scores = cross_val_score(model, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+	# calculate mean accuracy
+	result = mean(scores)
+	return result
+
+# take a step in the search space
+def step(cfg, step_size):
+	# unpack the configuration
+	eta, alpha = cfg
+	# step eta
+	new_eta = eta + randn() * step_size
+	# check the bounds of eta
+	if new_eta <= 0.0:
+		new_eta = 1e-8
+	# step alpha
+	new_alpha = alpha + randn() * step_size
+	# check the bounds of alpha
+	if new_alpha < 0.0:
+		new_alpha = 0.0
+	# return the new configuration
+	return [new_eta, new_alpha]
+
+# hill climbing local search algorithm
+def hillclimbing(X, y, objective, n_iter, step_size):
+	# starting point for the search
+	solution = [rand(), rand()]
+	# evaluate the initial point
+	solution_eval = objective(X, y, solution)
+	# run the hill climb
+	for i in range(n_iter):
+		# take a step
+		candidate = step(solution, step_size)
+		# evaluate candidate point
+		candidate_eval = objective(X, y, candidate)
+		# check if we should keep the new point
+		if candidate_eval >= solution_eval:
+			# store the new point
+			solution, solution_eval = candidate, candidate_eval
+			# report progress
+			print('>%d, cfg=%s %.5f' % (i, solution, solution_eval))
+	return [solution, solution_eval]
+
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=5, n_informative=2, n_redundant=1, random_state=1)
+# define the total iterations
+n_iter = 100
+# step size in the search space
+step_size = 0.1
+# perform the hill climbing search
+cfg, score = hillclimbing(X, y, objective, n_iter, step_size)
+print('Done!')
+print('cfg=%s: Mean Accuracy: %f' % (cfg, score))
+>0, cfg=[0.5827274503894747, 0.260872709578015] 0.70533
+>4, cfg=[0.5449820307807399, 0.3017271170801444] 0.70567
+>6, cfg=[0.6286475606495414, 0.17499090243915086] 0.71933
+>7, cfg=[0.5956196828965779, 0.0] 0.78633
+>8, cfg=[0.5878361167354715, 0.0] 0.78633
+>10, cfg=[0.6353507984485595, 0.0] 0.78633
+>13, cfg=[0.5690530537610675, 0.0] 0.78633
+>17, cfg=[0.6650936023999641, 0.0] 0.78633
+>22, cfg=[0.9070451625704087, 0.0] 0.78633
+>23, cfg=[0.9253366187387938, 0.0] 0.78633
+>26, cfg=[0.9966143540220266, 0.0] 0.78633
+>31, cfg=[1.0048613895650054, 0.002162219228449132] 0.79133
+Done!
+cfg=[1.0048613895650054, 0.002162219228449132]: Mean Accuracy: 0.791333
+sudo pip install xgboost
+# xgboost
+import xgboost
+print("xgboost", xgboost.__version__)
+xgboost 1.0.1
+
+# define model
+model = XGBClassifier()
+# xgboost with default hyperparameters for binary classification
+from numpy import mean
+from numpy import std
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from xgboost import XGBClassifier
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=5, n_informative=2, n_redundant=1, random_state=1)
+# define model
+model = XGBClassifier()
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+# report result
+print('Mean Accuracy: %.3f (%.3f)' % (mean(scores), std(scores)))
+Mean Accuracy: 0.849 (0.040)
+# objective function
+def objective(X, y, cfg):
+	# unpack config
+	lrate, n_tree, subsam, depth = cfg
+	# define model
+	model = XGBClassifier(learning_rate=lrate, n_estimators=n_tree, subsample=subsam, max_depth=depth)
+	# define evaluation procedure
+	cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+	# evaluate model
+	scores = cross_val_score(model, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+	# calculate mean accuracy
+	result = mean(scores)
+	return result
+# take a step in the search space
+def step(cfg):
+	# unpack config
+	lrate, n_tree, subsam, depth = cfg
+	# learning rate
+	lrate = lrate + randn() * 0.01
+	if lrate <= 0.0:
+		lrate = 1e-8
+	if lrate > 1:
+		lrate = 1.0
+	# number of trees
+	n_tree = round(n_tree + randn() * 50)
+	if n_tree <= 0.0:
+		n_tree = 1
+	# subsample percentage
+	subsam = subsam + randn() * 0.1
+	if subsam <= 0.0:
+		subsam = 1e-8
+	if subsam > 1:
+		subsam = 1.0
+	# max tree depth
+	depth = round(depth + randn() * 7)
+	if depth <= 1:
+		depth = 1
+	# return new config
+	return [lrate, n_tree, subsam, depth]
+
+# starting point for the search
+solution = step([0.1, 100, 1.0, 7])
+# xgboost manual hyperparameter optimization for binary classification
+from numpy import mean
+from numpy.random import randn
+from numpy.random import rand
+from numpy.random import randint
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from xgboost import XGBClassifier
+
+# objective function
+def objective(X, y, cfg):
+	# unpack config
+	lrate, n_tree, subsam, depth = cfg
+	# define model
+	model = XGBClassifier(learning_rate=lrate, n_estimators=n_tree, subsample=subsam, max_depth=depth)
+	# define evaluation procedure
+	cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+	# evaluate model
+	scores = cross_val_score(model, X, y, scoring='accuracy', cv=cv, n_jobs=-1)
+	# calculate mean accuracy
+	result = mean(scores)
+	return result
+
+# take a step in the search space
+def step(cfg):
+	# unpack config
+	lrate, n_tree, subsam, depth = cfg
+	# learning rate
+	lrate = lrate + randn() * 0.01
+	if lrate <= 0.0:
+		lrate = 1e-8
+	if lrate > 1:
+		lrate = 1.0
+	# number of trees
+	n_tree = round(n_tree + randn() * 50)
+	if n_tree <= 0.0:
+		n_tree = 1
+	# subsample percentage
+	subsam = subsam + randn() * 0.1
+	if subsam <= 0.0:
+		subsam = 1e-8
+	if subsam > 1:
+		subsam = 1.0
+	# max tree depth
+	depth = round(depth + randn() * 7)
+	if depth <= 1:
+		depth = 1
+	# return new config
+	return [lrate, n_tree, subsam, depth]
+
+# hill climbing local search algorithm
+def hillclimbing(X, y, objective, n_iter):
+	# starting point for the search
+	solution = step([0.1, 100, 1.0, 7])
+	# evaluate the initial point
+	solution_eval = objective(X, y, solution)
+	# run the hill climb
+	for i in range(n_iter):
+		# take a step
+		candidate = step(solution)
+		# evaluate candidate point
+		candidate_eval = objective(X, y, candidate)
+		# check if we should keep the new point
+		if candidate_eval >= solution_eval:
+			# store the new point
+			solution, solution_eval = candidate, candidate_eval
+			# report progress
+			print('>%d, cfg=[%s] %.5f' % (i, solution, solution_eval))
+	return [solution, solution_eval]
+
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=5, n_informative=2, n_redundant=1, random_state=1)
+# define the total iterations
+n_iter = 200
+# perform the hill climbing search
+cfg, score = hillclimbing(X, y, objective, n_iter)
+print('Done!')
+print('cfg=[%s]: Mean Accuracy: %f' % (cfg, score))
+>0, cfg=[[0.1058242692126418, 67, 0.9228490731610172, 12]] 0.85933
+>1, cfg=[[0.11060813799692253, 51, 0.859353656735739, 13]] 0.86100
+>4, cfg=[[0.11890247679234153, 58, 0.7135275461723894, 12]] 0.86167
+>5, cfg=[[0.10226257987735601, 61, 0.6086462443373852, 17]] 0.86400
+>15, cfg=[[0.11176962034280596, 106, 0.5592742266405146, 13]] 0.86500
+>19, cfg=[[0.09493587069112454, 153, 0.5049124222437619, 34]] 0.86533
+>23, cfg=[[0.08516531024154426, 88, 0.5895201311518876, 31]] 0.86733
+>46, cfg=[[0.10092590898175327, 32, 0.5982811365027455, 30]] 0.86867
+>75, cfg=[[0.099469211050998, 20, 0.36372573610040404, 32]] 0.86900
+>96, cfg=[[0.09021536590375884, 38, 0.4725379807796971, 20]] 0.86900
+>100, cfg=[[0.08979482274655906, 65, 0.3697395430835758, 14]] 0.87000
+>110, cfg=[[0.06792737273465625, 89, 0.33827505722318224, 17]] 0.87000
+>118, cfg=[[0.05544969684589669, 72, 0.2989721608535262, 23]] 0.87200
+>122, cfg=[[0.050102976159097, 128, 0.2043203965148931, 24]] 0.87200
+>123, cfg=[[0.031493266763680444, 120, 0.2998819062922256, 30]] 0.87333
+>128, cfg=[[0.023324201169625292, 84, 0.4017169945431015, 42]] 0.87333
+>140, cfg=[[0.020224220443108752, 52, 0.5088096815056933, 53]] 0.87367
+Done!
+cfg=[[0.020224220443108752, 52, 0.5088096815056933, 53]]: Mean Accuracy: 0.873667
+'''

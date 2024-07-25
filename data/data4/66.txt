@@ -1,0 +1,106 @@
+Combined Algorithm Selection and Hyperparameter Optimization (CASH Optimization)
+https://machinelearningmastery.com/combined-algorithm-selection-and-hyperparameter-optimization/
+2020-09-15
+Machine learning model selection and configuration may be the biggest challenge in applied machine learning.
+Controlled experiments must be performed in order to discover what works best for a given classification or regression predictive modeling task. This can feel overwhelming given the large number of data preparation schemes, learning algorithms, and model hyperparameters that could be considered.
+The common approach is to use a shortcut, such as using a popular algorithm or testing a small number of algorithms with default hyperparameters.
+A modern alternative is to consider the selection of data preparation, learning algorithm, and algorithm hyperparameters one large global optimization problem. This characterization is generally referred to as Combined Algorithm Selection and Hyperparameter Optimization, or “CASH Optimization” for short.
+In this post, you will discover the challenge of machine learning model selection and the modern solution referred to CASH Optimization.
+After reading this post, you will know:
+- The challenge of machine learning model and hyperparameter selection.
+- The shortcuts of using popular models or making a series of sequential decisions.
+- The characterization of Combined Algorithm Selection and Hyperparameter Optimization that underlies modern AutoML.
+Let’s get started.
+Combined Algorithm Selection and Hyperparameter Optimization (CASH Optimization)Photo by Bernard Spragg. NZ, some rights reserved.
+# Overview
+This tutorial is divided into three parts; they are:
+- Challenge of Model and Hyperparameter Selection
+- Solutions to Model and Hyperparameter Selection
+- Combined Algorithm Selection and Hyperparameter Optimization
+# Challenge of Model and Hyperparameter Selection
+There is no definitive mapping of machine learning algorithms to predictive modeling tasks.
+We cannot look at a dataset and know the best algorithm to use, let alone the best data transforms to use to prepare the data or the best configuration for a given model.
+Instead, we must use controlled experiments to discover what works best for a given dataset.
+As such, applied machine learning is an empirical discipline. It is engineering and art more than science.
+The problem is that there are tens, if not hundreds, of machine learning algorithms to choose from. Each algorithm may have up to tens of hyperparameters to be configured.
+To a beginner, the scope of the problem is overwhelming.
+- Where do you start?
+- What do you start with?
+- When do you discard a model?
+- When do you double down on a model?
+There are a few standard solutions to this problem adopted by most practitioners, experienced and otherwise.
+# Solutions to Model and Hyperparameter Selection
+Let’s look at two of the most common short-cuts to this problem of selecting data transforms, machine learning models, and model hyperparameters.
+One approach is to use a popular machine learning algorithm.
+It can be challenging to make the right choice when faced with these degrees of freedom, leaving many users to select algorithms based on reputation or intuitive appeal, and/or to leave hyperparameters set to default values. Of course, this approach can yield performance far worse than that of the best method and hyperparameter settings.
+— Auto-WEKA: Combined Selection and Hyperparameter Optimization of Classification Algorithms, 2012.
+For example, if it seems like everyone is talking about “random forest,” then random forest becomes the right algorithm for all classification and regression problems you encounter, and you limit the experimentation to the hyperparameters of the random forest algorithm.
+- Short-Cut #1: Use a popular algorithm like “random forest” or “xgboost“.
+Random forest indeed performs well on a wide range of prediction tasks. But we cannot know if it will be good or even best for a given dataset. The risk is that we may be able to achieve better results with a much simpler linear model.
+A workaround might be to test a range of popular algorithms, leading into the next shortcut.
+Another approach is to approach the problem as a series of sequential decisions.
+For example, review the data and select data transforms that make data more Gaussian, remove outliers, etc. Then test a suite of algorithms with default hyperparameters and select one or a few that perform well. Then tune the hyperparameters of those top-performing models.
+- Short-Cut #2: Sequentially select data transforms, models, and model hyperparameters.
+This is the approach that I recommend for getting good results quickly; for example:
+- Applied Machine Learning Process
+This short-cut too can be effective and reduces the likelihood of missing an algorithm that performs well on your dataset. The downside here is more subtle and impacts you if you are seeking great or excellent results rather than merely good results quickly.
+The risk is selecting data transforms prior to selecting models might mean that you miss the data preparation sequence that gets the most out of an algorithm.
+Similarly, selecting a model or subset of models prior to selecting model hyperparameters means that you might be missing a model with hyperparameters other than the default values that performs better than any of the subset of models selected and their subsequent configurations.
+Two important problems in AutoML are that (1) no single machine learning method performs best on all datasets and (2) some machine learning methods (e.g., non-linear SVMs) crucially rely on hyperparameter optimization.
+— Page 115, Automated Machine Learning: Methods, Systems, Challenges, 2019.
+A workaround might be to spot check good or well-performing configurations of each algorithm as part of the algorithm spot check. This is only a partial solution.
+There is a better approach.
+# Combined Algorithm Selection and Hyperparameter Optimization
+Selecting a data preparation pipeline, machine learning model, and model hyperparameters is a search problem.
+The possible choices at each step define a search space, and a single combination represents a point in that space that can be evaluated with a dataset.
+Navigating the search space efficiently is referred to as global optimization.
+This has been well understood for a long time in the field of machine learning, although perhaps tacitly, with focus typically on one element of the problem, such as hyperparameter optimization.
+The important insight is that there are dependencies between each step, which influences the size and structure of the search space.
+… [the problem] can be viewed as a single hierarchical hyperparameter optimization problem, in which even the choice of algorithm itself is considered a hyperparameter.
+— Page 82, Automated Machine Learning: Methods, Systems, Challenges, 2019.
+This requires that the data preparation and machine learning model, along with the model hyperparameters, must form the scope of the optimization problem and that the optimization algorithm must be aware of the dependencies between.
+This is a challenging global optimization problem, notably because of the dependencies, but also because estimating the performance of a machine learning model on a dataset is stochastic, resulting in a noisy distribution of performance scores (e.g. via repeated k-fold cross-validation).
+… the combined space of learning algorithms and their hyperparameters is very challenging to search: the response function is noisy and the space is high dimensional, involves both categorical and continuous choices, and contains hierarchical dependencies (e.g., the hyperparameters of a learning algorithm are only meaningful if that algorithm is chosen; the algorithm choices in an ensemble method are only meaningful if that ensemble method is chosen; etc).
+— Auto-WEKA: Combined Selection and Hyperparameter Optimization of Classification Algorithms, 2012.
+This challenge was perhaps best characterized by Chris Thornton, et al. in their 2013 paper titled “Auto-WEKA: Combined Selection and Hyperparameter Optimization of Classification Algorithms.” In the paper, they refer to this problem as “Combined Algorithm Selection And Hyperparameter Optimization,” or “CASH Optimization” for short.
+… a natural challenge for machine learning: given a dataset, to automatically and simultaneously choose a learning algorithm and set its hyperparameters to optimize empirical performance. We dub this the combined algorithm selection and hyperparameter optimization problem (short: CASH).
+— Auto-WEKA: Combined Selection and Hyperparameter Optimization of Classification Algorithms, 2012.
+This characterization is also sometimes referred to as “Full Model Selection,” or FMS for short.
+The FMS problem consists of the following: given a pool of preprocessing methods, feature selection and learning algorithms, select the combination of these that obtains the lowest classification error for a given data set. This task also includes the selection of hyperparameters for the considered methods, resulting in a vast search space that is well suited for stochastic optimization techniques.
+— Particle Swarm Model Selection, 2009.
+Thornton, et al. proceeded to use global optimization algorithms that are aware of the dependencies, so-called sequential global optimization algorithms, such as specific versions of Bayesian Optimization. They then proceeded to implement their approach for the WEKA machine learning workbench, called the AutoWEKA Projects.
+A promising approach is Bayesian Optimization, and in particular Sequential Model-Based Optimization (SMBO), a versatile stochastic optimization framework that can work with both categorical and continuous hyperparameters, and that can exploit hierarchical structure stemming from conditional parameters.
+— Page 85, Automated Machine Learning: Methods, Systems, Challenges, 2019.
+This now provides the dominant paradigm for a field of study referred to as “Automated Machine Learning,” or AutoML for short. AutoML is concerned with providing tools that allow practitioners with modest technical skill to quickly find effective solutions to machine learning tasks, such as classification and regression predictive modeling.
+AutoML aims to provide effective off-the-shelf learning systems to free experts and non-experts alike from the tedious and time-consuming tasks of selecting the right algorithm for a dataset at hand, along with the right preprocessing method and the various hyperparameters of all involved components.
+— Page 136,Automated Machine Learning: Methods, Systems, Challenges, 2019.
+AutoML techniques are provided by machine learning libraries and increasingly as services, so-called machine learning as a service, or MLaaS for short.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Auto-WEKA: Combined Selection and Hyperparameter Optimization of Classification Algorithms, 2012.
+Auto-WEKA 2.0: Automatic model selection and hyperparameter optimization in WEKA, 2016.
+- Making a Science of Model Search: Hyperparameter Optimization in Hundreds of Dimensions for Vision Architectures, 2013.
+- Particle Swarm Model Selection, 2009.
+- Automated Machine Learning: Methods, Systems, Challenges, 2019.
+- Automated machine learning, Wikipedia.
+- AutoWEKA Project.
+# Summary
+In this post, you discovered the challenge of machine learning model selection and the modern solution referred to as CASH Optimization.
+Specifically, you learned:
+- The challenge of machine learning model and hyperparameter selection.
+- The shortcuts of using popular models or making a series of sequential decisions.
+- The characterization of Combined Algorithm Selection and Hyperparameter Optimization that underlies modern AutoML.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Discover Fast Machine Learning in Python!
+...with just a few lines of scikit-learn code
+Learn how in my new Ebook:
+Machine Learning Mastery With Python
+Covers self-study tutorials and end-to-end projects like:
+Loading data, visualization, modeling, tuning, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+
+'''

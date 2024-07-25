@@ -1,0 +1,537 @@
+How to Develop Voting Ensembles With Python
+https://machinelearningmastery.com/voting-ensembles-with-python/
+2020-04-16
+Voting is an ensemble machine learning algorithm.
+For regression, a voting ensemble involves making a prediction that is the average of multiple other regression models.
+In classification, a hard voting ensemble involves summing the votes for crisp class labels from other models and predicting the class with the most votes. A soft voting ensemble involves summing the predicted probabilities for class labels and predicting the class label with the largest sum probability.
+In this tutorial, you will discover how to create voting ensembles for machine learning algorithms in Python.
+After completing this tutorial, you will know:
+- A voting ensemble involves summing the predictions made by classification models or averaging the predictions made by regression models.
+- How voting ensembles work, when to use voting ensembles, and the limitations of the approach.
+- How to implement a hard voting ensemble and soft voting ensemble for classification predictive modeling.
+Kick-start your project with my new book Ensemble Learning Algorithms With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Develop Voting Ensembles With PythonPhoto by Bureau of Land Management, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into four parts; they are:
+- Voting Ensembles
+- Voting Ensemble Scikit-Learn API
+- Voting Ensemble for Classification
+
+Hard Voting Ensemble for Classification
+Soft Voting Ensemble for Classification
+
+
+- Hard Voting Ensemble for Classification
+- Soft Voting Ensemble for Classification
+- Voting Ensemble for Regression
+# Voting Ensembles
+A voting ensemble (or a “majority voting ensemble“) is an ensemble machine learning model that combines the predictions from multiple other models.
+It is a technique that may be used to improve model performance, ideally achieving better performance than any single model used in the ensemble.
+A voting ensemble works by combining the predictions from multiple models. It can be used for classification or regression. In the case of regression, this involves calculating the average of the predictions from the models. In the case of classification, the predictions for each label are summed and the label with the majority vote is predicted.
+- Regression Voting Ensemble: Predictions are the average of contributing models.
+- Classification Voting Ensemble: Predictions are the majority vote of contributing models.
+There are two approaches to the majority vote prediction for classification; they are hard voting and soft voting.
+Hard voting involves summing the predictions for each class label and predicting the class label with the most votes. Soft voting involves summing the predicted probabilities (or probability-like scores) for each class label and predicting the class label with the largest probability.
+- Hard Voting. Predict the class with the largest sum of votes from models
+- Soft Voting. Predict the class with the largest summed probability from models.
+A voting ensemble may be considered a meta-model, a model of models.
+As a meta-model, it could be used with any collection of existing trained machine learning models and the existing models do not need to be aware that they are being used in the ensemble. This means you could explore using a voting ensemble on any set or subset of fit models for your predictive modeling task.
+A voting ensemble is appropriate when you have two or more models that perform well on a predictive modeling task. The models used in the ensemble must mostly agree with their predictions.
+One way to combine outputs is by voting—the same mechanism used in bagging. However, (unweighted) voting only makes sense if the learning schemes perform comparably well. If two of the three classifiers make predictions that are grossly incorrect, we will be in trouble!
+— Page 497, Data Mining: Practical Machine Learning Tools and Techniques, 2016.
+Use voting ensembles when:
+- All models in the ensemble have generally the same good performance.
+- All models in the ensemble mostly already agree.
+Hard voting is appropriate when the models used in the voting ensemble predict crisp class labels. Soft voting is appropriate when the models used in the voting ensemble predict the probability of class membership. Soft voting can be used for models that do not natively predict a class membership probability, although may require calibration of their probability-like scores prior to being used in the ensemble (e.g. support vector machine, k-nearest neighbors, and decision trees).
+- Hard voting is for models that predict class labels.
+- Soft voting is for models that predict class membership probabilities.
+The voting ensemble is not guaranteed to provide better performance than any single model used in the ensemble. If any given model used in the ensemble performs better than the voting ensemble, that model should probably be used instead of the voting ensemble.
+This is not always the case. A voting ensemble can offer lower variance in the predictions made over individual models. This can be seen in a lower variance in prediction error for regression tasks. This can also be seen in a lower variance in accuracy for classification tasks. This lower variance may result in a lower mean performance of the ensemble, which might be desirable given the higher stability or confidence of the model.
+Use a voting ensemble if:
+- It results in better performance than any model used in the ensemble.
+- It results in a lower variance than any model used in the ensemble.
+A voting ensemble is particularly useful for machine learning models that use a stochastic learning algorithm and result in a different final model each time it is trained on the same dataset. One example is neural networks that are fit using stochastic gradient descent.
+For more on this topic, see the tutorial:
+- How to Develop a Weighted Average Ensemble for Deep Learning Neural Networks
+Another particularly useful case for voting ensembles is when combining multiple fits of the same machine learning algorithm with slightly different hyperparameters.
+Voting ensembles are most effective when:
+- Combining multiple fits of a model trained using stochastic learning algorithms.
+- Combining multiple fits of a model with different hyperparameters.
+A limitation of the voting ensemble is that it treats all models the same, meaning all models contribute equally to the prediction. This is a problem if some models are good in some situations and poor in others.
+An extension to the voting ensemble to address this problem is to use a weighted average or weighted voting of the contributing models. This is sometimes called blending. A further extension is to use a machine learning model to learn when and how much to trust each model when making predictions. This is referred to as stacked generalization, or stacking for short.
+Extensions to voting ensembles:
+- Weighted Average Ensemble (blending).
+- Stacked Generalization (stacking).
+Now that we are familiar with voting ensembles, let’s take a closer look at how to create voting ensemble models.
+# Voting Ensemble Scikit-Learn API
+Voting ensembles can be implemented from scratch, although it can be challenging for beginners.
+The scikit-learn Python machine learning library provides an implementation of voting for machine learning.
+It is available in version 0.22 of the library and higher.
+First, confirm that you are using a modern version of the library by running the following script:
+Running the script will print your version of scikit-learn.
+Your version should be the same or higher. If not, you must upgrade your version of the scikit-learn library.
+Voting is provided via the VotingRegressor and VotingClassifier classes.
+Both models operate the same way and take the same arguments. Using the model requires that you specify a list of estimators that make predictions and are combined in the voting ensemble.
+A list of base models is provided via the “estimators” argument. This is a Python list where each element in the list is a tuple with the name of the model and the configured model instance. Each model in the list must have a unique name.
+For example, below defines two base models:
+Each model in the list may also be a Pipeline, including any data preparation required by the model prior to fitting the model on the training dataset.
+For example:
+When using a voting ensemble for classification, the type of voting, such as hard voting or soft voting, can be specified via the “voting” argument and set to the string ‘hard‘ (the default) or ‘soft‘.
+For example:
+Now that we are familiar with the voting ensemble API in scikit-learn, let’s look at some worked examples.
+# Voting Ensemble for Classification
+In this section, we will look at using stacking for a classification problem.
+First, we can use the make_classification() function to create a synthetic binary classification problem with 1,000 examples and 20 input features.
+The complete example is listed below.
+Running the example creates the dataset and summarizes the shape of the input and output components.
+Next, we will demonstrate hard voting and soft voting for this dataset.
+We can demonstrate hard voting with a k-nearest neighbor algorithm.
+We can fit five different versions of the KNN algorithm, each with a different number of neighbors used when making predictions. We will use 1, 3, 5, 7, and 9 neighbors (odd numbers in an attempt to avoid ties).
+Our expectation is that by combining the predicted class labels predicted by each different KNN model that the hard voting ensemble will achieve a better predictive performance than any standalone model used in the ensemble, on average.
+First, we can create a function named get_voting() that creates each KNN model and combines the models into a hard voting ensemble.
+We can then create a list of models to evaluate, including each standalone version of the KNN model configurations and the hard voting ensemble.
+This will help us directly compare each standalone configuration of the KNN model with the ensemble in terms of the distribution of classification accuracy scores. The get_models() function below creates the list of models for us to evaluate.
+Each model will be evaluated using repeated k-fold cross-validation.
+The evaluate_model() function below takes a model instance and returns as a list of scores from three repeats of stratified 10-fold cross-validation.
+We can then report the mean performance of each algorithm, and also create a box and whisker plot to compare the distribution of accuracy scores for each algorithm.
+Tying this together, the complete example is listed below.
+Running the example first reports the mean and standard deviation accuracy for each model.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+We can see the hard voting ensemble achieves a better classification accuracy of about 90.2% compared to all standalone versions of the model.
+A box-and-whisker plot is then created comparing the distribution accuracy scores for each model, allowing us to clearly see that hard voting ensemble performing better than all standalone models on average.
+Box Plot of Hard Voting Ensemble Compared to Standalone Models for Binary Classification
+If we choose a hard voting ensemble as our final model, we can fit and use it to make predictions on new data just like any other model.
+First, the hard voting ensemble is fit on all available data, then the predict() function can be called to make predictions on new data.
+The example below demonstrates this on our binary classification dataset.
+Running the example fits the hard voting ensemble model on the entire dataset and is then used to make a prediction on a new row of data, as we might when using the model in an application.
+
+We can demonstrate soft voting with the support vector machine (SVM) algorithm.
+The SVM algorithm does not natively predict probabilities, although it can be configured to predict probability-like scores by setting the “probability” argument to “True” in the SVC class.
+We can fit five different versions of the SVM algorithm with a polynomial kernel, each with a different polynomial degree, set via the “degree” argument. We will use degrees 1-5.
+Our expectation is that by combining the predicted class membership probability scores predicted by each different SVM model that the soft voting ensemble will achieve a better predictive performance than any standalone model used in the ensemble, on average.
+First, we can create a function named get_voting() that creates the SVM models and combines them into a soft voting ensemble.
+We can then create a list of models to evaluate, including each standalone version of the SVM model configurations and the soft voting ensemble.
+This will help us directly compare each standalone configuration of the SVM model with the ensemble in terms of the distribution of classification accuracy scores. The get_models() function below creates the list of models for us to evaluate.
+We can evaluate and report model performance using repeated k-fold cross-validation as we did in the previous section.
+Tying this together, the complete example is listed below.
+Running the example first reports the mean and standard deviation accuracy for each model.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+We can see the soft voting ensemble achieves a better classification accuracy of about 92.4% compared to all standalone versions of the model.
+A box-and-whisker plot is then created comparing the distribution accuracy scores for each model, allowing us to clearly see that soft voting ensemble performing better than all standalone models on average.
+Box Plot of Soft Voting Ensemble Compared to Standalone Models for Binary Classification
+If we choose a soft voting ensemble as our final model, we can fit and use it to make predictions on new data just like any other model.
+First, the soft voting ensemble is fit on all available data, then the predict() function can be called to make predictions on new data.
+The example below demonstrates this on our binary classification dataset.
+Running the example fits the soft voting ensemble model on the entire dataset and is then used to make a prediction on a new row of data, as we might when using the model in an application.
+
+# Voting Ensemble for Regression
+In this section, we will look at using voting for a regression problem.
+First, we can use the make_regression() function to create a synthetic regression problem with 1,000 examples and 20 input features.
+The complete example is listed below.
+Running the example creates the dataset and summarizes the shape of the input and output components.
+We can demonstrate ensemble voting for regression with a decision tree algorithm, sometimes referred to as a classification and regression tree (CART) algorithm.
+We can fit five different versions of the CART algorithm, each with a different maximum depth of the decision tree, set via the “max_depth” argument. We will use depths of 1-5.
+Our expectation is that by combining the values predicted by each different CART model that the voting ensemble will achieve a better predictive performance than any standalone model used in the ensemble, on average.
+First, we can create a function named get_voting() that creates each CART model and combines the models into a voting ensemble.
+We can then create a list of models to evaluate, including each standalone version of the CART model configurations and the soft voting ensemble.
+This will help us directly compare each standalone configuration of the CART model with the ensemble in terms of the distribution of error scores. The get_models() function below creates the list of models for us to evaluate.
+We can evaluate and report model performance using repeated k-fold cross-validation as we did in the previous section.
+Models are evaluated using mean absolute error (MAE). The scikit-learn makes the score negative so that it can be maximized. This means that the reported MAE scores are negative, larger values are better, and 0 represents no error.
+Tying this together, the complete example is listed below.
+Running the example first reports the mean and standard deviation accuracy for each model.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+We can see the voting ensemble achieves a better mean squared error of about -136.338, which is larger (better) compared to all standalone versions of the model.
+A box-and-whisker plot is then created comparing the distribution negative MAE scores for each model, allowing us to clearly see that voting ensemble performing better than all standalone models on average.
+Box Plot of Voting Ensemble Compared to Standalone Models for Regression
+If we choose a voting ensemble as our final model, we can fit and use it to make predictions on new data just like any other model.
+First, the voting ensemble is fit on all available data, then the predict() function can be called to make predictions on new data.
+The example below demonstrates this on our binary classification dataset.
+Running the example fits the voting ensemble model on the entire dataset and is then used to make a prediction on a new row of data, as we might when using the model in an application.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- How to Develop a Weighted Average Ensemble for Deep Learning Neural Networks
+- How to Develop a Stacking Ensemble for Deep Learning Neural Networks in Python With Keras
+- Data Mining: Practical Machine Learning Tools and Techniques, 2016.
+- Ensemble methods scikit-learn API.
+- sklearn.ensemble.VotingClassifier API.
+- sklearn.ensemble.VotingRegressor API.
+# Summary
+In this tutorial, you discovered how to create voting ensembles for machine learning algorithms in Python.
+Specifically, you learned:
+- A voting ensemble involves summing the predictions made by classification models or averaging the predictions made by regression models.
+- How voting ensembles work, when to use voting ensembles, and the limitations of the approach.
+- How to implement a hard voting ensemble and soft voting ensembles for classification predictive modeling.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Modern Ensemble Learning!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Ensemble Learning Algorithms With Python
+It provides self-study tutorials with full working code on:
+Stacking, Voting, Boosting, Bagging, Blending, Super Learner,
+and much more...
+See What's Inside
+
+'''
+# check scikit-learn version
+import sklearn
+print(sklearn.__version__)
+0.22.1
+
+models = [('lr',LogisticRegression()),('svm',SVC())]
+ensemble = VotingClassifier(estimators=models)
+
+models = [('lr',LogisticRegression()),('svm',make_pipeline(StandardScaler(),SVC()))]
+ensemble = VotingClassifier(estimators=models)
+
+models = [('lr',LogisticRegression()),('svm',SVC())]
+ensemble = VotingClassifier(estimators=models, voting='soft')
+# test classification dataset
+from sklearn.datasets import make_classification
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=20, n_informative=15, n_redundant=5, random_state=2)
+# summarize the dataset
+print(X.shape, y.shape)
+(1000, 20) (1000,)
+# get a voting ensemble of models
+def get_voting():
+	# define the base models
+	models = list()
+	models.append(('knn1', KNeighborsClassifier(n_neighbors=1)))
+	models.append(('knn3', KNeighborsClassifier(n_neighbors=3)))
+	models.append(('knn5', KNeighborsClassifier(n_neighbors=5)))
+	models.append(('knn7', KNeighborsClassifier(n_neighbors=7)))
+	models.append(('knn9', KNeighborsClassifier(n_neighbors=9)))
+	# define the voting ensemble
+	ensemble = VotingClassifier(estimators=models, voting='hard')
+	return ensemble
+# get a list of models to evaluate
+def get_models():
+	models = dict()
+	models['knn1'] = KNeighborsClassifier(n_neighbors=1)
+	models['knn3'] = KNeighborsClassifier(n_neighbors=3)
+	models['knn5'] = KNeighborsClassifier(n_neighbors=5)
+	models['knn7'] = KNeighborsClassifier(n_neighbors=7)
+	models['knn9'] = KNeighborsClassifier(n_neighbors=9)
+	models['hard_voting'] = get_voting()
+	return models
+# evaluate a give model using cross-validation
+def evaluate_model(model, X, y):
+	cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+	scores = cross_val_score(model, X, y, scoring='accuracy', cv=cv, n_jobs=-1, error_score='raise')
+	return scores
+# compare hard voting to standalone classifiers
+from numpy import mean
+from numpy import std
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.ensemble import VotingClassifier
+from matplotlib import pyplot
+
+# get the dataset
+def get_dataset():
+	X, y = make_classification(n_samples=1000, n_features=20, n_informative=15, n_redundant=5, random_state=2)
+	return X, y
+
+# get a voting ensemble of models
+def get_voting():
+	# define the base models
+	models = list()
+	models.append(('knn1', KNeighborsClassifier(n_neighbors=1)))
+	models.append(('knn3', KNeighborsClassifier(n_neighbors=3)))
+	models.append(('knn5', KNeighborsClassifier(n_neighbors=5)))
+	models.append(('knn7', KNeighborsClassifier(n_neighbors=7)))
+	models.append(('knn9', KNeighborsClassifier(n_neighbors=9)))
+	# define the voting ensemble
+	ensemble = VotingClassifier(estimators=models, voting='hard')
+	return ensemble
+
+# get a list of models to evaluate
+def get_models():
+	models = dict()
+	models['knn1'] = KNeighborsClassifier(n_neighbors=1)
+	models['knn3'] = KNeighborsClassifier(n_neighbors=3)
+	models['knn5'] = KNeighborsClassifier(n_neighbors=5)
+	models['knn7'] = KNeighborsClassifier(n_neighbors=7)
+	models['knn9'] = KNeighborsClassifier(n_neighbors=9)
+	models['hard_voting'] = get_voting()
+	return models
+
+# evaluate a give model using cross-validation
+def evaluate_model(model, X, y):
+	cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+	scores = cross_val_score(model, X, y, scoring='accuracy', cv=cv, n_jobs=-1, error_score='raise')
+	return scores
+
+# define dataset
+X, y = get_dataset()
+# get the models to evaluate
+models = get_models()
+# evaluate the models and store results
+results, names = list(), list()
+for name, model in models.items():
+	scores = evaluate_model(model, X, y)
+	results.append(scores)
+	names.append(name)
+	print('>%s %.3f (%.3f)' % (name, mean(scores), std(scores)))
+# plot model performance for comparison
+pyplot.boxplot(results, labels=names, showmeans=True)
+pyplot.show()
+>knn1 0.873 (0.030)
+>knn3 0.889 (0.038)
+>knn5 0.895 (0.031)
+>knn7 0.899 (0.035)
+>knn9 0.900 (0.033)
+>hard_voting 0.902 (0.034)
+# make a prediction with a hard voting ensemble
+from sklearn.datasets import make_classification
+from sklearn.ensemble import VotingClassifier
+from sklearn.neighbors import KNeighborsClassifier
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=20, n_informative=15, n_redundant=5, random_state=2)
+# define the base models
+models = list()
+models.append(('knn1', KNeighborsClassifier(n_neighbors=1)))
+models.append(('knn3', KNeighborsClassifier(n_neighbors=3)))
+models.append(('knn5', KNeighborsClassifier(n_neighbors=5)))
+models.append(('knn7', KNeighborsClassifier(n_neighbors=7)))
+models.append(('knn9', KNeighborsClassifier(n_neighbors=9)))
+# define the hard voting ensemble
+ensemble = VotingClassifier(estimators=models, voting='hard')
+# fit the model on all available data
+ensemble.fit(X, y)
+# make a prediction for one example
+data = [[5.88891819,2.64867662,-0.42728226,-1.24988856,-0.00822,-3.57895574,2.87938412,-1.55614691,-0.38168784,7.50285659,-1.16710354,-5.02492712,-0.46196105,-0.64539455,-1.71297469,0.25987852,-0.193401,-5.52022952,0.0364453,-1.960039]]
+yhat = ensemble.predict(data)
+print('Predicted Class: %d' % (yhat))
+Predicted Class: 1
+# get a voting ensemble of models
+def get_voting():
+	# define the base models
+	models = list()
+	models.append(('svm1', SVC(probability=True, kernel='poly', degree=1)))
+	models.append(('svm2', SVC(probability=True, kernel='poly', degree=2)))
+	models.append(('svm3', SVC(probability=True, kernel='poly', degree=3)))
+	models.append(('svm4', SVC(probability=True, kernel='poly', degree=4)))
+	models.append(('svm5', SVC(probability=True, kernel='poly', degree=5)))
+	# define the voting ensemble
+	ensemble = VotingClassifier(estimators=models, voting='soft')
+	return ensemble
+# get a list of models to evaluate
+def get_models():
+	models = dict()
+	models['svm1'] = SVC(probability=True, kernel='poly', degree=1)
+	models['svm2'] = SVC(probability=True, kernel='poly', degree=2)
+	models['svm3'] = SVC(probability=True, kernel='poly', degree=3)
+	models['svm4'] = SVC(probability=True, kernel='poly', degree=4)
+	models['svm5'] = SVC(probability=True, kernel='poly', degree=5)
+	models['soft_voting'] = get_voting()
+	return models
+# compare soft voting ensemble to standalone classifiers
+from numpy import mean
+from numpy import std
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.svm import SVC
+from sklearn.ensemble import VotingClassifier
+from matplotlib import pyplot
+
+# get the dataset
+def get_dataset():
+	X, y = make_classification(n_samples=1000, n_features=20, n_informative=15, n_redundant=5, random_state=2)
+	return X, y
+
+# get a voting ensemble of models
+def get_voting():
+	# define the base models
+	models = list()
+	models.append(('svm1', SVC(probability=True, kernel='poly', degree=1)))
+	models.append(('svm2', SVC(probability=True, kernel='poly', degree=2)))
+	models.append(('svm3', SVC(probability=True, kernel='poly', degree=3)))
+	models.append(('svm4', SVC(probability=True, kernel='poly', degree=4)))
+	models.append(('svm5', SVC(probability=True, kernel='poly', degree=5)))
+	# define the voting ensemble
+	ensemble = VotingClassifier(estimators=models, voting='soft')
+	return ensemble
+
+# get a list of models to evaluate
+def get_models():
+	models = dict()
+	models['svm1'] = SVC(probability=True, kernel='poly', degree=1)
+	models['svm2'] = SVC(probability=True, kernel='poly', degree=2)
+	models['svm3'] = SVC(probability=True, kernel='poly', degree=3)
+	models['svm4'] = SVC(probability=True, kernel='poly', degree=4)
+	models['svm5'] = SVC(probability=True, kernel='poly', degree=5)
+	models['soft_voting'] = get_voting()
+	return models
+
+# evaluate a give model using cross-validation
+def evaluate_model(model, X, y):
+	cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+	scores = cross_val_score(model, X, y, scoring='accuracy', cv=cv, n_jobs=-1, error_score='raise')
+	return scores
+
+# define dataset
+X, y = get_dataset()
+# get the models to evaluate
+models = get_models()
+# evaluate the models and store results
+results, names = list(), list()
+for name, model in models.items():
+	scores = evaluate_model(model, X, y)
+	results.append(scores)
+	names.append(name)
+	print('>%s %.3f (%.3f)' % (name, mean(scores), std(scores)))
+# plot model performance for comparison
+pyplot.boxplot(results, labels=names, showmeans=True)
+pyplot.show()
+>svm1 0.855 (0.035)
+>svm2 0.859 (0.034)
+>svm3 0.890 (0.035)
+>svm4 0.808 (0.037)
+>svm5 0.850 (0.037)
+>soft_voting 0.924 (0.028)
+# make a prediction with a soft voting ensemble
+from sklearn.datasets import make_classification
+from sklearn.ensemble import VotingClassifier
+from sklearn.svm import SVC
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=20, n_informative=15, n_redundant=5, random_state=2)
+# define the base models
+models = list()
+models.append(('svm1', SVC(probability=True, kernel='poly', degree=1)))
+models.append(('svm2', SVC(probability=True, kernel='poly', degree=2)))
+models.append(('svm3', SVC(probability=True, kernel='poly', degree=3)))
+models.append(('svm4', SVC(probability=True, kernel='poly', degree=4)))
+models.append(('svm5', SVC(probability=True, kernel='poly', degree=5)))
+# define the soft voting ensemble
+ensemble = VotingClassifier(estimators=models, voting='soft')
+# fit the model on all available data
+ensemble.fit(X, y)
+# make a prediction for one example
+data = [[5.88891819,2.64867662,-0.42728226,-1.24988856,-0.00822,-3.57895574,2.87938412,-1.55614691,-0.38168784,7.50285659,-1.16710354,-5.02492712,-0.46196105,-0.64539455,-1.71297469,0.25987852,-0.193401,-5.52022952,0.0364453,-1.960039]]
+yhat = ensemble.predict(data)
+print('Predicted Class: %d' % (yhat))
+Predicted Class: 1
+# test regression dataset
+from sklearn.datasets import make_regression
+# define dataset
+X, y = make_regression(n_samples=1000, n_features=20, n_informative=15, noise=0.1, random_state=1)
+# summarize the dataset
+print(X.shape, y.shape)
+(1000, 20) (1000,)
+# get a voting ensemble of models
+def get_voting():
+	# define the base models
+	models = list()
+	models.append(('cart1', DecisionTreeRegressor(max_depth=1)))
+	models.append(('cart2', DecisionTreeRegressor(max_depth=2)))
+	models.append(('cart3', DecisionTreeRegressor(max_depth=3)))
+	models.append(('cart4', DecisionTreeRegressor(max_depth=4)))
+	models.append(('cart5', DecisionTreeRegressor(max_depth=5)))
+	# define the voting ensemble
+	ensemble = VotingRegressor(estimators=models)
+	return ensemble
+# get a list of models to evaluate
+def get_models():
+	models = dict()
+	models['cart1'] = DecisionTreeRegressor(max_depth=1)
+	models['cart2'] = DecisionTreeRegressor(max_depth=2)
+	models['cart3'] = DecisionTreeRegressor(max_depth=3)
+	models['cart4'] = DecisionTreeRegressor(max_depth=4)
+	models['cart5'] = DecisionTreeRegressor(max_depth=5)
+	models['voting'] = get_voting()
+	return models
+# compare voting ensemble to each standalone models for regression
+from numpy import mean
+from numpy import std
+from sklearn.datasets import make_regression
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedKFold
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import VotingRegressor
+from matplotlib import pyplot
+
+# get the dataset
+def get_dataset():
+	X, y = make_regression(n_samples=1000, n_features=20, n_informative=15, noise=0.1, random_state=1)
+	return X, y
+
+# get a voting ensemble of models
+def get_voting():
+	# define the base models
+	models = list()
+	models.append(('cart1', DecisionTreeRegressor(max_depth=1)))
+	models.append(('cart2', DecisionTreeRegressor(max_depth=2)))
+	models.append(('cart3', DecisionTreeRegressor(max_depth=3)))
+	models.append(('cart4', DecisionTreeRegressor(max_depth=4)))
+	models.append(('cart5', DecisionTreeRegressor(max_depth=5)))
+	# define the voting ensemble
+	ensemble = VotingRegressor(estimators=models)
+	return ensemble
+
+# get a list of models to evaluate
+def get_models():
+	models = dict()
+	models['cart1'] = DecisionTreeRegressor(max_depth=1)
+	models['cart2'] = DecisionTreeRegressor(max_depth=2)
+	models['cart3'] = DecisionTreeRegressor(max_depth=3)
+	models['cart4'] = DecisionTreeRegressor(max_depth=4)
+	models['cart5'] = DecisionTreeRegressor(max_depth=5)
+	models['voting'] = get_voting()
+	return models
+
+# evaluate a give model using cross-validation
+def evaluate_model(model, X, y):
+	cv = RepeatedKFold(n_splits=10, n_repeats=3, random_state=1)
+	scores = cross_val_score(model, X, y, scoring='neg_mean_absolute_error', cv=cv, n_jobs=-1, error_score='raise')
+	return scores
+
+# define dataset
+X, y = get_dataset()
+# get the models to evaluate
+models = get_models()
+# evaluate the models and store results
+results, names = list(), list()
+for name, model in models.items():
+	scores = evaluate_model(model, X, y)
+	results.append(scores)
+	names.append(name)
+	print('>%s %.3f (%.3f)' % (name, mean(scores), std(scores)))
+# plot model performance for comparison
+pyplot.boxplot(results, labels=names, showmeans=True)
+pyplot.show()
+>cart1 -161.519 (11.414)
+>cart2 -152.596 (11.271)
+>cart3 -142.378 (10.900)
+>cart4 -140.086 (12.469)
+>cart5 -137.641 (12.240)
+>voting -136.338 (11.242)
+# make a prediction with a voting ensemble
+from sklearn.datasets import make_regression
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import VotingRegressor
+# define dataset
+X, y = make_regression(n_samples=1000, n_features=20, n_informative=15, noise=0.1, random_state=1)
+# define the base models
+models = list()
+models.append(('cart1', DecisionTreeRegressor(max_depth=1)))
+models.append(('cart2', DecisionTreeRegressor(max_depth=2)))
+models.append(('cart3', DecisionTreeRegressor(max_depth=3)))
+models.append(('cart4', DecisionTreeRegressor(max_depth=4)))
+models.append(('cart5', DecisionTreeRegressor(max_depth=5)))
+# define the voting ensemble
+ensemble = VotingRegressor(estimators=models)
+# fit the model on all available data
+ensemble.fit(X, y)
+# make a prediction for one example
+data = [[0.59332206,-0.56637507,1.34808718,-0.57054047,-0.72480487,1.05648449,0.77744852,0.07361796,0.88398267,2.02843157,1.01902732,0.11227799,0.94218853,0.26741783,0.91458143,-0.72759572,1.08842814,-0.61450942,-0.69387293,1.69169009]]
+yhat = ensemble.predict(data)
+print('Predicted Value: %.3f' % (yhat))
+Predicted Value: 141.319
+'''

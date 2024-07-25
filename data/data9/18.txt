@@ -1,0 +1,377 @@
+Develop a Neural Network for Woods Mammography Dataset
+https://machinelearningmastery.com/develop-a-neural-network-for-woods-mammography-dataset/
+2021-03-30
+It can be challenging to develop a neural network predictive model for a new dataset.
+One approach is to first inspect the dataset and develop ideas for what models might work, then explore the learning dynamics of simple models on the dataset, then finally develop and tune a model for the dataset with a robust test harness.
+This process can be used to develop effective neural network models for classification and regression predictive modeling problems.
+In this tutorial, you will discover how to develop a Multilayer Perceptron neural network model for the Wood’s Mammography classification dataset.
+After completing this tutorial, you will know:
+- How to load and summarize the Wood’s Mammography dataset and use the results to suggest data preparations and model configurations to use.
+- How to explore the learning dynamics of simple MLP models on the dataset.
+- How to develop robust estimates of model performance, tune model performance and make predictions on new data.
+Let’s get started.
+Develop a Neural Network for Woods Mammography DatasetPhoto by Larry W. Lo, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into 4 parts; they are:
+- Woods Mammography Dataset
+- Neural Network Learning Dynamics
+- Robust Model Evaluation
+- Final Model and Make Predictions
+# Woods Mammography Dataset
+The first step is to define and explore the dataset.
+We will be working with the “mammography” standard binary classification dataset, sometimes called “Woods Mammography“.
+The dataset is credited to Kevin Woods, et al. and the 1993 paper titled “Comparative Evaluation Of Pattern Recognition Techniques For Detection Of Microcalcifications In Mammography.”
+The focus of the problem is on detecting breast cancer from radiological scans, specifically the presence of clusters of microcalcifications that appear bright on a mammogram.
+There are two classes and the goal is to distinguish between microcalcifications and non-microcalcifications using the features for a given segmented object.
+- Non-microcalcifications: negative case, or majority class.
+- Microcalcifications: positive case, or minority class.
+The Mammography dataset is a widely used standard machine learning dataset, used to explore and demonstrate many techniques designed specifically for imbalanced classification.
+Note: To be crystal clear, we are NOT “solving breast cancer“. We are exploring a standard classification dataset.
+Below is a sample of the first 5 rows of the dataset
+You can learn more about the dataset here:
+- Mammography Dataset (mammography.csv)
+- Mammography Details (mammography.names)
+We can load the dataset as a pandas DataFrame directly from the URL; for example:
+Running the example loads the dataset directly from the URL and reports the shape of the dataset.
+In this case, we can confirm that the dataset has 7 variables (6 input and one output) and that the dataset has 11,183 rows of data.
+This a modest sized dataset for a neural network and suggests that a small network would be appropriate.
+It also suggests that using k-fold cross-validation would be a good idea given that it will give a more reliable estimate of model performance than a train/test split and because a single model will fit in seconds instead of hours or days with the largest datasets.
+Next, we can learn more about the dataset by looking at summary statistics and a plot of the data.
+Running the example first loads the data before and then prints summary statistics for each variable.
+We can see that the values are generally small with means close to zero.
+A histogram plot is then created for each variable.
+We can see that perhaps most variables have an exponential distribution, and perhaps variable 5 (the last input variable) is Gaussian with outliers/missing values.
+We may have some benefit in using a power transform on each variable in order to make the probability distribution less skewed which will likely improve model performance.
+Histograms of the Mammography Classification Dataset
+It may be helpful to know how imbalanced the dataset actually is.
+We can use the Counter object to count the number of examples in each class, then use those counts to summarize the distribution.
+The complete example is listed below.
+Running the example summarizes the class distribution, confirming the severe class imbalanced with approximately 98 percent for the majority class (no cancer) and approximately 2 percent for the minority class (cancer).
+This is helpful because if we use classification accuracy, then any model that achieves an accuracy less than about 97.7% does not have skill on this dataset.
+Now that we are familiar with the dataset, let’s explore how we might develop a neural network model.
+# Neural Network Learning Dynamics
+We will develop a Multilayer Perceptron (MLP) model for the dataset using TensorFlow.
+We cannot know what model architecture of learning hyperparameters would be good or best for this dataset, so we must experiment and discover what works well.
+Given that the dataset is small, a small batch size is probably a good idea, e.g. 16 or 32 rows. Using the Adam version of stochastic gradient descent is a good idea when getting started as it will automatically adapt the learning rate and works well on most datasets.
+Before we evaluate models in earnest, it is a good idea to review the learning dynamics and tune the model architecture and learning configuration until we have stable learning dynamics, then look at getting the most out of the model.
+We can do this by using a simple train/test split of the data and review plots of the learning curves. This will help us see if we are over-learning or under-learning; then we can adapt the configuration accordingly.
+First, we must ensure all input variables are floating-point values and encode the target label as integer values 0 and 1.
+Next, we can split the dataset into input and output variables, then into 67/33 train and test sets.
+We must ensure that the split is stratified by the class ensuring that the train and test sets have the same distribution of class labels as the main dataset.
+We can define a minimal MLP model.
+In this case, we will use one hidden layer with 50 nodes and one output layer (chosen arbitrarily). We will use the ReLU activation function in the hidden layer and the “he_normal” weight initialization, as together, they are a good practice.
+The output of the model is a sigmoid activation for binary classification and we will minimize binary cross-entropy loss.
+We will fit the model for 300 training epochs (chosen arbitrarily) with a batch size of 32 because it is a modestly sized dataset.
+We are fitting the model on raw data, which we think might be a good idea, but it is an important starting point.
+At the end of training, we will evaluate the model’s performance on the test dataset and report performance as the classification accuracy.
+Finally, we will plot learning curves of the cross-entropy loss on the train and test sets during training.
+Tying this all together, the complete example of evaluating our first MLP on the cancer survival dataset is listed below.
+Running the example first fits the model on the training dataset, then reports the classification accuracy on the test dataset.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case we can see that the model performs better than a no-skill model, given that the accuracy is above about 97.7 percent, in this case achieving an accuracy of about 98.8 percent.
+Line plots of the loss on the train and test sets are then created.
+We can see that the model quickly finds a good fit on the dataset and does not appear to be over or underfitting.
+Learning Curves of Simple Multilayer Perceptron on the Mammography Dataset
+Now that we have some idea of the learning dynamics for a simple MLP model on the dataset, we can look at developing a more robust evaluation of model performance on the dataset.
+# Robust Model Evaluation
+The k-fold cross-validation procedure can provide a more reliable estimate of MLP performance, although it can be very slow.
+This is because k models must be fit and evaluated. This is not a problem when the dataset size is small, such as the cancer survival dataset.
+We can use the StratifiedKFold class and enumerate each fold manually, fit the model, evaluate it, and then report the mean of the evaluation scores at the end of the procedure.
+We can use this framework to develop a reliable estimate of MLP model performance with our base configuration, and even with a range of different data preparations, model architectures, and learning configurations.
+It is important that we first developed an understanding of the learning dynamics of the model on the dataset in the previous section before using k-fold cross-validation to estimate the performance. If we started to tune the model directly, we might get good results, but if not, we might have no idea of why, e.g. that the model was over or under fitting.
+If we make large changes to the model again, it is a good idea to go back and confirm that the model is converging appropriately.
+The complete example of this framework to evaluate the base MLP model from the previous section is listed below.
+Running the example reports the model performance each iteration of the evaluation procedure and reports the mean and standard deviation of classification accuracy at the end of the run.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the MLP model achieved a mean accuracy of about 98.7 percent, which is pretty close to our rough estimate in the previous section.
+This confirms our expectation that the base model configuration may work better than a naive model for this dataset
+Next, let’s look at how we might fit a final model and use it to make predictions.
+# Final Model and Make Predictions
+Once we choose a model configuration, we can train a final model on all available data and use it to make predictions on new data.
+In this case, we will use the model with dropout and a small batch size as our final model.
+We can prepare the data and fit the model as before, although on the entire dataset instead of a training subset of the dataset.
+We can then use this model to make predictions on new data.
+First, we can define a row of new data.
+Note: I took this row from the first row of the dataset and the expected label is a ‘-1’.
+We can then make a prediction.
+Then invert the transform on the prediction, so we can use or interpret the result in the correct label (which is just an integer for this dataset).
+And in this case, we will simply report the prediction.
+Tying this all together, the complete example of fitting a final model for the mammography dataset and using it to make a prediction on new data is listed below.
+Running the example fits the model on the entire dataset and makes a prediction for a single row of new data.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the model predicted a “-1” label for the input row.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Imbalanced Classification Model to Detect Mammography Microcalcifications
+- Best Results for Standard Machine Learning Datasets
+- TensorFlow 2 Tutorial: Get Started in Deep Learning With tf.keras
+- A Gentle Introduction to k-fold Cross-Validation
+# Summary
+In this tutorial, you discovered how to develop a Multilayer Perceptron neural network model for the Wood’s Mammography classification dataset.
+Specifically, you learned:
+- How to load and summarize the Wood’s Mammography dataset and use the results to suggest data preparations and model configurations to use.
+- How to explore the learning dynamics of simple MLP models on the dataset.
+- How to develop robust estimates of model performance, tune model performance and make predictions on new data.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+'''
+0.23001961,5.0725783,-0.27606055,0.83244412,-0.37786573,0.4803223,'-1'
+0.15549112,-0.16939038,0.67065219,-0.85955255,-0.37786573,-0.94572324,'-1'
+-0.78441482,-0.44365372,5.6747053,-0.85955255,-0.37786573,-0.94572324,'-1'
+0.54608818,0.13141457,-0.45638679,-0.85955255,-0.37786573,-0.94572324,'-1'
+-0.10298725,-0.3949941,-0.14081588,0.97970269,-0.37786573,1.0135658,'-1'
+...
+# load the mammography dataset and summarize the shape
+from pandas import read_csv
+# define the location of the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/mammography.csv'
+# load the dataset
+df = read_csv(url, header=None)
+# summarize shape
+print(df.shape)
+(11183, 7)
+# show summary statistics and plots of the mammography dataset
+from pandas import read_csv
+from matplotlib import pyplot
+# define the location of the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/mammography.csv'
+# load the dataset
+df = read_csv(url, header=None)
+# show summary statistics
+print(df.describe())
+# plot histograms
+df.hist()
+pyplot.show()
+                  0             1  ...             4             5
+count  1.118300e+04  1.118300e+04  ...  1.118300e+04  1.118300e+04
+mean   1.096535e-10  1.297595e-09  ... -1.120680e-09  1.459483e-09
+std    1.000000e+00  1.000000e+00  ...  1.000000e+00  1.000000e+00
+min   -7.844148e-01 -4.701953e-01  ... -3.778657e-01 -9.457232e-01
+25%   -7.844148e-01 -4.701953e-01  ... -3.778657e-01 -9.457232e-01
+50%   -1.085769e-01 -3.949941e-01  ... -3.778657e-01 -9.457232e-01
+75%    3.139489e-01 -7.649473e-02  ... -3.778657e-01  1.016613e+00
+max    3.150844e+01  5.085849e+00  ...  2.361712e+01  1.949027e+00
+# summarize the class ratio of the mammography dataset
+from pandas import read_csv
+from collections import Counter
+# define the location of the dataset
+url = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/mammography.csv'
+# load the csv file as a data frame
+dataframe = read_csv(url, header=None)
+# summarize the class distribution
+target = dataframe.values[:,-1]
+counter = Counter(target)
+for k,v in counter.items():
+	per = v / len(target) * 100
+	print('Class=%s, Count=%d, Percentage=%.3f%%' % (k, v, per))
+Class='-1', Count=10923, Percentage=97.675%
+Class='1', Count=260, Percentage=2.325%
+
+# ensure all data are floating point values
+X = X.astype('float32')
+# encode strings to integer
+y = LabelEncoder().fit_transform(y)
+
+# split into input and output columns
+X, y = df.values[:, :-1], df.values[:, -1]
+# split into train and test datasets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, stratify=y, random_state=1)
+
+# define model
+model = Sequential()
+model.add(Dense(50, activation='relu', kernel_initializer='he_normal', input_shape=(n_features,)))
+model.add(Dense(1, activation='sigmoid'))
+# compile the model
+model.compile(optimizer='adam', loss='binary_crossentropy')
+
+history = model.fit(X_train, y_train, epochs=300, batch_size=32, verbose=0, validation_data=(X_test,y_test))
+
+# predict test set
+yhat = model.predict_classes(X_test)
+# evaluate predictions
+score = accuracy_score(y_test, yhat)
+print('Accuracy: %.3f' % score)
+
+# plot learning curves
+pyplot.title('Learning Curves')
+pyplot.xlabel('Epoch')
+pyplot.ylabel('Cross Entropy')
+pyplot.plot(history.history['loss'], label='train')
+pyplot.plot(history.history['val_loss'], label='val')
+pyplot.legend()
+pyplot.show()
+# fit a simple mlp model on the mammography and review learning curves
+from pandas import read_csv
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Dense
+from matplotlib import pyplot
+# load the dataset
+path = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/mammography.csv'
+df = read_csv(path, header=None)
+# split into input and output columns
+X, y = df.values[:, :-1], df.values[:, -1]
+# ensure all data are floating point values
+X = X.astype('float32')
+# encode strings to integer
+y = LabelEncoder().fit_transform(y)
+# split into train and test datasets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.5, stratify=y, random_state=1)
+# determine the number of input features
+n_features = X.shape[1]
+# define model
+model = Sequential()
+model.add(Dense(50, activation='relu', kernel_initializer='he_normal', input_shape=(n_features,)))
+model.add(Dense(1, activation='sigmoid'))
+# compile the model
+model.compile(optimizer='adam', loss='binary_crossentropy')
+# fit the model
+history = model.fit(X_train, y_train, epochs=300, batch_size=32, verbose=0, validation_data=(X_test,y_test))
+# predict test set
+yhat = model.predict_classes(X_test)
+# evaluate predictions
+score = accuracy_score(y_test, yhat)
+print('Accuracy: %.3f' % score)
+# plot learning curves
+pyplot.title('Learning Curves')
+pyplot.xlabel('Epoch')
+pyplot.ylabel('Cross Entropy')
+pyplot.plot(history.history['loss'], label='train')
+pyplot.plot(history.history['val_loss'], label='val')
+pyplot.legend()
+pyplot.show()
+Accuracy: 0.988
+
+# prepare cross validation
+kfold = KFold(10)
+# enumerate splits
+scores = list()
+for train_ix, test_ix in kfold.split(X, y):
+	# fit and evaluate the model...
+	...
+...
+# summarize all scores
+print('Mean Accuracy: %.3f (%.3f)' % (mean(scores), std(scores)))
+# k-fold cross-validation of base model for the mammography dataset
+from numpy import mean
+from numpy import std
+from pandas import read_csv
+from sklearn.model_selection import StratifiedKFold
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Dense
+from matplotlib import pyplot
+# load the dataset
+path = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/mammography.csv'
+df = read_csv(path, header=None)
+# split into input and output columns
+X, y = df.values[:, :-1], df.values[:, -1]
+# ensure all data are floating point values
+X = X.astype('float32')
+# encode strings to integer
+y = LabelEncoder().fit_transform(y)
+# prepare cross validation
+kfold = StratifiedKFold(10, random_state=1)
+# enumerate splits
+scores = list()
+for train_ix, test_ix in kfold.split(X, y):
+	# split data
+	X_train, X_test, y_train, y_test = X[train_ix], X[test_ix], y[train_ix], y[test_ix]
+	# determine the number of input features
+	n_features = X.shape[1]
+	# define model
+	model = Sequential()
+	model.add(Dense(50, activation='relu', kernel_initializer='he_normal', input_shape=(n_features,)))
+	model.add(Dense(1, activation='sigmoid'))
+	# compile the model
+	model.compile(optimizer='adam', loss='binary_crossentropy')
+	# fit the model
+	model.fit(X_train, y_train, epochs=300, batch_size=32, verbose=0)
+	# predict test set
+	yhat = model.predict_classes(X_test)
+	# evaluate predictions
+	score = accuracy_score(y_test, yhat)
+	print('>%.3f' % score)
+	scores.append(score)
+# summarize all scores
+print('Mean Accuracy: %.3f (%.3f)' % (mean(scores), std(scores)))
+>0.987
+>0.986
+>0.989
+>0.987
+>0.986
+>0.988
+>0.989
+>0.989
+>0.983
+>0.988
+Mean Accuracy: 0.987 (0.002)
+
+# split into input and output columns
+X, y = df.values[:, :-1], df.values[:, -1]
+# ensure all data are floating point values
+X = X.astype('float32')
+# encode strings to integer
+le = LabelEncoder()
+y = le.fit_transform(y)
+# determine the number of input features
+n_features = X.shape[1]
+# define model
+model = Sequential()
+model.add(Dense(50, activation='relu', kernel_initializer='he_normal', input_shape=(n_features,)))
+model.add(Dense(1, activation='sigmoid'))
+# compile the model
+model.compile(optimizer='adam', loss='binary_crossentropy')
+
+# define a row of new data
+row = [0.23001961,5.0725783,-0.27606055,0.83244412,-0.37786573,0.4803223]
+
+# make prediction
+yhat = model.predict_classes([row])
+
+# invert transform to get label for class
+yhat = le.inverse_transform(yhat)
+
+# report prediction
+print('Predicted: %s' % (yhat[0]))
+# fit a final model and make predictions on new data for the mammography dataset
+from pandas import read_csv
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import accuracy_score
+from tensorflow.keras import Sequential
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dropout
+# load the dataset
+path = 'https://raw.githubusercontent.com/jbrownlee/Datasets/master/mammography.csv'
+df = read_csv(path, header=None)
+# split into input and output columns
+X, y = df.values[:, :-1], df.values[:, -1]
+# ensure all data are floating point values
+X = X.astype('float32')
+# encode strings to integer
+le = LabelEncoder()
+y = le.fit_transform(y)
+# determine the number of input features
+n_features = X.shape[1]
+# define model
+model = Sequential()
+model.add(Dense(50, activation='relu', kernel_initializer='he_normal', input_shape=(n_features,)))
+model.add(Dense(1, activation='sigmoid'))
+# compile the model
+model.compile(optimizer='adam', loss='binary_crossentropy')
+# fit the model
+model.fit(X, y, epochs=300, batch_size=32, verbose=0)
+# define a row of new data
+row = [0.23001961,5.0725783,-0.27606055,0.83244412,-0.37786573,0.4803223]
+# make prediction
+yhat = model.predict_classes([row])
+# invert transform to get label for class
+yhat = le.inverse_transform(yhat)
+# report prediction
+print('Predicted: %s' % (yhat[0]))
+Predicted: '-1'
+'''

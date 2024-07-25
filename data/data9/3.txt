@@ -1,0 +1,496 @@
+Undersampling Algorithms for Imbalanced Classification
+https://machinelearningmastery.com/undersampling-algorithms-for-imbalanced-classification/
+2020-01-19
+Resampling methods are designed to change the composition of a training dataset for an imbalanced classification task.
+Most of the attention of resampling methods for imbalanced classification is put on oversampling the minority class. Nevertheless, a suite of techniques has been developed for undersampling the majority class that can be used in conjunction with effective oversampling methods.
+There are many different types of undersampling techniques, although most can be grouped into those that select examples to keep in the transformed dataset, those that select examples to delete, and hybrids that combine both types of methods.
+In this tutorial, you will discover undersampling methods for imbalanced classification.
+After completing this tutorial, you will know:
+- How to use the Near-Miss and Condensed Nearest Neighbor Rule methods that select examples to keep from the majority class.
+- How to use Tomek Links and the Edited Nearest Neighbors Rule methods that select examples to delete from the majority class.
+- How to use One-Sided Selection and the Neighborhood Cleaning Rule that combine methods for choosing examples to keep and delete from the majority class.
+Kick-start your project with my new book Imbalanced Classification with Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Updated Jan/2021: Updated links for API documentation.
+How to Use Undersampling Algorithms for Imbalanced ClassificationPhoto by nuogein, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into five parts; they are:
+- Undersampling for Imbalanced Classification
+- Imbalanced-Learn Library
+- Methods that Select Examples to Keep
+
+Near Miss Undersampling
+Condensed Nearest Neighbor Rule for Undersampling
+
+
+- Near Miss Undersampling
+- Condensed Nearest Neighbor Rule for Undersampling
+- Methods that Select Examples to Delete
+
+Tomek Links for Undersampling
+Edited Nearest Neighbors Rule for Undersampling
+
+
+- Tomek Links for Undersampling
+- Edited Nearest Neighbors Rule for Undersampling
+- Combinations of Keep and Delete Methods
+
+One-Sided Selection for Undersampling
+Neighborhood Cleaning Rule for Undersampling
+
+
+- One-Sided Selection for Undersampling
+- Neighborhood Cleaning Rule for Undersampling
+# Undersampling for Imbalanced Classification
+Undersampling refers to a group of techniques designed to balance the class distribution for a classification dataset that has a skewed class distribution.
+An imbalanced class distribution will have one or more classes with few examples (the minority classes) and one or more classes with many examples (the majority classes). It is best understood in the context of a binary (two-class) classification problem where class 0 is the majority class and class 1 is the minority class.
+Undersampling techniques remove examples from the training dataset that belong to the majority class in order to better balance the class distribution, such as reducing the skew from a 1:100 to a 1:10, 1:2, or even a 1:1 class distribution. This is different from oversampling that involves adding examples to the minority class in an effort to reduce the skew in the class distribution.
+… undersampling, that consists of reducing the data by eliminating examples belonging to the majority class with the objective of equalizing the number of examples of each class …
+— Page 82, Learning from Imbalanced Data Sets, 2018.
+Undersampling methods can be used directly on a training dataset that can then, in turn, be used to fit a machine learning model. Typically, undersampling methods are used in conjunction with an oversampling technique for the minority class, and this combination often results in better performance than using oversampling or undersampling alone on the training dataset.
+The simplest undersampling technique involves randomly selecting examples from the majority class and deleting them from the training dataset. This is referred to as random undersampling. Although simple and effective, a limitation of this technique is that examples are removed without any concern for how useful or important they might be in determining the decision boundary between the classes. This means it is possible, or even likely, that useful information will be deleted.
+The major drawback of random undersampling is that this method can discard potentially useful data that could be important for the induction process. The removal of data is a critical decision to be made, hence many the proposal of undersampling use heuristics in order to overcome the limitations of the non- heuristics decisions.
+— Page 83, Learning from Imbalanced Data Sets, 2018.
+An extension of this approach is to be more discerning regarding the examples from the majority class that are deleted. This typically involves heuristics or learning models that attempt to identify redundant examples for deletion or useful examples for non-deletion.
+There are many undersampling techniques that use these types of heuristics. In the following sections, we will review some of the more common methods and develop an intuition for their operation on a synthetic imbalanced binary classification dataset.
+We can define a synthetic binary classification dataset using the make_classification() function from the scikit-learn library. For example, we can create 10,000 examples with two input variables and a 1:100 distribution as follows:
+We can then create a scatter plot of the dataset via the scatter() Matplotlib function to understand the spatial relationship of the examples in each class and their imbalance.
+Tying this together, the complete example of creating an imbalanced classification dataset and plotting the examples is listed below.
+Running the example first summarizes the class distribution, showing an approximate 1:100 class distribution with about 10,000 examples with class 0 and 100 with class 1.
+Next, a scatter plot is created showing all of the examples in the dataset. We can see a large mass of examples for class 0 (blue) and a small number of examples for class 1 (orange). We can also see that the classes overlap with some examples from class 1 clearly within the part of the feature space that belongs to class 0.
+Scatter Plot of Imbalanced Classification Dataset
+This plot provides the starting point for developing the intuition for the effect that different undersampling techniques have on the majority class.
+Next, we can begin to review popular undersampling methods made available via the imbalanced-learn Python library.
+There are many different methods to choose from. We will divide them into methods that select what examples from the majority class to keep, methods that select examples to delete, and combinations of both approaches.
+
+
+
+
+# Imbalanced-Learn Library
+In these examples, we will use the implementations provided by the imbalanced-learn Python library, which can be installed via pip as follows:
+You can confirm that the installation was successful by printing the version of the installed library:
+Running the example will print the version number of the installed library; for example:
+
+# Methods that Select Examples to Keep
+In this section, we will take a closer look at two methods that choose which examples from the majority class to keep, the near-miss family of methods, and the popular condensed nearest neighbor rule.
+Near Miss refers to a collection of undersampling methods that select examples based on the distance of majority class examples to minority class examples.
+The approaches were proposed by Jianping Zhang and Inderjeet Mani in their 2003 paper titled “KNN Approach to Unbalanced Data Distributions: A Case Study Involving Information Extraction.”
+There are three versions of the technique, named NearMiss-1, NearMiss-2, and NearMiss-3.
+NearMiss-1 selects examples from the majority class that have the smallest average distance to the three closest examples from the minority class. NearMiss-2 selects examples from the majority class that have the smallest average distance to the three furthest examples from the minority class. NearMiss-3 involves selecting a given number of majority class examples for each example in the minority class that are closest.
+Here, distance is determined in feature space using Euclidean distance or similar.
+- NearMiss-1: Majority class examples with minimum average distance to three closest minority class examples.
+- NearMiss-2: Majority class examples with minimum average distance to three furthest minority class examples.
+- NearMiss-3: Majority class examples with minimum distance to each minority class example.
+The NearMiss-3 seems desirable, given that it will only keep those majority class examples that are on the decision boundary.
+We can implement the Near Miss methods using the NearMiss imbalanced-learn class.
+The type of near-miss strategy used is defined by the “version” argument, which by default is set to 1 for NearMiss-1, but can be set to 2 or 3 for the other two methods.
+By default, the technique will undersample the majority class to have the same number of examples as the minority class, although this can be changed by setting the sampling_strategy argument to a fraction of the minority class.
+First, we can demonstrate NearMiss-1 that selects only those majority class examples that have a minimum distance to three minority class instances, defined by the n_neighbors argument.
+We would expect clusters of majority class examples around the minority class examples that overlap.
+The complete example is listed below.
+Running the example undersamples the majority class and creates a scatter plot of the transformed dataset.
+We can see that, as expected, only those examples in the majority class that are closest to the minority class examples in the overlapping area were retained.
+Scatter Plot of Imbalanced Dataset Undersampled with NearMiss-1
+Next, we can demonstrate the NearMiss-2 strategy, which is an inverse to NearMiss-1. It selects examples that are closest to the most distant examples from the minority class, defined by the n_neighbors argument.
+This is not an intuitive strategy from the description alone.
+The complete example is listed below.
+Running the example, we can see that the NearMiss-2 selects examples that appear to be in the center of mass for the overlap between the two classes.
+Scatter Plot of Imbalanced Dataset Undersampled With NearMiss-2
+Finally, we can try NearMiss-3 that selects the closest examples from the majority class for each minority class.
+The n_neighbors_ver3 argument determines the number of examples to select for each minority example, although the desired balancing ratio set via sampling_strategy will filter this so that the desired balance is achieved.
+The complete example is listed below.
+As expected, we can see that each example in the minority class that was in the region of overlap with the majority class has up to three neighbors from the majority class.
+Scatter Plot of Imbalanced Dataset Undersampled With NearMiss-3
+Condensed Nearest Neighbors, or CNN for short, is an undersampling technique that seeks a subset of a collection of samples that results in no loss in model performance, referred to as a minimal consistent set.
+… the notion of a consistent subset of a sample set. This is a subset which, when used as a stored reference set for the NN rule, correctly classifies all of the remaining points in the sample set.
+— The Condensed Nearest Neighbor Rule (Corresp.), 1968.
+It is achieved by enumerating the examples in the dataset and adding them to the “store” only if they cannot be classified correctly by the current contents of the store. This approach was proposed to reduce the memory requirements for the k-Nearest Neighbors (KNN) algorithm by Peter Hart in the 1968 correspondence titled “The Condensed Nearest Neighbor Rule.”
+When used for imbalanced classification, the store is comprised of all examples in the minority set and only examples from the majority set that cannot be classified correctly are added incrementally to the store.
+We can implement the Condensed Nearest Neighbor for undersampling using the CondensedNearestNeighbour class from the imbalanced-learn library.
+During the procedure, the KNN algorithm is used to classify points to determine if they are to be added to the store or not. The k value is set via the n_neighbors argument and defaults to 1.
+It’s a relatively slow procedure, so small datasets and small k values are preferred.
+The complete example of demonstrating the Condensed Nearest Neighbor rule for undersampling is listed below.
+Running the example first reports the skewed distribution of the raw dataset, then the more balanced distribution for the transformed dataset.
+We can see that the resulting distribution is about 1:2 minority to majority examples. This highlights that although the sampling_strategy argument seeks to balance the class distribution, the algorithm will continue to add misclassified examples to the store (transformed dataset). This is a desirable property.
+A scatter plot of the resulting dataset is created. We can see that the focus of the algorithm is those examples in the minority class along the decision boundary between the two classes, specifically, those majority examples around the minority class examples.
+Scatter Plot of Imbalanced Dataset Undersampled With the Condensed Nearest Neighbor Rule
+# Methods that Select Examples to Delete
+In this section, we will take a closer look at methods that select examples from the majority class to delete, including the popular Tomek Links method and the Edited Nearest Neighbors rule.
+A criticism of the Condensed Nearest Neighbor Rule is that examples are selected randomly, especially initially.
+This has the effect of allowing redundant examples into the store and in allowing examples that are internal to the mass of the distribution, rather than on the class boundary, into the store.
+The condensed nearest-neighbor (CNN) method chooses samples randomly. This results in a)retention of unnecessary samples and b) occasional retention of internal rather than boundary samples.
+— Two modifications of CNN, 1976.
+Two modifications to the CNN procedure were proposed by Ivan Tomek in his 1976 paper titled “Two modifications of CNN.” One of the modifications (Method2) is a rule that finds pairs of examples, one from each class; they together have the smallest Euclidean distance to each other in feature space.
+This means that in a binary classification problem with classes 0 and 1, a pair would have an example from each class and would be closest neighbors across the dataset.
+In words, instances a and b define a Tomek Link if: (i) instance a’s nearest neighbor is b, (ii) instance b’s nearest neighbor is a, and (iii) instances a and b belong to different classes.
+— Page 46, Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+These cross-class pairs are now generally referred to as “Tomek Links” and are valuable as they define the class boundary.
+Method 2 has another potentially important property: It finds pairs of boundary points which participate in the formation of the (piecewise-linear) boundary. […] Such methods could use these pairs to generate progressively simpler descriptions of acceptably accurate approximations of the original completely specified boundaries.
+— Two modifications of CNN, 1976.
+The procedure for finding Tomek Links can be used to locate all cross-class nearest neighbors. If the examples in the minority class are held constant, the procedure can be used to find all of those examples in the majority class that are closest to the minority class, then removed. These would be the ambiguous examples.
+From this definition, we see that instances that are in Tomek Links are either boundary instances or noisy instances. This is due to the fact that only boundary instances and noisy instances will have nearest neighbors, which are from the opposite class.
+— Page 46, Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+We can implement Tomek Links method for undersampling using the TomekLinks imbalanced-learn class.
+The complete example of demonstrating the Tomek Links for undersampling is listed below.
+Because the procedure only removes so-named “Tomek Links“, we would not expect the resulting transformed dataset to be balanced, only less ambiguous along the class boundary.
+Running the example first summarizes the class distribution for the raw dataset, then the transformed dataset.
+We can see that only 26 examples from the majority class were removed.
+The scatter plot of the transformed dataset does not make the minor editing to the majority class obvious.
+This highlights that although finding the ambiguous examples on the class boundary is useful, alone, it is not a great undersampling technique. In practice, the Tomek Links procedure is often combined with other methods, such as the Condensed Nearest Neighbor Rule.
+The choice to combine Tomek Links and CNN is natural, as Tomek Links can be said to remove borderline and noisy instances, while CNN removes redundant instances.
+— Page 46, Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+Scatter Plot of Imbalanced Dataset Undersampled With the Tomek Links Method
+Another rule for finding ambiguous and noisy examples in a dataset is called Edited Nearest Neighbors, or sometimes ENN for short.
+This rule involves using k=3 nearest neighbors to locate those examples in a dataset that are misclassified and that are then removed before a k=1 classification rule is applied. This approach of resampling and classification was proposed by Dennis Wilson in his 1972 paper titled “Asymptotic Properties of Nearest Neighbor Rules Using Edited Data.”
+The modified three-nearest neighbor rule which uses the three-nearest neighbor rule to edit the preclassified samples and then uses a single-nearest neighbor rule to make decisions is a particularly attractive rule.
+— Asymptotic Properties of Nearest Neighbor Rules Using Edited Data, 1972.
+When used as an undersampling procedure, the rule can be applied to each example in the majority class, allowing those examples that are misclassified as belonging to the minority class to be removed, and those correctly classified to remain.
+It is also applied to each example in the minority class where those examples that are misclassified have their nearest neighbors from the majority class deleted.
+… for each instance a in the dataset, its three nearest neighbors are computed. If a is a majority class instance and is misclassified by its three nearest neighbors, then a is removed from the dataset. Alternatively, if a is a minority class instance and is misclassified by its three nearest neighbors, then the majority class instances among a’s neighbors are removed.
+— Page 46, Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+The Edited Nearest Neighbors rule can be implemented using the EditedNearestNeighbours imbalanced-learn class.
+The n_neighbors argument controls the number of neighbors to use in the editing rule, which defaults to three, as in the paper.
+The complete example of demonstrating the ENN rule for undersampling is listed below.
+Like Tomek Links, the procedure only removes noisy and ambiguous points along the class boundary. As such, we would not expect the resulting transformed dataset to be balanced.
+Running the example first summarizes the class distribution for the raw dataset, then the transformed dataset.
+We can see that only 94 examples from the majority class were removed.
+Given the small amount of undersampling performed, the change to the mass of majority examples is not obvious from the plot.
+Also, like Tomek Links, the Edited Nearest Neighbor Rule gives best results when combined with another undersampling method.
+Scatter Plot of Imbalanced Dataset Undersampled With the Edited Nearest Neighbor Rule
+Ivan Tomek, developer of Tomek Links, explored extensions of the Edited Nearest Neighbor Rule in his 1976 paper titled “An Experiment with the Edited Nearest-Neighbor Rule.”
+Among his experiments was a repeated ENN method that invoked the continued editing of the dataset using the ENN rule for a fixed number of iterations, referred to as “unlimited editing.”
+… unlimited repetition of Wilson’s editing (in fact, editing is always stopped after a finite number of steps because after a certain number of repetitions the design set becomes immune to further elimination)
+— An Experiment with the Edited Nearest-Neighbor Rule, 1976.
+He also describes a method referred to as “all k-NN” that removes all examples from the dataset that were classified incorrectly.
+Both of these additional editing procedures are also available via the imbalanced-learn library via the RepeatedEditedNearestNeighbours and AllKNN classes.
+# Combinations of Keep and Delete Methods
+In this section, we will take a closer look at techniques that combine the techniques we have already looked at to both keep and delete examples from the majority class, such as One-Sided Selection and the Neighborhood Cleaning Rule.
+One-Sided Selection, or OSS for short, is an undersampling technique that combines Tomek Links and the Condensed Nearest Neighbor (CNN) Rule.
+Specifically, Tomek Links are ambiguous points on the class boundary and are identified and removed in the majority class. The CNN method is then used to remove redundant examples from the majority class that are far from the decision boundary.
+OSS is an undersampling method resulting from the application of Tomek links followed by the application of US-CNN. Tomek links are used as an undersampling method and removes noisy and borderline majority class examples. […] US-CNN aims to remove examples from the majority class that are distant from the decision border.
+— Page 84, Learning from Imbalanced Data Sets, 2018.
+This combination of methods was proposed by Miroslav Kubat and Stan Matwin in their 1997 paper titled “Addressing The Curse Of Imbalanced Training Sets: One-sided Selection.”
+The CNN procedure occurs in one-step and involves first adding all minority class examples to the store and some number of majority class examples (e.g. 1), then classifying all remaining majority class examples with KNN (k=1) and adding those that are misclassified to the store.
+Overview of the One-Sided Selection for Undersampling ProcedureTaken from Addressing The Curse Of Imbalanced Training Sets: One-sided Selection.
+We can implement the OSS undersampling strategy via the OneSidedSelection imbalanced-learn class.
+The number of seed examples can be set with n_seeds_S and defaults to 1 and the k for KNN can be set via the n_neighbors argument and defaults to 1.
+Given that the CNN procedure occurs in one block, it is more useful to have a larger seed sample of the majority class in order to effectively remove redundant examples. In this case, we will use a value of 200.
+The complete example of applying OSS on the binary classification problem is listed below.
+We might expect a large number of redundant examples from the majority class to be removed from the interior of the distribution (e.g. away from the class boundary).
+Running the example first reports the class distribution in the raw dataset, then the transformed dataset.
+We can see that a large number of examples from the majority class were removed, consisting of both redundant examples (removed via CNN) and ambiguous examples (removed via Tomek Links). The ratio for this dataset is now around 1:10., down from 1:100.
+A scatter plot of the transformed dataset is created showing that most of the majority class examples left belong are around the class boundary and the overlapping examples from the minority class.
+It might be interesting to explore larger seed samples from the majority class and different values of k used in the one-step CNN procedure.
+Scatter Plot of Imbalanced Dataset Undersampled With One-Sided Selection
+The Neighborhood Cleaning Rule, or NCR for short, is an undersampling technique that combines both the Condensed Nearest Neighbor (CNN) Rule to remove redundant examples and the Edited Nearest Neighbors (ENN) Rule to remove noisy or ambiguous examples.
+Like One-Sided Selection (OSS), the CSS method is applied in a one-step manner, then the examples that are misclassified according to a KNN classifier are removed, as per the ENN rule. Unlike OSS, less of the redundant examples are removed and more attention is placed on “cleaning” those examples that are retained.
+The reason for this is to focus less on improving the balance of the class distribution and more on the quality (unambiguity) of the examples that are retained in the majority class.
+… the quality of classification results does not necessarily depend on the size of the class. Therefore, we should consider, besides the class distribution, other characteristics of data, such as noise, that may hamper classification.
+— Improving Identification of Difficult Small Classes by Balancing Class Distribution, 2001.
+This approach was proposed by Jorma Laurikkala in her 2001 paper titled “Improving Identification of Difficult Small Classes by Balancing Class Distribution.”
+The approach involves first selecting all examples from the minority class. Then all of the ambiguous examples in the majority class are identified using the ENN rule and removed. Finally, a one-step version of CNN is used where those remaining examples in the majority class that are misclassified against the store are removed, but only if the number of examples in the majority class is larger than half the size of the minority class.
+Summary of the Neighborhood Cleaning Rule Algorithm.Taken from Improving Identification of Difficult Small Classes by Balancing Class Distribution.
+This technique can be implemented using the NeighbourhoodCleaningRule imbalanced-learn class. The number of neighbors used in the ENN and CNN steps can be specified via the n_neighbors argument that defaults to three. The threshold_cleaning controls whether or not the CNN is applied to a given class, which might be useful if there are multiple minority classes with similar sizes. This is kept at 0.5.
+The complete example of applying NCR on the binary classification problem is listed below.
+Given the focus on data cleaning over removing redundant examples, we would expect only a modest reduction in the number of examples in the majority class.
+Running the example first reports the class distribution in the raw dataset, then the transformed dataset.
+We can see that only 114 examples from the majority class were removed.
+Given the limited and focused amount of undersampling performed, the change to the mass of majority examples is not obvious from the scatter plot that is created.
+Scatter Plot of Imbalanced Dataset Undersampled With the Neighborhood Cleaning Rule
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- kNN Approach To Unbalanced Data Distributions: A Case Study Involving Information Extraction, 2003.
+- The Condensed Nearest Neighbor Rule (Corresp.), 1968
+- Two modifications of CNN, 1976.
+- Addressing The Curse Of Imbalanced Training Sets: One-sided Selection, 1997.
+- Asymptotic Properties of Nearest Neighbor Rules Using Edited Data, 1972.
+- An Experiment with the Edited Nearest-Neighbor Rule, 1976.
+- Improving Identification of Difficult Small Classes by Balancing Class Distribution, 2001.
+- Learning from Imbalanced Data Sets, 2018.
+- Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+- Under-sampling, Imbalanced-Learn User Guide.
+- imblearn.under_sampling.NearMiss API
+- imblearn.under_sampling.CondensedNearestNeighbour API
+- imblearn.under_sampling.TomekLinks API
+- imblearn.under_sampling.OneSidedSelection API
+- imblearn.under_sampling.EditedNearestNeighbours API.
+- imblearn.under_sampling.NeighbourhoodCleaningRule API
+- Oversampling and undersampling in data analysis, Wikipedia.
+# Summary
+In this tutorial, you discovered undersampling methods for imbalanced classification.
+Specifically, you learned:
+- How to use the Near-Miss and Condensed Nearest Neighbor Rule methods that select examples to keep from the majority class.
+- How to use Tomek Links and the Edited Nearest Neighbors Rule methods that select examples to delete from the majority class.
+- How to use One-Sided Selection and the Neighborhood Cleaning Rule that combine methods for choosing examples to keep and delete from the majority class.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Imbalanced Classification!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Imbalanced Classification with Python
+It provides self-study tutorials and end-to-end projects on:
+Performance Metrics, Undersampling Methods, SMOTE, Threshold Moving, Probability Calibration, Cost-Sensitive Algorithms
+and much more...
+See What's Inside
+
+'''
+
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=1)
+
+# scatter plot of examples by class label
+for label, _ in counter.items():
+	row_ix = where(y == label)[0]
+	pyplot.scatter(X[row_ix, 0], X[row_ix, 1], label=str(label))
+pyplot.legend()
+pyplot.show()
+# Generate and plot a synthetic imbalanced classification dataset
+from collections import Counter
+from sklearn.datasets import make_classification
+from matplotlib import pyplot
+from numpy import where
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=1)
+# summarize class distribution
+counter = Counter(y)
+print(counter)
+# scatter plot of examples by class label
+for label, _ in counter.items():
+	row_ix = where(y == label)[0]
+	pyplot.scatter(X[row_ix, 0], X[row_ix, 1], label=str(label))
+pyplot.legend()
+pyplot.show()
+Counter({0: 9900, 1: 100})
+sudo pip install imbalanced-learn
+# check version number
+import imblearn
+print(imblearn.__version__)
+0.5.0
+
+# define the undersampling method
+undersample = NearMiss(version=1)
+# Undersample imbalanced dataset with NearMiss-1
+from collections import Counter
+from sklearn.datasets import make_classification
+from imblearn.under_sampling import NearMiss
+from matplotlib import pyplot
+from numpy import where
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=1)
+# summarize class distribution
+counter = Counter(y)
+print(counter)
+# define the undersampling method
+undersample = NearMiss(version=1, n_neighbors=3)
+# transform the dataset
+X, y = undersample.fit_resample(X, y)
+# summarize the new class distribution
+counter = Counter(y)
+print(counter)
+# scatter plot of examples by class label
+for label, _ in counter.items():
+	row_ix = where(y == label)[0]
+	pyplot.scatter(X[row_ix, 0], X[row_ix, 1], label=str(label))
+pyplot.legend()
+pyplot.show()
+# Undersample imbalanced dataset with NearMiss-2
+from collections import Counter
+from sklearn.datasets import make_classification
+from imblearn.under_sampling import NearMiss
+from matplotlib import pyplot
+from numpy import where
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=1)
+# summarize class distribution
+counter = Counter(y)
+print(counter)
+# define the undersampling method
+undersample = NearMiss(version=2, n_neighbors=3)
+# transform the dataset
+X, y = undersample.fit_resample(X, y)
+# summarize the new class distribution
+counter = Counter(y)
+print(counter)
+# scatter plot of examples by class label
+for label, _ in counter.items():
+	row_ix = where(y == label)[0]
+	pyplot.scatter(X[row_ix, 0], X[row_ix, 1], label=str(label))
+pyplot.legend()
+pyplot.show()
+# Undersample imbalanced dataset with NearMiss-3
+from collections import Counter
+from sklearn.datasets import make_classification
+from imblearn.under_sampling import NearMiss
+from matplotlib import pyplot
+from numpy import where
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=1)
+# summarize class distribution
+counter = Counter(y)
+print(counter)
+# define the undersampling method
+undersample = NearMiss(version=3, n_neighbors_ver3=3)
+# transform the dataset
+X, y = undersample.fit_resample(X, y)
+# summarize the new class distribution
+counter = Counter(y)
+print(counter)
+# scatter plot of examples by class label
+for label, _ in counter.items():
+	row_ix = where(y == label)[0]
+	pyplot.scatter(X[row_ix, 0], X[row_ix, 1], label=str(label))
+pyplot.legend()
+pyplot.show()
+
+# define the undersampling method
+undersample = CondensedNearestNeighbour(n_neighbors=1)
+# Undersample and plot imbalanced dataset with the Condensed Nearest Neighbor Rule
+from collections import Counter
+from sklearn.datasets import make_classification
+from imblearn.under_sampling import CondensedNearestNeighbour
+from matplotlib import pyplot
+from numpy import where
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=1)
+# summarize class distribution
+counter = Counter(y)
+print(counter)
+# define the undersampling method
+undersample = CondensedNearestNeighbour(n_neighbors=1)
+# transform the dataset
+X, y = undersample.fit_resample(X, y)
+# summarize the new class distribution
+counter = Counter(y)
+print(counter)
+# scatter plot of examples by class label
+for label, _ in counter.items():
+	row_ix = where(y == label)[0]
+	pyplot.scatter(X[row_ix, 0], X[row_ix, 1], label=str(label))
+pyplot.legend()
+pyplot.show()
+Counter({0: 9900, 1: 100})
+Counter({0: 188, 1: 100})
+
+# define the undersampling method
+undersample = TomekLinks()
+# Undersample and plot imbalanced dataset with Tomek Links
+from collections import Counter
+from sklearn.datasets import make_classification
+from imblearn.under_sampling import TomekLinks
+from matplotlib import pyplot
+from numpy import where
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=1)
+# summarize class distribution
+counter = Counter(y)
+print(counter)
+# define the undersampling method
+undersample = TomekLinks()
+# transform the dataset
+X, y = undersample.fit_resample(X, y)
+# summarize the new class distribution
+counter = Counter(y)
+print(counter)
+# scatter plot of examples by class label
+for label, _ in counter.items():
+	row_ix = where(y == label)[0]
+	pyplot.scatter(X[row_ix, 0], X[row_ix, 1], label=str(label))
+pyplot.legend()
+pyplot.show()
+Counter({0: 9900, 1: 100})
+Counter({0: 9874, 1: 100})
+
+# define the undersampling method
+undersample = EditedNearestNeighbours(n_neighbors=3)
+# Undersample and plot imbalanced dataset with the Edited Nearest Neighbor rule
+from collections import Counter
+from sklearn.datasets import make_classification
+from imblearn.under_sampling import EditedNearestNeighbours
+from matplotlib import pyplot
+from numpy import where
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=1)
+# summarize class distribution
+counter = Counter(y)
+print(counter)
+# define the undersampling method
+undersample = EditedNearestNeighbours(n_neighbors=3)
+# transform the dataset
+X, y = undersample.fit_resample(X, y)
+# summarize the new class distribution
+counter = Counter(y)
+print(counter)
+# scatter plot of examples by class label
+for label, _ in counter.items():
+	row_ix = where(y == label)[0]
+	pyplot.scatter(X[row_ix, 0], X[row_ix, 1], label=str(label))
+pyplot.legend()
+pyplot.show()
+Counter({0: 9900, 1: 100})
+Counter({0: 9806, 1: 100})
+
+# define the undersampling method
+undersample = OneSidedSelection(n_neighbors=1, n_seeds_S=200)
+# Undersample and plot imbalanced dataset with One-Sided Selection
+from collections import Counter
+from sklearn.datasets import make_classification
+from imblearn.under_sampling import OneSidedSelection
+from matplotlib import pyplot
+from numpy import where
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=1)
+# summarize class distribution
+counter = Counter(y)
+print(counter)
+# define the undersampling method
+undersample = OneSidedSelection(n_neighbors=1, n_seeds_S=200)
+# transform the dataset
+X, y = undersample.fit_resample(X, y)
+# summarize the new class distribution
+counter = Counter(y)
+print(counter)
+# scatter plot of examples by class label
+for label, _ in counter.items():
+	row_ix = where(y == label)[0]
+	pyplot.scatter(X[row_ix, 0], X[row_ix, 1], label=str(label))
+pyplot.legend()
+pyplot.show()
+Counter({0: 9900, 1: 100})
+Counter({0: 940, 1: 100})
+# Undersample and plot imbalanced dataset with the neighborhood cleaning rule
+from collections import Counter
+from sklearn.datasets import make_classification
+from imblearn.under_sampling import NeighbourhoodCleaningRule
+from matplotlib import pyplot
+from numpy import where
+# define dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=1)
+# summarize class distribution
+counter = Counter(y)
+print(counter)
+# define the undersampling method
+undersample = NeighbourhoodCleaningRule(n_neighbors=3, threshold_cleaning=0.5)
+# transform the dataset
+X, y = undersample.fit_resample(X, y)
+# summarize the new class distribution
+counter = Counter(y)
+print(counter)
+# scatter plot of examples by class label
+for label, _ in counter.items():
+	row_ix = where(y == label)[0]
+	pyplot.scatter(X[row_ix, 0], X[row_ix, 1], label=str(label))
+pyplot.legend()
+pyplot.show()
+Counter({0: 9900, 1: 100})
+Counter({0: 9786, 1: 100})
+'''

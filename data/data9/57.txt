@@ -1,0 +1,160 @@
+Essence of Stacking Ensembles for Machine Learning
+https://machinelearningmastery.com/essence-of-stacking-ensembles-for-machine-learning/
+2021-04-22
+Stacked generalization, or stacking, may be a less popular machine learning ensemble given that it describes a framework more than a specific model.
+Perhaps the reason it has been less popular in mainstream machine learning is that it can be tricky to train a stacking model correctly, without suffering data leakage. This has meant that the technique has mainly been used by highly skilled experts in high-stakes environments, such as machine learning competitions, and given new names like blending ensembles.
+Nevertheless, modern machine learning frameworks make stacking routine to implement and evaluate for classification and regression predictive modeling problems. As such, we can review ensemble learning methods related to stacking through the lens of the stacking framework. This broader family of stacking techniques can also help to see how to tailor the configuration of the technique in the future when exploring our own predictive modeling projects.
+In this tutorial, you will discover the essence of the stacked generalization approach to machine learning ensembles.
+After completing this tutorial, you will know:
+- The stacking ensemble method for machine learning uses a meta-model to combine predictions from contributing members.
+- How to distill the essential elements from the stacking method and how popular extensions like blending and the super ensemble are related.
+- How to devise new extensions to stacking by selecting new procedures for the essential elements of the method.
+Kick-start your project with my new book Ensemble Learning Algorithms With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+Essence of Stacking Ensembles for Machine LearningPhoto by Thomas, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into four parts; they are:
+- Stacked Generalization
+- Essence of Stacking Ensembles
+- Stacking Ensemble Family
+
+Voting Ensembles
+Weighted Average
+Blending Ensemble
+Super Learner Ensemble
+
+
+- Voting Ensembles
+- Weighted Average
+- Blending Ensemble
+- Super Learner Ensemble
+- Customized Stacking Ensembles
+# Stacked Generalization
+Stacked Generalization, or stacking for short, is an ensemble machine learning algorithm.
+Stacking involves using a machine learning model to learn how to best combine the predictions from contributing ensemble members.
+In voting, ensemble members are typically a diverse collection of model types, such as a decision tree, naive Bayes, and support vector machine. Predictions are made by averaging the predictions, such as selecting the class with the most votes (the statistical mode) or the largest summed probability.
+… (unweighted) voting only makes sense if the learning schemes perform comparably well.
+— Page 497, Data Mining: Practical Machine Learning Tools and Techniques, 2016.
+An extension to voting is to weigh the contribution of each ensemble member in the prediction, providing a weighted sum prediction. This allows more weight to be placed on models that perform better on average and less on those that don’t perform as well but still have some predictive skill.
+The weight assigned to each contributing member must be learned, such as the performance of each model on the training dataset or a holdout dataset.
+Stacking generalizes this approach and allows any machine learning model to be used to learn how to best combine the predictions from contributing members. The model that combines the predictions is referred to as the meta-model, whereas the ensemble members are referred to as base-models.
+The problem with voting is that it is not clear which classifier to trust. Stacking tries to learn which classifiers are the reliable ones, using another learning algorithm—the metalearner—to discover how best to combine the output of the base learners.
+— Page 497, Data Mining: Practical Machine Learning Tools and Techniques, 2016.
+In the language taken from the paper that introduced the technique, base models are referred to as level-0 learners, and the meta-model is referred to as a level-1 model.
+Naturally, the stacking of models can continue to any desired level.
+Stacking is a general procedure where a learner is trained to combine the individual learners. Here, the individual learners are called the first-level learners, while the combiner is called the second-level learner, or meta-learner.
+— Page 83, Ensemble Methods, 2012.
+Importantly, the way that the meta-model is trained is different to the way the base-models are trained.
+The input to the meta-model are the predictions made by the base-models, not the raw inputs from the dataset. The target is the same expected target value. The predictions made by the base-models used to train the meta-model are for examples not used to train the base-models, meaning that they are out of sample.
+For example, the dataset can be split into train, validation, and test datasets. Each base-model can then be fit on the training set and make predictions on the validation dataset. The predictions from the validation set are then used to train the meta-model.
+This means that the meta-model is trained to best combine the capabilities of the base-models when they are making out-of-sample predictions, e.g. examples not seen during training.
+… we reserve some instances to form the training data for the level-1 learner and build level-0 classifiers from the remaining data. Once the level-0 classifiers have been built they are used to classify the instances in the holdout set, forming the level-1 training data.
+— Page 498, Data Mining: Practical Machine Learning Tools and Techniques, 2016.
+Once the meta-model is trained, the base models can be re-trained on the combined training and validation datasets. The whole system can then be evaluated on the test set by passing examples first through the base models to collect base-level predictions, then passing those predictions through the meta-model to get final predictions. The system can be used in the same way when making predictions on new data.
+This approach to training, evaluating, and using a stacking model can be further generalized to work with k-fold cross-validation.
+Typically, base models are prepared using different algorithms, meaning that the ensembles are a heterogeneous collection of model types providing a desired level of diversity to the predictions made. However, this does not have to be the case, and different configurations of the same models can be used or the same model trained on different datasets.
+The first-level learners are often generated by applying different learning algorithms, and so, stacked ensembles are often heterogeneous
+— Page 83, Ensemble Methods, 2012.
+On classification problems, the stacking ensemble often performs better when base-models are configured to predict probabilities instead of crisp class labels, as the added uncertainty in the predictions provides more context for the meta-model when learning how to best combine the predictions.
+… most learning schemes are able to output probabilities for every class label instead of making a single categorical prediction. This can be exploited to improve the performance of stacking by using the probabilities to form the level-1 data.
+— Page 498, Data Mining: Practical Machine Learning Tools and Techniques, 2016.
+The meta-model is typically a simple linear model, such as a linear regression for regression problems or a logistic regression model for classification. Again, this does not have to be the case, and any machine learning model can be used as the meta learner.
+… because most of the work is already done by the level-0 learners, the level-1 classifier is basically just an arbiter and it makes sense to choose a rather simple algorithm for this purpose. […] Simple linear models or trees with linear models at the leaves usually work well.
+— Page 499, Data Mining: Practical Machine Learning Tools and Techniques, 2016.
+This is a high-level summary of the stacking ensemble method, yet we can generalize the approach and extract the essential elements.
+# Essence of Stacking Ensembles
+The essence of stacking is about learning how to combine contributing ensemble members.
+In this way, we might think of stacking as assuming that a simple “wisdom of crowds” (e.g. averaging) is good but not optimal and that better results can be achieved if we can identify and give more weight to experts in the crowd.
+The experts and lesser experts are identified based on their skill in new situations, e.g. out-of-sample data. This is an important distinction from simple averaging and voting, although it introduces a level of complexity that makes the technique challenging to implement correctly and avoid data leakage, and in turn, incorrect and optimistic performance.
+Nevertheless, we can see that stacking is a very general ensemble learning approach.
+Broadly conceived, we might think of a weighted average of ensemble models as a generalization and improvement upon voting ensembles, and stacking as a further generalization of a weighted average model.
+As such, the structure of the stacking procedure can be divided into three essential elements; they are:
+- Diverse Ensemble Members: Create a diverse set of models that make different predictions.
+- Member Assessment: Evaluate the performance of ensemble members.
+- Combine With Model: Use a model to combine predictions from members.
+We can map canonical stacking onto these elements as follows:
+- Diverse Ensemble Members: Use different algorithms to fit each contributing model.
+- Member Assessment: Evaluate model performance on out-of-sample predictions.
+- Combine With Model: Machine learning model to combine predictions.
+This provides a framework where we could consider related ensemble algorithms.
+Let’s take a closer look at other ensemble methods that may be considered a part of the stacking family.
+# Stacking Ensemble Family
+Many ensemble machine learning techniques may be considered precursors or descendants of stacking.
+As such, we can map them onto our framework of essential stacking. This is a helpful exercise as it both highlights the differences between methods and uniqueness of each technique. Perhaps more importantly, it may also spark ideas for additional variations that you may want to explore on your own predictive modeling project.
+Let’s take a closer look at four of the more common ensemble methods related to stacking.
+Voting ensembles are one of the simplest ensemble learning techniques.
+A voting ensemble typically involves using a different algorithm to prepare each ensemble member, much like stacking. Instead of learning how to combine predictions, a simple statistic is used.
+On regression problems, a voting ensemble may predict the mean or median of the predictions from ensemble members. For classification problems, the label with the most votes is predicted, called hard voting, or the label that received the largest sum probability is predicted, called soft voting.
+The important difference from stacking is that there is no weighing of models based on their performance. All models are assumed to have the same skill level on average.
+- Member Assessment: Assume all models are equally skillful.
+- Combine with Model: Simple statistics.
+A weighted average might be considered one step above a voting ensemble.
+Like stacking and voting ensembles, a weighted average uses a diverse collection of model types as contributing members.
+Unlike voting, a weighted average assumes that some contributing members are better than others and weighs contributions from models accordingly.
+The simplest weighted average ensemble weighs each model based on its performance on a training dataset. An improvement over this naive approach is to weigh each member based on its performance on a hold-out dataset, such as a validation set or out-of-fold predictions during k-fold cross-validation.
+One step further might involve tuning the coefficient weightings for each model using an optimization algorithm and performance on a holdout dataset.
+These continued improvements of a weighted average model begin to resemble a primitive stacking model with a linear model trained to combine the predictions.
+- Member Assessment: Member performance on training dataset.
+- Combine With Model: Weighted average of predictions.
+Blending is explicitly a stacked generalization model with a specific configuration.
+A limitation of stacking is that there is no generally accepted configuration. This can make the method challenging for beginners as essentially any models can be used as the base-models and meta-model, and any resampling method can be used to prepare the training dataset for the meta-model.
+Blending is a specific stacking ensemble that makes two prescriptions.
+The first is to use a holdout validation dataset to prepare the out-of-sample predictions used to train the meta-model. The second is to use a linear model as the meta-model.
+The technique was born out of the requirements of practitioners working on machine learning competitions that involves the development of a very large number of base learner models, perhaps from different sources (or teams of people), that in turn may be too computationally expensive and too challenging to coordinate to validate using the k-fold cross-validation partitions of the dataset.
+- Member Predictions: Out-of-sample predictions on a validation dataset.
+- Combine With Model: Linear model (e.g. linear regression or logistic regression).
+Given the popularity of blending ensembles, stacking has sometimes come to specifically refer to the use of k-fold cross-validation to prepare out of sample predictions for the meta-model.
+Like blending, the super ensemble is a specific configuration of a stacking ensemble.
+The meta-model in super learning is prepared using out-of-fold predictions for base learners collected during k-fold cross-validation.
+As such, we might think of the super learner ensemble as a sibling to blending where the main difference is the choice of how out-of-sample predictions are prepared for the meta learner.
+- Diverse Ensemble Members: Use different algorithms and different configurations of the same algorithms.
+- Member Assessment: Out of fold predictions on k-fold cross-validation.
+# Customized Stacking Ensembles
+We have reviewed canonical stacking as a framework for combining predictions from a diverse collection of model types.
+Stacking is a broad method, which can make it hard to start using. We can see how voting ensembles and weighted average ensembles are a simplification of the stacking method and blending ensembles and the super learner ensembles are a specific configuration of stacking.
+This review highlighted that the focus on different stacking approaches is on the sophistication of the meta-model, such as using statistics, a weighted average, or a true machine learning model. The focus has also been on the manner in which the meta-model is trained, e.g. out of sample predictions from a validation dataset or k-fold cross-validation.
+An alternate area to explore with stacking might be the diversity of the ensemble members beyond simply using different algorithms.
+Stacking is not prescriptive in the types of models compared to boosting and bagging that both prescribe using decision trees. This allows for a lot of flexibility in customizing and exploring the use of the method on a dataset.
+For example, we could imagine fitting a large number of decision trees on bootstrap samples of the training dataset, as we do in bagging, then testing a suite of different models to learn how to best combine the predictions from the trees.
+- Diverse Ensemble Members: Decision trees trained on bootstrap samples.
+Alternatively, we can imagine grid searching a large number of configurations for a single machine learning model, which is common on a machine learning project, and keeping all of the fit models. These models could then be used as members in a stacking ensemble.
+- Diverse Ensemble Members: Alternate configurations of the same algorithm.
+We might also see the “mixture of experts” technique as fitting into the stacking method.
+Mixture of experts, or MoE for short, is a technique that explicitly partitions a problem into subproblems and trains a model on each subproblem, then uses the model to learn how to best weigh or combine the predictions from experts.
+The important differences between stacking and mixture of experts are the explicitly divide and conquer approach of MoE and the more complex manner in which predictions are combined using a gating network.
+Nevertheless, we imagine partitioning an input feature space into a grid of subspaces, training a model on each subspace and using a meta-model that takes the predictions from the base-models as well as the raw input sample and learns which base-model to trust or weigh the most conditional on the input data.
+- Diverse Ensemble Members: Partition input feature space into uniform subspaces.
+This could be further extended to first select the one model type that performs well among many for each subspace, keeping only those top-performing experts for each subspace, then learning how to best combine their predictions.
+Finally, we might think of the meta-model as a correction of the base models. We might explore this idea and have multiple meta-models attempt to correct overlapping or non-overlapping pools of contributing members and additional layers of models stacked on top of them. This deeper stacking of models is sometimes used in machine learning competitions and can become complex and challenging to train, but may offer additional benefit on prediction tasks where better model skill vastly outweighs the ability to introspect the model.
+We can see that the generality of the stacking method leaves a lot of room for experimentation and customization, where ideas from boosting and bagging may be incorporated directly.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Stacking Ensemble Machine Learning With Python
+- How to Develop a Stacking Ensemble for Deep Learning Neural Networks in Python With Keras
+- How to Implement Stacked Generalization (Stacking) From Scratch With Python
+- How to Develop Voting Ensembles With Python
+- How to Develop Super Learner Ensembles in Python
+- Pattern Classification Using Ensemble Methods, 2010.
+- Ensemble Methods, 2012.
+- Ensemble Machine Learning, 2012.
+- Data Mining: Practical Machine Learning Tools and Techniques, 2016.
+# Summary
+In this tutorial, you discovered the essence of the stacked generalization approach to machine learning ensembles.
+Specifically, you learned:
+- The stacking ensemble method for machine learning uses a meta-model to combine predictions from contributing members.
+- How to distill the essential elements from the stacking method and how popular extensions like blending and the super ensemble are related.
+- How to devise new extensions to stacking by selecting new procedures for the essential elements of the method.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Modern Ensemble Learning!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Ensemble Learning Algorithms With Python
+It provides self-study tutorials with full working code on:
+Stacking, Voting, Boosting, Bagging, Blending, Super Learner,
+and much more...
+See What's Inside
+
+'''
+
+'''

@@ -1,0 +1,131 @@
+Best Practices for Preparing and Augmenting Image Data for CNNs
+https://machinelearningmastery.com/best-practices-for-preparing-and-augmenting-image-data-for-convolutional-neural-networks/
+2019-05-02
+It is challenging to know how to best prepare image data when training a convolutional neural network.
+This involves both scaling the pixel values and use of image data augmentation techniques during both the training and evaluation of the model.
+Instead of testing a wide range of options, a useful shortcut is to consider the types of data preparation, train-time augmentation, and test-time augmentation used by state-of-the-art models that notably achieve the best performance on a challenging computer vision dataset, namely the Large Scale Visual Recognition Challenge, or ILSVRC, that uses the ImageNet dataset.
+In this tutorial, you will discover best practices for preparing and augmenting photographs for image classification tasks with convolutional neural networks.
+After completing this tutorial, you will know:
+- Image data should probably be centered by subtracting the per-channel mean pixel values calculated on the training dataset.
+- Training data augmentation should probably involve random rescaling, horizontal flips, perturbations to brightness, contrast, and color, as well as random cropping.
+- Test-time augmentation should probably involve both a mixture of multiple rescaling of each image as well as predictions for multiple different systematic crops of each rescaled version of the image.
+Kick-start your project with my new book Deep Learning for Computer Vision, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+Best Practices for Preparing and Augmenting Image Data for Convolutional Neural NetworksPhoto by Mark in New Zealand, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into five parts; they are:
+- Top ILSVRC Models
+- SuperVision (AlexNet) Data Preparation
+- GoogLeNet (Inception) Data Preparation
+- VGG Data Preparation
+- ResNet Data Preparation
+- Data Preparation Recommendations
+# Top ILSVRC Models
+When applying convolutional neural networks for image classification, it can be challenging to know exactly how to prepare images for modeling, e.g. scaling or normalizing pixel values.
+Further, image data augmentation can be used to improve model performance and reduce generalization error and test-time augmentation can be used to improve the predictive performance of a fit model.
+Rather than guessing at what might be effective, a good practice is to take a closer look at the types of data preparation, train-time augmentation, and test-time augmentation used on top-performing models described in the literature.
+The ImageNet Large Scale Visual Recognition Challenge, or ILSVRC for short, is an annual competition helped between 2010 and 2017 in which challenge tasks use subsets of the ImageNet dataset. This competition has resulted in a range of state-of-the-art deep learning convolutional neural network models for image classification, the architectures and configurations of which have become heuristics and best practices in the field.
+The papers describing the models that won or performed well on tasks in this annual competition can be reviewed in order to discover the types of data preparation an image augmentation performed. In turn, these can be used as suggestions and best practices when preparing image data for your own image classification tasks.
+In the following sections, we will review the data preparation and image augmentation used in four top models: they are SuperVision/AlexNet, GoogLeNet/Inception, VGG, and ResNet.
+# SuperVision (AlexNet) Data Preparation
+Alex Krizhevsky, et al. from the University of Toronto in their paper 2012 titled “ImageNet Classification with Deep Convolutional Neural Networks” developed a convolutional neural network that achieved top results on the ILSVRC-2010 and ILSVRC-2012 image classification tasks.
+These results sparked interested in deep learning in computer vision. They called their model SuperVision, but it has since been referred to as AlexNet.
+Images in the training dataset had differing sizes, therefore images had to be resized before being used as input to the model.
+Square images were resized to the shape 256×256 pixels. Rectangular images were resized to 256 pixels on their shortest side, then the middle 256×256 square was cropped from the image. Note: the network expects input images to have the shape 224×224, achieved via training augmentation.
+ImageNet consists of variable-resolution images, while our system requires a constant input dimensionality. Therefore, we down-sampled the images to a fixed resolution of 256 × 256. Given a rectangular image, we first rescaled the image such that the shorter side was of length 256, and then cropped out the central 256×256 patch from the resulting image.
+— ImageNet Classification with Deep Convolutional Neural Networks, 2012.
+A mean pixel value was then subtracted from each pixel, referred to as centering. It is believed that this was performed per-channel: that is mean pixel values were estimated from the training dataset, one for each of the red, green, and blue channels of the color images.
+We did not pre-process the images in any other way, except for subtracting the mean activity over the training set from each pixel. So we trained our network on the (centered) raw RGB values of the pixels.
+— ImageNet Classification with Deep Convolutional Neural Networks, 2012.
+Image augmentation was performed to the training dataset.
+Specifically, augmentations were performed in memory and the results were not saved, the so-called just-in-time augmentation that is now the standard way for using the approach.
+The first type of augmentation performed was horizontal flips of a smaller cropped square image that was expanded to the required side using horizontal reflections within the image.
+The first form of data augmentation consists of generating image translations and horizontal reflections. We do this by extracting random 224×224 patches (and their horizontal reflections) from the 256×256 images and training our network on these extracted patches.
+— ImageNet Classification with Deep Convolutional Neural Networks, 2012.
+The second type of augmentation performed was random changes to the light-level or brightness of the images.
+The second form of data augmentation consists of altering the intensities of the RGB channels in training images. Specifically, we perform PCA on the set of RGB pixel values throughout the ImageNet training set. To each training image, we add multiples of the found principal components, with magnitudes proportional to the corresponding eigenvalues times a random variable drawn from a Gaussian with mean zero and standard deviation 0.1.
+— ImageNet Classification with Deep Convolutional Neural Networks, 2012.
+Test-time augmentation was performed in order to give a fit model every chance of making a robust prediction.
+This involved creating five cropped versions of the input image and five cropped versions of the horizontally flipped version of the image, then averaging the predictions.
+At test time, the network makes a prediction by extracting five 224×224 patches (the four corner patches and the center patch) as well as their horizontal reflections (hence ten patches in all), and averaging the predictions made by the network’s softmax layer on the ten patches.
+— ImageNet Classification with Deep Convolutional Neural Networks, 2012.
+# GoogLeNet (Inception) Data Preparation
+Christian Szegedy, et al. from Google achieved top results for object detection with their GoogLeNet model that made use of the inception model and inception architecture. This approach was described in their 2014 paper titled “Going Deeper with Convolutions.”
+Data preparation is described as subtracting the mean pixel value, likely centered per-channel as with AlexNet.
+The size of the receptive field in our network is 224×224 taking RGB color channels with mean subtraction.
+— Going Deeper with Convolutions, 2014.
+The version of the architecture described in the first paper is commonly referred to as Inception v1. A follow-up paper titled “Rethinking the Inception Architecture for Computer Vision” in 2015 describes Inception v2 and v3. Version 3 of this architecture and model weights are available in the Keras deep learning library.
+In this implementation, based on the open source TensorFlow implementation, images are not centered; instead, pixel values are scaled per-image into the range [-1,1] and the image input shape is 299×299 pixels. This normalization and lack of centering do not appear to be mentioned in the more recent paper.
+Train-time image augmentation is performed using a range of techniques.
+Randomly sized crops of images in the training dataset are taken using a randomly selected aspect ratio of either 3/4 or 4/3.
+Still, one prescription that was verified to work very well after the competition includes sampling of various sized patches of the image whose size is distributed evenly between 8% and 100% of the image area and whose aspect ratio is chosen randomly between 3/4 and 4/3
+— Going Deeper with Convolutions, 2014.
+Additionally, “photometric distortions” are used, involving random changes to image properties such as color, contrast, and brightness.
+Images are adjusted to fit the expected input shape of the model and different interpolation methods are selected at random.
+In addition, we started to use random interpolation methods (bilinear, area, nearest neighbor and cubic, with equal probability) for resizing
+— Going Deeper with Convolutions, 2014.
+Similar to AlexNet, test-time augmentation is performed, albeit more extensively.
+Each image is resampled at four different scales, from which multiple square crops are taken and resized to the expected input shape of the image. The result is a prediction on up to 144 versions of a given input image.
+Specifically, we resize the image to 4 scales where the shorter dimension (height or width) is 256, 288, 320 and 352 respectively, take the left, center and right square of these resized images (in the case of portrait images, we take the top, center and bottom squares). For each square, we then take the 4 corners and the center 224×224 crop as well as the square resized to 224×224, and their mirrored versions. This results in 4×3×6×2 = 144 crops per image.
+— Going Deeper with Convolutions, 2014.
+The predictions are then averaged to make a final prediction.
+The softmax probabilities are averaged over multiple crops and over all the individual classifiers to obtain the final prediction.
+— Going Deeper with Convolutions, 2014.
+# VGG Data Preparation
+Karen Simonyan and Andrew Zisserman from the Oxford Vision Geometry Group (VGG) achieved top results for image classification and localization with their VGG model. Their approach is described in their 2015 paper titled “Very Deep Convolutional Networks for Large-Scale Image Recognition.”
+As described with the prior models, the data preparation involved standardizing the shape of the input images to small squares and subtracting the per-channel pixel mean calculated on the training dataset.
+During training, the input to our ConvNets is a fixed-size 224 × 224 RGB image. The only preprocessing we do is subtracting the mean RGB value, computed on the training set, from each pixel.
+— Very Deep Convolutional Networks for Large-Scale Image Recognition, 2015.
+A range of different image scaling was explored with the model.
+One approach described involved first training a model with a fixed but smaller image size, retaining the model weights, then using them as a starting point for training a new model with a larger but still fixed-sized image. This approach was designed in an effort to speed up the training of the larger (second) model.
+Given a ConvNet configuration, we first trained the network using S = 256. To speed-up training of the S = 384 network, it was initialised with the weights pre-trained with S = 256
+— Very Deep Convolutional Networks for Large-Scale Image Recognition, 2015.
+Another approach to image scaling was described called “multi-scale training” that involved randomly selecting an image scale size for each image.
+The second approach to setting S is multi-scale training, where each training image is individually rescaled by randomly sampling S from a certain range [Smin, Smax] (we used Smin = 256 and Smax = 512).
+— Very Deep Convolutional Networks for Large-Scale Image Recognition, 2015.
+In both approaches to training, the input image was then taken as a smaller crop of the input. Additionally, horizontal flips and color shifts were applied to the crops.
+To obtain the fixed-size 224×224 ConvNet input images, they were randomly cropped from rescaled training images (one crop per image per SGD iteration). To further augment the training set, the crops underwent random horizontal flipping and random RGB colour shift.
+— Very Deep Convolutional Networks for Large-Scale Image Recognition, 2015.
+The “multi-scale” approach evaluated during training-time was also evaluated at test-time and was referred to more generally as “scale jitter.”
+Multiple different scaled versions of a given test image were created, predictions made for each, then the predictions were averaged to give a final prediction.
+… we now assess the effect of scale jittering at test time. It consists of running a model over several rescaled versions of a test image (corresponding to different values of Q), followed by averaging the resulting class posteriors. […] The results […] indicate that scale jittering at test time leads to better performance (as compared to evaluating the same model at a single scale …
+— Very Deep Convolutional Networks for Large-Scale Image Recognition, 2015.
+# ResNet Data Preparation
+Kaiming He, et al. from Microsoft Research achieved top results for object detection and object detection with localization tasks with their Residual Network or ResNet described in their 2015 paper titled “Deep Residual Learning for Image Recognition.”
+As with other models, the mean pixel values calculated across the training were subtracted from the images, seemingly centered per-channel.
+… with the per-pixel mean subtracted.
+— Deep Residual Learning for Image Recognition, 2015.
+Image data augmentation was a combination of approaches described, leaning on AlexNet and VGG.
+The images were randomly resized as either a small or large size, so-called scale augmentation used in VGG. A small square crop was then taken with a possible horizontal flip and color augmentation.
+The image is resized with its shorter side randomly sampled in [256, 480] for scale augmentation [41]. A 224×224 crop is randomly sampled from an image or its horizontal flip […] The standard color augmentation in [21] is used.
+— Deep Residual Learning for Image Recognition, 2015.
+Test-time augmentation is a staple and was also applied for the ResNet.
+Like AlexNet, 10 crops of each image in the test set were created, although the crops were calculated on multiple versions of each test image with fixed sized, achieving the scale jittering described for VGG. Predictions across all variations are then averaged.
+In testing, for comparison studies we adopt the standard 10-crop testing. In testing, for comparison studies we adopt the standard 10-crop testing [21]. For best results, we adopt the fully-convolutional form as in [41, 13], and average the scores at multiple scales (images are resized such that the shorter side is in {224, 256, 384, 480, 640}).
+— Deep Residual Learning for Image Recognition, 2015.
+# Data Preparation Recommendations
+Given the review of data preparation performed across top-performing models, we can summarise a number of best practices to consider when preparing data for your own image classification tasks. This section summarizes these findings.
+- Data Preparation. A fixed size must be selected for input images, and all images must be resized to that shape. The most common type of pixel scaling involves centering pixel values per-channel, perhaps followed by some type of normalization.
+- Train-Time Augmentation.  Train-time augmentation is required, most commonly involved resizing and cropping of input images, as well as modification of images such as shifts, flips and changes to colors.
+- Test-Time Augmentation. Test-time augmentation was focused on systematic crops of the input images to ensure features present in the input images were detected.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- ImageNet Classification with Deep Convolutional Neural Networks, 2012.
+- Going Deeper with Convolutions, 2014.
+- Rethinking the Inception Architecture for Computer Vision, 2015.
+- Very Deep Convolutional Networks for Large-Scale Image Recognition, 2015.
+- Deep Residual Learning for Image Recognition, 2015.
+- Keras Applications API
+- Keras Applications Source Code
+# Summary
+In this tutorial, you discovered best practices for preparing and augmenting photographs for image classification tasks with convolutional neural networks.
+Specifically, you learned:
+- Image data should probably be centered by subtracting the per-channel mean pixel values calculated on the training dataset.
+- Training data augmentation should probably involve random rescaling, horizontal flips, perturbations to brightness, contrast, and color, as well as random cropping.
+- Test-time augmentation should probably involve both a mixture of multiple rescaling of each image as well as predictions for multiple different systematic crops of each rescaled version of the image.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+
+'''
+
+'''

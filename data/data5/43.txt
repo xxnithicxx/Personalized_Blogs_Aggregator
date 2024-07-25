@@ -1,0 +1,101 @@
+Data Leakage in Machine Learning
+https://machinelearningmastery.com/data-leakage-machine-learning/
+2016-08-01
+Data leakage is a big problem in machine learning when developing predictive models.
+Data leakage is when information from outside the training dataset is used to create the model.
+In this post you will discover the problem of data leakage in predictive modeling.
+After reading this post you will know:
+- What is data leakage is in predictive modeling.
+- Signs of data leakage and why it is a problem.
+- Tips and tricks that you can use to minimize data leakage on your predictive modeling problems.
+Kick-start your project with my new book Data Preparation for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+Data Leakage in Machine LearningPhoto by DaveBleasdale, some rights reserved.
+# Goal of Predictive Modeling
+The goal of predictive modeling is to develop a model that makes accurate predictions on new data, unseen during training.
+This is a hard problem.
+It’s hard because we cannot evaluate the model on something we don’t have.
+Therefore, we must estimate the performance of the model on unseen data by training it on only some of the data we have and evaluating it on the rest of the data.
+This is the principle that underlies cross validation and more sophisticated techniques that try to reduce the variance in this estimate.
+
+
+
+
+# What is Data Leakage in Machine Learning?
+Data leakage can cause you to create overly optimistic if not completely invalid predictive models.
+Data leakage is when information from outside the training dataset is used to create the model. This additional information can allow the model to learn or know something that it otherwise would not know and in turn invalidate the estimated performance of the mode being constructed.
+if any other feature whose value would not actually be available in practice at the time you’d want to use the model to make a prediction, is a feature that can introduce leakage to your model
+— Data Skeptic
+when the data you are using to train a machine learning algorithm happens to have the information you are trying to predict
+— Daniel Gutierrez, Ask a Data Scientist: Data Leakage
+There is a topic in computer security called data leakage and data loss prevention which is related but not what we are talking about.
+It is a serious problem for at least 3 reasons:
+- It is a problem if you are running a machine learning competition. Top models will use the leaky data rather than be good general model of the underlying problem.
+- It is a problem when you are a company providing your data. Reversing an anonymization and obfuscation can result in a privacy breach that you did not expect.
+- It is a problem when you are developing your own predictive models. You may be creating overly optimistic models that are practically useless and cannot be used in production.
+As machine learning practitioners, we are primarily concerned with this last case.
+An easy way to know you have data leakage is if you are achieving performance that seems a little too good to be true.
+Like you can predict lottery numbers or pick stocks with high accuracy.
+“too good to be true” performance is “a dead giveaway” of its existence
+— Chapter 13, Doing Data Science: Straight Talk from the Frontline
+Data leakage is generally more of a problem with complex datasets, for example:
+- Time series datasets when creating training and test sets can be difficult.
+- Graph problems where random sampling methods can be difficult to construct.
+- Analog observations like sound and images where samples are stored in separate files that have a size and a time stamp.
+# Techniques To Minimize Data Leakage When Building Models
+Two good techniques that you can use to minimize data leakage when developing predictive models are as follows:
+- Perform data preparation within your cross validation folds.
+- Hold back a validation dataset for final sanity check of your developed models.
+Generally, it is good practice to use both of these techniques.
+You can easily leak information when preparing your data for machine learning.
+The effect is overfitting your training data and having an overly optimistic evaluation of your models performance on unseen data.
+For example, if you normalize or standardize your entire dataset, then estimate the performance of your model using cross validation, you have committed the sin of data leakage.
+The data rescaling process that you performed had knowledge of the full distribution of data in the training dataset when calculating the scaling factors (like min and max or mean and standard deviation). This knowledge was stamped into the rescaled values and exploited by all algorithms in your cross validation test harness.
+A non-leaky evaluation of machine learning algorithms in this situation would calculate the parameters for rescaling data within each fold of the cross validation and use those parameters to prepare the data on the held out test fold on each cycle.
+The reality is that as a data scientist, you’re at risk of producing a data leakage situation any time you prepare, clean your data, impute missing values, remove outliers, etc. You might be distorting the data in the process of preparing it to the point that you’ll build a model that works well on your “clean” dataset, but will totally suck when applied in the real-world situation where you actually want to apply it.
+— Page 313, Doing Data Science: Straight Talk from the Frontline
+More generally, non-leaky data preparation must happen within each fold of your cross validation cycle.
+You may be able to relax this constraint for some problems, for example if you can confidently estimate the distribution of your data because you have some other domain knowledge.
+In general though, it is a good idea to re-prepare or re-calculate any required data preparation within your cross validation folds including tasks like feature selection, outlier removal, encoding, feature scaling and projection methods for dimensionality reduction, and more.
+If you perform feature selection on all of the data and then cross-validate, then the test data in each fold of the cross-validation procedure was also used to choose the features and this is what biases the performance analysis.
+— Dikran Marsupial, in answer to the question “Feature selection and cross-validation” on Cross Validated.
+Platforms like R and scikit-learn in Python help automate this good practice, with the caret package in R and Pipelines in scikit-learn.
+Another, perhaps simpler approach is to split your training dataset into train and validation sets, and store away the validation dataset.
+Once you have completed your modeling process and actually created your final model, evaluate it on the validation dataset.
+This can give you a sanity check to see if your estimation of performance has been overly optimistic and has leaked.
+Essentially the only way to really solve this problem is to retain an independent test set and keep it held out until the study is complete and use it for final validation.
+— Dikran Marsupial in answer to the question “How can I help ensure testing data does not leak into training data?” on Cross Validated
+# 5 Tips to Combat Data Leakage
+- Temporal Cutoff. Remove all data just prior to the event of interest, focusing on the time you learned about a fact or observation rather than the time the observation occurred.
+- Add Noise. Add random noise to input data to try and smooth out the effects of possibly leaking variables.
+- Remove Leaky Variables. Evaluate simple rule based models line OneR using variables like account numbers and IDs and the like to see if these variables are leaky, and if so, remove them. If you suspect a variable is leaky, consider removing it.
+- Use Pipelines. Heavily use pipeline architectures that allow a sequence of data preparation steps to be performed within cross validation folds, such as the caret package in R and Pipelines in scikit-learn.
+- Use a Holdout Dataset. Hold back an unseen validation dataset as a final sanity check of your model before you use it.
+# Further Reading on Data Leakage
+There is not a lot of material on data leakage, but those few precious papers and blog posts that do exist are gold.
+Below are some of the better resources that you can use to learn more about data leakage in applied machine learning.
+- Leakage in Data Mining: Formulation, Detection, and Avoidance [pdf], 2011. (recommended!)
+- Mini episode on Data Leakage on the Data Skeptic podcast.
+- Chapter 13: Lessons Learned from Data Competitions: Data Leakage and Model Evaluation, from Doing Data Science: Straight Talk from the Frontline, 2013.
+- Ask a Data Scientist: Data Leakage, 2014
+- Data Leakage on the Kaggle Wiki
+- Fascinating Discussion on data leakage in the ICML 2013 Whale Challenge
+# Summary
+In this post you discovered data leakage in machine learning when developing predictive models.
+You learned:
+- What data leakage is when developing predictive models.
+- Why data leakage is a problem and how to detect it.
+- Techniques that you can use to over come data leakage when developing predictive models.
+Do you have any questions about data leakage or about this post? Ask your questions in the comments and I will do my best to answer.
+# Get a Handle on Modern Data Preparation!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Data Preparation for Machine Learning
+It provides self-study tutorials with full working code on:
+Feature Selection, RFE, Data Cleaning, Data Transforms, Scaling, Dimensionality Reduction,
+and much more...
+See What's Inside
+
+'''
+
+'''

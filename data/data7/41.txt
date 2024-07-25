@@ -1,0 +1,388 @@
+How to Use Quantile Transforms for Machine Learning
+https://machinelearningmastery.com/quantile-transforms-for-machine-learning/
+2020-05-19
+Numerical input variables may have a highly skewed or non-standard distribution.
+This could be caused by outliers in the data, multi-modal distributions, highly exponential distributions, and more.
+Many machine learning algorithms prefer or perform better when numerical input variables and even output variables in the case of regression have a standard probability distribution, such as a Gaussian (normal) or a uniform distribution.
+The quantile transform provides an automatic way to transform a numeric input variable to have a different data distribution, which in turn, can be used as input to a predictive model.
+In this tutorial, you will discover how to use quantile transforms to change the distribution of numeric variables for machine learning.
+After completing this tutorial, you will know:
+- Many machine learning algorithms prefer or perform better when numerical variables have a Gaussian or standard probability distribution.
+- Quantile transforms are a technique for transforming numerical input or output variables to have a Gaussian or uniform probability distribution.
+- How to use the QuantileTransformer to change the probability distribution of numeric variables to improve the performance of predictive models.
+Kick-start your project with my new book Data Preparation for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Use Quantile Transforms for Machine LearningPhoto by Bernard Spragg. NZ, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into five parts; they are:
+- Change Data Distribution
+- Quantile Transforms
+- Sonar Dataset
+- Normal Quantile Transform
+- Uniform Quantile Transform
+# Change Data Distribution
+Many machine learning algorithms perform better when the distribution of variables is Gaussian.
+Recall that the observations for each variable may be thought to be drawn from a probability distribution. The Gaussian is a common distribution with the familiar bell shape. It is so common that it is often referred to as the “normal” distribution.
+For more on the Gaussian probability distribution, see the tutorial:
+- Continuous Probability Distributions for Machine Learning
+Some algorithms, like linear regression and logistic regression, explicitly assume the real-valued variables have a Gaussian distribution. Other nonlinear algorithms may not have this assumption, yet often perform better when variables have a Gaussian distribution.
+This applies both to real-valued input variables in the case of classification and regression tasks, and real-valued target variables in the case of regression tasks.
+Some input variables may have a highly skewed distribution, such as an exponential distribution where the most common observations are bunched together. Some input variables may have outliers that cause the distribution to be highly spread.
+These concerns and others, like non-standard distributions and multi-modal distributions, can make a dataset challenging to model with a range of machine learning models.
+As such, it is often desirable to transform each input variable to have a standard probability distribution, such as a Gaussian (normal) distribution or a uniform distribution.
+
+
+
+
+# Quantile Transforms
+A quantile transform will map a variable’s probability distribution to another probability distribution.
+Recall that a quantile function, also called a percent-point function (PPF), is the inverse of the cumulative probability distribution (CDF). A CDF is a function that returns the probability of a value at or below a given value. The PPF is the inverse of this function and returns the value at or below a given probability.
+The quantile function ranks or smooths out the relationship between observations and can be mapped onto other distributions, such as the uniform or normal distribution.
+The transformation can be applied to each numeric input variable in the training dataset and then provided as input to a machine learning model to learn a predictive modeling task.
+This quantile transform is available in the scikit-learn Python machine learning library via the QuantileTransformer class.
+The class has an “output_distribution” argument that can be set to “uniform” or “normal” and defaults to “uniform“.
+It also provides a “n_quantiles” that determines the resolution of the mapping or ranking of the observations in the dataset. This must be set to a value less than the number of observations in the dataset and defaults to 1,000.
+We can demonstrate the QuantileTransformer with a small worked example. We can generate a sample of random Gaussian numbers and impose a skew on the distribution by calculating the exponent. The QuantileTransformer can then be used to transform the dataset to be another distribution, in this cases back to a Gaussian distribution.
+The complete example is listed below.
+Running the example first creates a sample of 1,000 random Gaussian values and adds a skew to the dataset.
+A histogram is created from the skewed dataset and clearly shows the distribution pushed to the far left.
+Histogram of Skewed Gaussian Distribution
+Then a QuantileTransformer is used to map the data distribution Gaussian and standardize the result, centering the values on the mean value of 0 and a standard deviation of 1.0.
+A histogram of the transform data is created showing a Gaussian shaped data distribution.
+Histogram of Skewed Gaussian Data After Quantile Transform
+In the following sections will take a closer look at how to use the quantile transform on a real dataset.
+Next, let’s introduce the dataset.
+# Sonar Dataset
+The sonar dataset is a standard machine learning dataset for binary classification.
+It involves 60 real-valued inputs and a two-class target variable. There are 208 examples in the dataset and the classes are reasonably balanced.
+A baseline classification algorithm can achieve a classification accuracy of about 53.4 percent using repeated stratified 10-fold cross-validation. Top performance on this dataset is about 88 percent using repeated stratified 10-fold cross-validation.
+The dataset describes sonar returns of rocks or simulated mines.
+You can learn more about the dataset from here:
+- Sonar Dataset
+- Sonar Dataset Description
+No need to download the dataset; we will download it automatically from our worked examples.
+First, let’s load and summarize the dataset. The complete example is listed below.
+Running the example first summarizes the shape of the loaded dataset.
+This confirms the 60 input variables, one output variable, and 208 rows of data.
+A statistical summary of the input variables is provided showing that values are numeric and range approximately from 0 to 1.
+Finally a histogram is created for each input variable.
+If we ignore the clutter of the plots and focus on the histograms themselves, we can see that many variables have a skewed distribution.
+The dataset provides a good candidate for using a quantile transform to make the variables more-Gaussian.
+Histogram Plots of Input Variables for the Sonar Binary Classification Dataset
+Next, let’s fit and evaluate a machine learning model on the raw dataset.
+We will use a k-nearest neighbor algorithm with default hyperparameters and evaluate it using repeated stratified k-fold cross-validation. The complete example is listed below.
+Running the example evaluates a KNN model on the raw sonar dataset.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+We can see that the model achieved a mean classification accuracy of about 79.7 percent, showing that it has skill (better than 53.4 percent) and is in the ball-park of good performance (88 percent).
+Next, let’s explore a normal quantile transform of the dataset.
+# Normal Quantile Transform
+It is often desirable to transform an input variable to have a normal probability distribution to improve the modeling performance.
+We can apply the Quantile transform using the QuantileTransformer class and set the “output_distribution” argument to “normal“. We must also set the “n_quantiles” argument to a value less than the number of observations in the training dataset, in this case, 100.
+Once defined, we can call the fit_transform() function and pass it to our dataset to create a quantile transformed version of our dataset.
+Let’s try it on our sonar dataset.
+The complete example of creating a normal quantile transform of the sonar dataset and plotting histograms of the result is listed below.
+Running the example transforms the dataset and plots histograms of each input variable.
+We can see that the shape of the histograms for each variable looks very Gaussian as compared to the raw data.
+Histogram Plots of Normal Quantile Transformed Input Variables for the Sonar Dataset
+Next, let’s evaluate the same KNN model as the previous section, but in this case on a normal quantile transform of the dataset.
+The complete example is listed below.
+
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+
+Running the example, we can see that the normal quantile transform results in a lift in performance from 79.7% accuracy without the transform to about 81.7% with the transform.
+Next, let’s take a closer look at the uniform quantile transform.
+# Uniform Quantile Transform
+Sometimes it can be beneficial to transform a highly exponential or multi-modal distribution to have a uniform distribution.
+This is especially useful for data with a large and sparse range of values, e.g. outliers that are common rather than rare.
+We can apply the transform by defining a QuantileTransformer class and setting the “output_distribution” argument to “uniform” (the default).
+The example below applies the uniform quantile transform and creates histogram plots of each of the transformed variables.
+Running the example transforms the dataset and plots histograms of each input variable.
+We can see that the shape of the histograms for each variable looks very uniform compared to the raw data.
+Histogram Plots of Uniform Quantile Transformed Input Variables for the Sonar Dataset
+Next, let’s evaluate the same KNN model as the previous section, but in this case on a uniform quantile transform of the raw dataset.
+The complete example is listed below.
+
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+
+Running the example, we can see that the uniform transform results in a lift in performance from 79.7 percent accuracy without the transform to about 84.5 percent with the transform, better than the normal transform that achieved a score of 81.7 percent.
+We chose the number of quantiles as an arbitrary number, in this case, 100.
+This hyperparameter can be tuned to explore the effect of the resolution of the transform on the resulting skill of the model.
+The example below performs this experiment and plots the mean accuracy for different “n_quantiles” values from 1 to 99.
+Running the example reports the mean classification accuracy for each value of the “n_quantiles” argument.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+We can see that surprisingly smaller values resulted in better accuracy, with values such as 4 achieving an accuracy of about 85.4 percent.
+A line plot is created showing the number of quantiles used in the transform versus the classification accuracy of the resulting model.
+We can see a bump with values less than 10 and drop and flat performance after that.
+The results highlight that there is likely some benefit in exploring different distributions and number of quantiles to see if better performance can be achieved.
+Line Plot of Number of Quantiles vs. Classification Accuracy of KNN on the Sonar Dataset
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Continuous Probability Distributions for Machine Learning
+- How to Transform Target Variables for Regression With Scikit-Learn
+- Sonar Dataset
+- Sonar Dataset Description
+- Non-linear transformation, scikit-learn Guide.
+- sklearn.preprocessing.QuantileTransformer API.
+- Quantile function, Wikipedia.
+# Summary
+In this tutorial, you discovered how to use quantile transforms to change the distribution of numeric variables for machine learning.
+Specifically, you learned:
+- Many machine learning algorithms prefer or perform better when numerical variables have a Gaussian or standard probability distribution.
+- Quantile transforms are a technique for transforming numerical input or output variables to have a Gaussian or uniform probability distribution.
+- How to use the QuantileTransformer to change the probability distribution of numeric variables to improve the performance of predictive models.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Modern Data Preparation!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Data Preparation for Machine Learning
+It provides self-study tutorials with full working code on:
+Feature Selection, RFE, Data Cleaning, Data Transforms, Scaling, Dimensionality Reduction,
+and much more...
+See What's Inside
+
+'''
+# demonstration of the quantile transform
+from numpy import exp
+from numpy.random import randn
+from sklearn.preprocessing import QuantileTransformer
+from matplotlib import pyplot
+# generate gaussian data sample
+data = randn(1000)
+# add a skew to the data distribution
+data = exp(data)
+# histogram of the raw data with a skew
+pyplot.hist(data, bins=25)
+pyplot.show()
+# reshape data to have rows and columns
+data = data.reshape((len(data),1))
+# quantile transform the raw data
+quantile = QuantileTransformer(output_distribution='normal')
+data_trans = quantile.fit_transform(data)
+# histogram of the transformed data
+pyplot.hist(data_trans, bins=25)
+pyplot.show()
+# load and summarize the sonar dataset
+from pandas import read_csv
+from pandas.plotting import scatter_matrix
+from matplotlib import pyplot
+# Load dataset
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/sonar.csv"
+dataset = read_csv(url, header=None)
+# summarize the shape of the dataset
+print(dataset.shape)
+# summarize each variable
+print(dataset.describe())
+# histograms of the variables
+dataset.hist()
+pyplot.show()
+(208, 61)
+               0           1           2   ...          57          58          59
+count  208.000000  208.000000  208.000000  ...  208.000000  208.000000  208.000000
+mean     0.029164    0.038437    0.043832  ...    0.007949    0.007941    0.006507
+std      0.022991    0.032960    0.038428  ...    0.006470    0.006181    0.005031
+min      0.001500    0.000600    0.001500  ...    0.000300    0.000100    0.000600
+25%      0.013350    0.016450    0.018950  ...    0.003600    0.003675    0.003100
+50%      0.022800    0.030800    0.034300  ...    0.005800    0.006400    0.005300
+75%      0.035550    0.047950    0.057950  ...    0.010350    0.010325    0.008525
+max      0.137100    0.233900    0.305900  ...    0.044000    0.036400    0.043900
+
+[8 rows x 60 columns]
+# evaluate knn on the raw sonar dataset
+from numpy import mean
+from numpy import std
+from pandas import read_csv
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import LabelEncoder
+from matplotlib import pyplot
+# load dataset
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/sonar.csv"
+dataset = read_csv(url, header=None)
+data = dataset.values
+# separate into input and output columns
+X, y = data[:, :-1], data[:, -1]
+# ensure inputs are floats and output is an integer label
+X = X.astype('float32')
+y = LabelEncoder().fit_transform(y.astype('str'))
+# define and configure the model
+model = KNeighborsClassifier()
+# evaluate the model
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+n_scores = cross_val_score(model, X, y, scoring='accuracy', cv=cv, n_jobs=-1, error_score='raise')
+# report model performance
+print('Accuracy: %.3f (%.3f)' % (mean(n_scores), std(n_scores)))
+Accuracy: 0.797 (0.073)
+
+# perform a normal quantile transform of the dataset
+trans = QuantileTransformer(n_quantiles=100, output_distribution='normal')
+data = trans.fit_transform(data)
+# visualize a normal quantile transform of the sonar dataset
+from pandas import read_csv
+from pandas import DataFrame
+from pandas.plotting import scatter_matrix
+from sklearn.preprocessing import QuantileTransformer
+from matplotlib import pyplot
+# load dataset
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/sonar.csv"
+dataset = read_csv(url, header=None)
+# retrieve just the numeric input values
+data = dataset.values[:, :-1]
+# perform a normal quantile transform of the dataset
+trans = QuantileTransformer(n_quantiles=100, output_distribution='normal')
+data = trans.fit_transform(data)
+# convert the array back to a dataframe
+dataset = DataFrame(data)
+# histograms of the variables
+dataset.hist()
+pyplot.show()
+# evaluate knn on the sonar dataset with normal quantile transform
+from numpy import mean
+from numpy import std
+from pandas import read_csv
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import QuantileTransformer
+from sklearn.pipeline import Pipeline
+from matplotlib import pyplot
+# load dataset
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/sonar.csv"
+dataset = read_csv(url, header=None)
+data = dataset.values
+# separate into input and output columns
+X, y = data[:, :-1], data[:, -1]
+# ensure inputs are floats and output is an integer label
+X = X.astype('float32')
+y = LabelEncoder().fit_transform(y.astype('str'))
+# define the pipeline
+trans = QuantileTransformer(n_quantiles=100, output_distribution='normal')
+model = KNeighborsClassifier()
+pipeline = Pipeline(steps=[('t', trans), ('m', model)])
+# evaluate the pipeline
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+n_scores = cross_val_score(pipeline, X, y, scoring='accuracy', cv=cv, n_jobs=-1, error_score='raise')
+# report pipeline performance
+print('Accuracy: %.3f (%.3f)' % (mean(n_scores), std(n_scores)))
+Accuracy: 0.817 (0.087)
+
+# perform a uniform quantile transform of the dataset
+trans = QuantileTransformer(n_quantiles=100, output_distribution='uniform')
+data = trans.fit_transform(data)
+# visualize a uniform quantile transform of the sonar dataset
+from pandas import read_csv
+from pandas import DataFrame
+from pandas.plotting import scatter_matrix
+from sklearn.preprocessing import QuantileTransformer
+from matplotlib import pyplot
+# load dataset
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/sonar.csv"
+dataset = read_csv(url, header=None)
+# retrieve just the numeric input values
+data = dataset.values[:, :-1]
+# perform a uniform quantile transform of the dataset
+trans = QuantileTransformer(n_quantiles=100, output_distribution='uniform')
+data = trans.fit_transform(data)
+# convert the array back to a dataframe
+dataset = DataFrame(data)
+# histograms of the variables
+dataset.hist()
+pyplot.show()
+# evaluate knn on the sonar dataset with uniform quantile transform
+from numpy import mean
+from numpy import std
+from pandas import read_csv
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import QuantileTransformer
+from sklearn.pipeline import Pipeline
+from matplotlib import pyplot
+# load dataset
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/sonar.csv"
+dataset = read_csv(url, header=None)
+data = dataset.values
+# separate into input and output columns
+X, y = data[:, :-1], data[:, -1]
+# ensure inputs are floats and output is an integer label
+X = X.astype('float32')
+y = LabelEncoder().fit_transform(y.astype('str'))
+# define the pipeline
+trans = QuantileTransformer(n_quantiles=100, output_distribution='uniform')
+model = KNeighborsClassifier()
+pipeline = Pipeline(steps=[('t', trans), ('m', model)])
+# evaluate the pipeline
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+n_scores = cross_val_score(pipeline, X, y, scoring='accuracy', cv=cv, n_jobs=-1, error_score='raise')
+# report pipeline performance
+print('Accuracy: %.3f (%.3f)' % (mean(n_scores), std(n_scores)))
+Accuracy: 0.845 (0.074)
+# explore number of quantiles on classification accuracy
+from numpy import mean
+from numpy import std
+from pandas import read_csv
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.preprocessing import QuantileTransformer
+from sklearn.preprocessing import LabelEncoder
+from sklearn.pipeline import Pipeline
+from matplotlib import pyplot
+
+# get the dataset
+def get_dataset():
+	# load dataset
+	url = "https://raw.githubusercontent.com/jbrownlee/Datasets/master/sonar.csv"
+	dataset = read_csv(url, header=None)
+	data = dataset.values
+	# separate into input and output columns
+	X, y = data[:, :-1], data[:, -1]
+	# ensure inputs are floats and output is an integer label
+	X = X.astype('float32')
+	y = LabelEncoder().fit_transform(y.astype('str'))
+	return X, y
+
+# get a list of models to evaluate
+def get_models():
+	models = dict()
+	for i in range(1,100):
+		# define the pipeline
+		trans = QuantileTransformer(n_quantiles=i, output_distribution='uniform')
+		model = KNeighborsClassifier()
+		models[str(i)] = Pipeline(steps=[('t', trans), ('m', model)])
+	return models
+
+# evaluate a give model using cross-validation
+def evaluate_model(model, X, y):
+	cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+	scores = cross_val_score(model, X, y, scoring='accuracy', cv=cv, n_jobs=-1, error_score='raise')
+	return scores
+
+# define dataset
+X, y = get_dataset()
+# get the models to evaluate
+models = get_models()
+# evaluate the models and store results
+results = list()
+for name, model in models.items():
+	scores = evaluate_model(model, X, y)
+	results.append(mean(scores))
+	print('>%s %.3f (%.3f)' % (name, mean(scores), std(scores)))
+# plot model performance for comparison
+pyplot.plot(results)
+pyplot.show()
+>1 0.466 (0.016)
+>2 0.813 (0.085)
+>3 0.840 (0.080)
+>4 0.854 (0.075)
+>5 0.848 (0.072)
+>6 0.851 (0.071)
+>7 0.845 (0.071)
+>8 0.848 (0.066)
+>9 0.848 (0.071)
+>10 0.843 (0.074)
+...
+'''

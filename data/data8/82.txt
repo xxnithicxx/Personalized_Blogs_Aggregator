@@ -1,0 +1,332 @@
+Bagging and Random Forest for Imbalanced Classification
+https://machinelearningmastery.com/bagging-and-random-forest-for-imbalanced-classification/
+2020-02-11
+Bagging is an ensemble algorithm that fits multiple models on different subsets of a training dataset, then combines the predictions from all models.
+Random forest is an extension of bagging that also randomly selects subsets of features used in each data sample. Both bagging and random forests have proven effective on a wide range of different predictive modeling problems.
+Although effective, they are not suited to classification problems with a skewed class distribution. Nevertheless, many modifications to the algorithms have been proposed that adapt their behavior and make them better suited to a severe class imbalance.
+In this tutorial, you will discover how to use bagging and random forest for imbalanced classification.
+After completing this tutorial, you will know:
+- How to use Bagging with random undersampling for imbalanced classification.
+- How to use Random Forest with class weighting and random undersampling for imbalanced classification.
+- How to use the Easy Ensemble that combines bagging and boosting for imbalanced classification.
+Kick-start your project with my new book Imbalanced Classification with Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Updated Jan/2021: Updated links for API documentation.
+Bagging and Random Forest for Imbalanced ClassificationPhoto by Don Graham, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Bagging for Imbalanced Classification
+
+Standard Bagging
+Bagging With Random Undersampling
+
+
+- Standard Bagging
+- Bagging With Random Undersampling
+- Random Forest for Imbalanced Classification
+
+Standard Random Forest
+Random Forest With Class Weighting
+Random Forest With Bootstrap Class Weighting
+Random Forest With Random Undersampling
+
+
+- Standard Random Forest
+- Random Forest With Class Weighting
+- Random Forest With Bootstrap Class Weighting
+- Random Forest With Random Undersampling
+- Easy Ensemble for Imbalanced Classification
+
+Easy Ensemble
+
+
+- Easy Ensemble
+# Bagging for Imbalanced Classification
+Bootstrap Aggregation, or Bagging for short, is an ensemble machine learning algorithm.
+It involves first selecting random samples of a training dataset with replacement, meaning that a given sample may contain zero, one, or more than one copy of examples in the training dataset. This is called a bootstrap sample. One weak learner model is then fit on each data sample. Typically, decision tree models that do not use pruning (e.g. may overfit their training set slightly) are used as weak learners. Finally, the predictions from all of the fit weak learners are combined to make a single prediction (e.g. aggregated).
+Each model in the ensemble is then used to generate a prediction for a new sample and these m predictions are averaged to give the bagged model’s prediction.
+— Page 192, Applied Predictive Modeling, 2013.
+The process of creating new bootstrap samples and fitting and adding trees to the sample can continue until no further improvement is seen in the ensemble’s performance on a validation dataset.
+This simple procedure often results in better performance than a single well-configured decision tree algorithm.
+Bagging as-is will create bootstrap samples that will not consider the skewed class distribution for imbalanced classification datasets. As such, although the technique performs well in general, it may not perform well if a severe class imbalance is present.
+Before we dive into exploring extensions to bagging, let’s evaluate a standard bagged decision tree ensemble without and use it as a point of comparison.
+We can use the BaggingClassifier scikit-sklearn class to create a bagged decision tree model with roughly the same configuration.
+First, let’s define a synthetic imbalanced binary classification problem with 10,000 examples, 99 percent of which are in the majority class and 1 percent are in the minority class.
+We can then define the standard bagged decision tree ensemble model ready for evaluation.
+We can then evaluate this model using repeated stratified k-fold cross-validation, with three repeats and 10 folds.
+We will use the mean ROC AUC score across all folds and repeats to evaluate the performance of the model.
+Tying this together, the complete example of evaluating a standard bagged ensemble on the imbalanced classification dataset is listed below.
+Running the example evaluates the model and reports the mean ROC AUC score.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the model achieves a score of about 0.87.
+
+
+
+
+
+
+There are many ways to adapt bagging for use with imbalanced classification.
+Perhaps the most straightforward approach is to apply data resampling on the bootstrap sample prior to fitting the weak learner model. This might involve oversampling the minority class or undersampling the majority class.
+An easy way to overcome class imbalance problem when facing the resampling stage in bagging is to take the classes of the instances into account when they are randomly drawn from the original dataset.
+— Page 175, Learning from Imbalanced Data Sets, 2018.
+Oversampling the minority class in the bootstrap is referred to as OverBagging; likewise, undersampling the majority class in the bootstrap is referred to as UnderBagging, and combining both approaches is referred to as OverUnderBagging.
+The imbalanced-learn library provides an implementation of UnderBagging.
+Specifically, it provides a version of bagging that uses a random undersampling strategy on the majority class within a bootstrap sample in order to balance the two classes. This is provided in the BalancedBaggingClassifier class.
+Next, we can evaluate a modified version of the bagged decision tree ensemble that performs random undersampling of the majority class prior to fitting each decision tree.
+We would expect that the use of random undersampling would improve the performance of the ensemble.
+The default number of trees (n_estimators) for this model and the previous is 10. In practice, it is a good idea to test larger values for this hyperparameter, such as 100 or 1,000.
+The complete example is listed below.
+Running the example evaluates the model and reports the mean ROC AUC score.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see a lift on mean ROC AUC from about 0.87 without any data resampling, to about 0.96 with random undersampling of the majority class.
+This is not a true apples-to-apples comparison as we are using the same algorithm implementation from two different libraries, but it makes the general point that balancing the bootstrap prior to fitting a weak learner offers some benefit when the class distribution is skewed.
+Although the BalancedBaggingClassifier class uses a decision tree, you can test different models, such as k-nearest neighbors and more. You can set the base_estimator argument when defining the class to use a different weaker learner classifier model.
+# Random Forest for Imbalanced Classification
+Random forest is another ensemble of decision tree models and may be considered an improvement upon bagging.
+Like bagging, random forest involves selecting bootstrap samples from the training dataset and fitting a decision tree on each. The main difference is that all features (variables or columns) are not used; instead, a small, randomly selected subset of features (columns) is chosen for each bootstrap sample. This has the effect of de-correlating the decision trees (making them more independent), and in turn, improving the ensemble prediction.
+Each model in the ensemble is then used to generate a prediction for a new sample and these m predictions are averaged to give the forest’s prediction. Since the algorithm randomly selects predictors at each split, tree correlation will necessarily be lessened.
+— Page 199, Applied Predictive Modeling, 2013.
+Again, random forest is very effective on a wide range of problems, but like bagging, performance of the standard algorithm is not great on imbalanced classification problems.
+In learning extremely imbalanced data, there is a significant probability that a bootstrap sample contains few or even none of the minority class, resulting in a tree with poor performance for predicting the minority class.
+— Using Random Forest to Learn Imbalanced Data, 2004.
+Before we dive into extensions of the random forest ensemble algorithm to make it better suited for imbalanced classification, let’s fit and evaluate a random forest algorithm on our synthetic dataset.
+We can use the RandomForestClassifier class from scikit-learn and use a small number of trees, in this case, 10.
+The complete example of fitting a standard random forest ensemble on the imbalanced dataset is listed below.
+Running the example evaluates the model and reports the mean ROC AUC score.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the model achieved a mean ROC AUC of about 0.86.
+
+A simple technique for modifying a decision tree for imbalanced classification is to change the weight that each class has when calculating the “impurity” score of a chosen split point.
+Impurity measures how mixed the groups of samples are for a given split in the training dataset and is typically measured with Gini or entropy. The calculation can be biased so that a mixture in favor of the minority class is favored, allowing some false positives for the majority class.
+This modification of random forest is referred to as Weighted Random Forest.
+Another approach to make random forest more suitable for learning from extremely imbalanced data follows the idea of cost sensitive learning. Since the RF classifier tends to be biased towards the majority class, we shall place a heavier penalty on misclassifying the minority class.
+— Using Random Forest to Learn Imbalanced Data, 2004.
+This can be achieved by setting the class_weight argument on the RandomForestClassifier class.
+This argument takes a dictionary with a mapping of each class value (e.g. 0 and 1) to the weighting. The argument value of ‘balanced‘ can be provided to automatically use the inverse weighting from the training dataset, giving focus to the minority class.
+We can test this modification of random forest on our test problem. Although not specific to random forest, we would expect some modest improvement.
+The complete example is listed below.
+Running the example evaluates the model and reports the mean ROC AUC score.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the model achieved a modest lift in mean ROC AUC from 0.86 to about 0.87.
+
+Given that each decision tree is constructed from a bootstrap sample (e.g. random selection with replacement), the class distribution in the data sample will be different for each tree.
+As such, it might be interesting to change the class weighting based on the class distribution in each bootstrap sample, instead of the entire training dataset.
+This can be achieved by setting the class_weight argument to the value ‘balanced_subsample‘.
+We can test this modification and compare the results to the ‘balanced’ case above; the complete example is listed below.
+Running the example evaluates the model and reports the mean ROC AUC score.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the model achieved a modest lift in mean ROC AUC from 0.87 to about 0.88.
+
+Another useful modification to random forest is to perform data resampling on the bootstrap sample in order to explicitly change the class distribution.
+The BalancedRandomForestClassifier class from the imbalanced-learn library implements this and performs random undersampling of the majority class in reach bootstrap sample. This is generally referred to as Balanced Random Forest.
+We would expect this to have a more dramatic effect on model performance, given the broader success of data resampling techniques.
+We can test this modification of random forest on our synthetic dataset and compare the results. The complete example is listed below.
+Running the example evaluates the model and reports the mean ROC AUC score.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the model achieved a modest lift in mean ROC AUC from 0.89 to about 0.97.
+
+# Easy Ensemble for Imbalanced Classification
+When considering bagged ensembles for imbalanced classification, a natural thought might be to use random resampling of the majority class to create multiple datasets with a balanced class distribution.
+Specifically, a dataset can be created from all of the examples in the minority class and a randomly selected sample from the majority class. Then a model or weak learner can be fit on this dataset. The process can be repeated multiple times and the average prediction across the ensemble of models can be used to make predictions.
+This is exactly the approach proposed by Xu-Ying Liu, et al. in their 2008 paper titled “Exploratory Undersampling for Class-Imbalance Learning.”
+The selective construction of the subsamples is seen as a type of undersampling of the majority class. The generation of multiple subsamples allows the ensemble to overcome the downside of undersampling in which valuable information is discarded from the training process.
+… under-sampling is an efficient strategy to deal with class-imbalance. However, the drawback of under-sampling is that it throws away many potentially useful data.
+— Exploratory Undersampling for Class-Imbalance Learning, 2008.
+The authors propose variations on the approach, such as the Easy Ensemble and the Balance Cascade.
+Let’s take a closer look at the Easy Ensemble.
+The Easy Ensemble involves creating balanced samples of the training dataset by selecting all examples from the minority class and a subset from the majority class.
+Rather than using pruned decision trees, boosted decision trees are used on each subset, specifically the AdaBoost algorithm.
+AdaBoost works by first fitting a decision tree on the dataset, then determining the errors made by the tree and weighing the examples in the dataset by those errors so that more attention is paid to the misclassified examples and less to the correctly classified examples. A subsequent tree is then fit on the weighted dataset intended to correct the errors. The process is then repeated for a given number of decision trees.
+This means that samples that are difficult to classify receive increasingly larger weights until the algorithm identifies a model that correctly classifies these samples. Therefore, each iteration of the algorithm is required to learn a different aspect of the data, focusing on regions that contain difficult-to-classify samples.
+— Page 389, Applied Predictive Modeling, 2013.
+The EasyEnsembleClassifier class from the imbalanced-learn library provides an implementation of the easy ensemble technique.
+We can evaluate the technique on our synthetic imbalanced classification problem.
+Given the use of a type of random undersampling, we would expect the technique to perform well in general.
+The complete example is listed below.
+Running the example evaluates the model and reports the mean ROC AUC score.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the ensemble performs well on the dataset, achieving a mean ROC AUC of about 0.96, close to that achieved on this dataset with random forest with random undersampling (0.97).
+Although an AdaBoost classifier is used on each subsample, alternate classifier models can be used via setting the base_estimator argument to the model.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Using Random Forest to Learn Imbalanced Data, 2004.
+- Exploratory Undersampling for Class-Imbalance Learning, 2008.
+- Learning from Imbalanced Data Sets, 2018.
+- Imbalanced Learning: Foundations, Algorithms, and Applications, 2013.
+- Applied Predictive Modeling, 2013.
+- imblearn.ensemble.BalancedBaggingClassifier API.
+- sklearn.ensemble.BaggingClassifier API.
+- sklearn.ensemble.RandomForestClassifier API.
+- imblearn.ensemble.BalancedRandomForestClassifier API.
+# Summary
+In this tutorial, you discovered how to use bagging and random forest for imbalanced classification.
+Specifically, you learned:
+- How to use Bagging with random undersampling for imbalance classification.
+- How to use Random Forest with class weighting and random undersampling for imbalanced classification.
+- How to use the Easy Ensemble that combines bagging and boosting for imbalanced classification.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Imbalanced Classification!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Imbalanced Classification with Python
+It provides self-study tutorials and end-to-end projects on:
+Performance Metrics, Undersampling Methods, SMOTE, Threshold Moving, Probability Calibration, Cost-Sensitive Algorithms
+and much more...
+See What's Inside
+
+'''
+
+# generate dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=4)
+
+# define model
+model = BaggingClassifier()
+
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+# bagged decision trees on an imbalanced classification problem
+from numpy import mean
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.ensemble import BaggingClassifier
+# generate dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=4)
+# define model
+model = BaggingClassifier()
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+# summarize performance
+print('Mean ROC AUC: %.3f' % mean(scores))
+Mean ROC AUC: 0.871
+
+# define model
+model = BalancedBaggingClassifier()
+# bagged decision trees with random undersampling for imbalanced classification
+from numpy import mean
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from imblearn.ensemble import BalancedBaggingClassifier
+# generate dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=4)
+# define model
+model = BalancedBaggingClassifier()
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+# summarize performance
+print('Mean ROC AUC: %.3f' % mean(scores))
+Mean ROC AUC: 0.962
+
+# define model
+model = RandomForestClassifier(n_estimators=10)
+# random forest for imbalanced classification
+from numpy import mean
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.ensemble import RandomForestClassifier
+# generate dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=4)
+# define model
+model = RandomForestClassifier(n_estimators=10)
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+# summarize performance
+print('Mean ROC AUC: %.3f' % mean(scores))
+Mean ROC AUC: 0.869
+
+# define model
+model = RandomForestClassifier(n_estimators=10, class_weight='balanced')
+# class balanced random forest for imbalanced classification
+from numpy import mean
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.ensemble import RandomForestClassifier
+# generate dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=4)
+# define model
+model = RandomForestClassifier(n_estimators=10, class_weight='balanced')
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+# summarize performance
+print('Mean ROC AUC: %.3f' % mean(scores))
+Mean ROC AUC: 0.871
+# bootstrap class balanced random forest for imbalanced classification
+from numpy import mean
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from sklearn.ensemble import RandomForestClassifier
+# generate dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=4)
+# define model
+model = RandomForestClassifier(n_estimators=10, class_weight='balanced_subsample')
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+# summarize performance
+print('Mean ROC AUC: %.3f' % mean(scores))
+Mean ROC AUC: 0.884
+
+# define model
+model = BalancedRandomForestClassifier(n_estimators=10)
+# random forest with random undersampling for imbalanced classification
+from numpy import mean
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from imblearn.ensemble import BalancedRandomForestClassifier
+# generate dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=4)
+# define model
+model = BalancedRandomForestClassifier(n_estimators=10)
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+# summarize performance
+print('Mean ROC AUC: %.3f' % mean(scores))
+Mean ROC AUC: 0.970
+
+# define model
+model = EasyEnsembleClassifier(n_estimators=10)
+# easy ensemble for imbalanced classification
+from numpy import mean
+from sklearn.datasets import make_classification
+from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import RepeatedStratifiedKFold
+from imblearn.ensemble import EasyEnsembleClassifier
+# generate dataset
+X, y = make_classification(n_samples=10000, n_features=2, n_redundant=0,
+	n_clusters_per_class=1, weights=[0.99], flip_y=0, random_state=4)
+# define model
+model = EasyEnsembleClassifier(n_estimators=10)
+# define evaluation procedure
+cv = RepeatedStratifiedKFold(n_splits=10, n_repeats=3, random_state=1)
+# evaluate model
+scores = cross_val_score(model, X, y, scoring='roc_auc', cv=cv, n_jobs=-1)
+# summarize performance
+print('Mean ROC AUC: %.3f' % mean(scores))
+Mean ROC AUC: 0.968
+'''

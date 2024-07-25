@@ -1,0 +1,297 @@
+How To Resample and Interpolate Your Time Series Data With Python
+https://machinelearningmastery.com/resample-interpolate-time-series-data-python/
+2016-12-15
+You may have observations at the wrong frequency.
+Maybe they are too granular or not granular enough. The Pandas library in Python provides the capability to change the frequency of your time series data.
+In this tutorial, you will discover how to use Pandas in Python to both increase and decrease the sampling frequency of time series data.
+After completing this tutorial, you will know:
+- About time series resampling, the two types of resampling, and the 2 main reasons why you need to use them.
+- How to use Pandas to upsample time series data to a higher frequency and interpolate the new observations.
+- How to use Pandas to downsample time series data to a lower frequency and summarize the higher frequency observations.
+Kick-start your project with my new book Time Series Forecasting With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Update Dec/2016: Fixed definitions of upsample and downsample.
+- Updated Apr/2019: Updated the link to dataset.
+How To Resample and Interpolate Your Time Series Data With PythonPhoto by sung ming whang, some rights reserved.
+# Resampling
+Resampling involves changing the frequency of your time series observations.
+Two types of resampling are:
+- Upsampling: Where you increase the frequency of the samples, such as from minutes to seconds.
+- Downsampling: Where you decrease the frequency of the samples, such as from days to months.
+In both cases, data must be invented.
+In the case of upsampling, care may be needed in determining how the fine-grained observations are calculated using interpolation. In the case of downsampling, care may be needed in selecting the summary statistics used to calculate the new aggregated values.
+There are perhaps two main reasons why you may be interested in resampling your time series data:
+- Problem Framing: Resampling may be required if your data is not available at the same frequency that you want to make predictions.
+- Feature Engineering: Resampling can also be used to provide additional structure or insight into the learning problem for supervised learning models.
+There is a lot of overlap between these two cases.
+For example, you may have daily data and want to predict a monthly problem. You could use the daily data directly or you could downsample it to monthly data and develop your model.
+A feature engineering perspective may use observations and summaries of observations from both time scales and more in developing a model.
+Let’s make resampling more concrete by looking at a real dataset and some examples.
+
+
+
+
+# Shampoo Sales Dataset
+This dataset describes the monthly number of sales of shampoo over a 3 year period.
+The units are a sales count and there are 36 observations. The original dataset is credited to Makridakis, Wheelwright, and Hyndman (1998).
+- Download the dataset.
+Below is a sample of the first 5 rows of data, including the header row.
+Below is a plot of the entire dataset.
+Shampoo Sales Dataset
+The dataset shows an increasing trend and possibly some seasonal components.
+# Load the Shampoo Sales Dataset
+Download the dataset and place it in the current working directory with the filename “shampoo-sales.csv“.
+- Download the dataset.
+The timestamps in the dataset do not have an absolute year, but do have a month. We can write a custom date parsing function to load this dataset and pick an arbitrary year, such as 1900, to baseline the years from.
+Below is a snippet of code to load the Shampoo Sales dataset using the custom date parsing function from read_csv().
+Running this example loads the dataset and prints the first 5 rows. This shows the correct handling of the dates, baselined from 1900.
+We also get a plot of the dataset, showing the rising trend in sales from month to month.
+Plot of the Shampoo Sales Dataset
+# Upsample Shampoo Sales
+The observations in the Shampoo Sales are monthly.
+Imagine we wanted daily sales information. We would have to upsample the frequency from monthly to daily and use an interpolation scheme to fill in the new daily frequency.
+The Pandas library provides a function called resample() on the Series and DataFrame objects. This can be used to group records when downsampling and making space for new observations when upsampling.
+We can use this function to transform our monthly dataset into a daily dataset by calling resampling and specifying the preferred frequency of calendar day frequency or “D”.
+Pandas is clever and you could just as easily specify the frequency as “1D” or even something domain specific, such as “5D.” See the further reading section at the end of the tutorial for the list of aliases that you can use.
+Running this example prints the first 32 rows of the upsampled dataset, showing each day of January and the first day of February.
+We can see that the resample() function has created the rows by putting NaN values in the new values. We can see we still have the sales volume on the first of January and February from the original data.
+Next, we can interpolate the missing values at this new frequency.
+The Series Pandas object provides an interpolate() function to interpolate missing values, and there is a nice selection of simple and more complex interpolation functions. You may have domain knowledge to help choose how values are to be interpolated.
+A good starting point is to use a linear interpolation. This draws a straight line between available data, in this case on the first of the month, and fills in values at the chosen frequency from this line.
+Running this example, we can see interpolated values.
+Looking at a line plot, we see no difference from plotting the original data as the plot already interpolated the values between points to draw the line.
+Shampoo Sales Interpolated Linear
+Another common interpolation method is to use a polynomial or a spline to connect the values.
+This creates more curves and can look more natural on many datasets. Using a spline interpolation requires you specify the order (number of terms in the polynomial); in this case, an order of 2 is just fine.
+Running the example, we can first review the raw interpolated values.
+Reviewing the line plot, we can see more natural curves on the interpolated values.
+Shampoo Sales Interpolated Spline
+Generally, interpolation is a useful tool when you have missing observations.
+Next, we will consider resampling in the other direction and decreasing the frequency of observations.
+# Downsample Shampoo Sales
+The sales data is monthly, but perhaps we would prefer the data to be quarterly.
+The year can be divided into 4 business quarters, 3 months a piece.
+Instead of creating new rows between existing observations, the resample() function in Pandas will group all observations by the new frequency.
+We could use an alias like “3M” to create groups of 3 months, but this might have trouble if our observations did not start in January, April, July, or October. Pandas does have a quarter-aware alias of “Q” that we can use for this purpose.
+We must now decide how to create a new quarterly value from each group of 3 records. A good starting point is to calculate the average monthly sales numbers for the quarter. For this, we can use the mean() function.
+Putting this all together, we get the following code example.
+Running the example prints the first 5 rows of the quarterly data.
+We also plot the quarterly data, showing Q1-Q4 across the 3 years of original observations.
+Shampoo Sales Downsampled Quarterly
+Perhaps we want to go further and turn the monthly data into yearly data, and perhaps later use that to model the following year.
+We can downsample the data using the alias “A” for year-end frequency and this time use sum to calculate the total sales each year.
+Running the example shows the 3 records for the 3 years of observations.
+We also get a plot, correctly showing the year along the x-axis and the total number of sales per year along the y-axis.
+Shampoo Sales Downsampled Yearly Sum
+# Further Reading
+This section provides links and further reading for the Pandas functions used in this tutorial.
+- pandas.Series.resample API documentation for more on how to configure the resample() function.
+- Pandas Time Series Resampling Examples for more general code examples.
+- Pandas Offset Aliases used when resampling for all the built-in methods for changing the granularity of the data.
+- pandas.Series.interpolate API documentation for more on how to configure the interpolate() function.
+# Summary
+In this tutorial, you discovered how to resample your time series data using Pandas in Python.
+Specifically, you learned:
+- About time series resampling and the difference and reasons between downsampling and upsampling observation frequencies.
+- How to upsample time series data using Pandas and how to use different interpolation schemes.
+- How to downsample time series data using Pandas and how to summarize grouped data.
+Do you have any questions about resampling or interpolating time series data or about this tutorial?
+Ask your questions in the comments and I will do my best to answer them.
+# Want to Develop Time Series Forecasts with Python?
+Discover how in my new Ebook:
+Introduction to Time Series Forecasting With Python
+It covers self-study tutorials and end-to-end projects on topics like:
+Loading data, visualization, modeling, algorithm tuning, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+"Month","Sales"
+"1-01",266.0
+"1-02",145.9
+"1-03",183.1
+"1-04",119.3
+"1-05",180.3
+from pandas import read_csv
+from pandas import datetime
+from matplotlib import pyplot
+
+def parser(x):
+	return datetime.strptime('190'+x, '%Y-%m')
+
+series = read_csv('shampoo-sales.csv', header=0, parse_dates=[0], index_col=0, squeeze=True, date_parser=parser)
+print(series.head())
+series.plot()
+pyplot.show()
+Month
+1901-01-01 266.0
+1901-02-01 145.9
+1901-03-01 183.1
+1901-04-01 119.3
+1901-05-01 180.3
+Name: Sales of shampoo over a three year period, dtype: float64
+from pandas import read_csv
+from pandas import datetime
+
+def parser(x):
+	return datetime.strptime('190'+x, '%Y-%m')
+
+series = read_csv('shampoo-sales.csv', header=0, parse_dates=[0], index_col=0, squeeze=True, date_parser=parser)
+upsampled = series.resample('D')
+print(upsampled.head(32))
+Month
+1901-01-01 266.0
+1901-01-02 NaN
+1901-01-03 NaN
+1901-01-04 NaN
+1901-01-05 NaN
+1901-01-06 NaN
+1901-01-07 NaN
+1901-01-08 NaN
+1901-01-09 NaN
+1901-01-10 NaN
+1901-01-11 NaN
+1901-01-12 NaN
+1901-01-13 NaN
+1901-01-14 NaN
+1901-01-15 NaN
+1901-01-16 NaN
+1901-01-17 NaN
+1901-01-18 NaN
+1901-01-19 NaN
+1901-01-20 NaN
+1901-01-21 NaN
+1901-01-22 NaN
+1901-01-23 NaN
+1901-01-24 NaN
+1901-01-25 NaN
+1901-01-26 NaN
+1901-01-27 NaN
+1901-01-28 NaN
+1901-01-29 NaN
+1901-01-30 NaN
+1901-01-31 NaN
+1901-02-01 145.9
+from pandas import read_csv
+from pandas import datetime
+
+def parser(x):
+	return datetime.strptime('190'+x, '%Y-%m')
+
+series = read_csv('shampoo-sales.csv', header=0, parse_dates=[0], index_col=0, squeeze=True, date_parser=parser)
+upsampled = series.resample('D')
+interpolated = upsampled.interpolate(method='linear')
+print(interpolated.head(32))
+Month
+1901-01-01 266.000000
+1901-01-02 262.125806
+1901-01-03 258.251613
+1901-01-04 254.377419
+1901-01-05 250.503226
+1901-01-06 246.629032
+1901-01-07 242.754839
+1901-01-08 238.880645
+1901-01-09 235.006452
+1901-01-10 231.132258
+1901-01-11 227.258065
+1901-01-12 223.383871
+1901-01-13 219.509677
+1901-01-14 215.635484
+1901-01-15 211.761290
+1901-01-16 207.887097
+1901-01-17 204.012903
+1901-01-18 200.138710
+1901-01-19 196.264516
+1901-01-20 192.390323
+1901-01-21 188.516129
+1901-01-22 184.641935
+1901-01-23 180.767742
+1901-01-24 176.893548
+1901-01-25 173.019355
+1901-01-26 169.145161
+1901-01-27 165.270968
+1901-01-28 161.396774
+1901-01-29 157.522581
+1901-01-30 153.648387
+1901-01-31 149.774194
+1901-02-01 145.900000
+from pandas import read_csv
+from pandas import datetime
+from matplotlib import pyplot
+
+def parser(x):
+	return datetime.strptime('190'+x, '%Y-%m')
+
+series = read_csv('shampoo-sales.csv', header=0, parse_dates=[0], index_col=0, squeeze=True, date_parser=parser)
+upsampled = series.resample('D')
+interpolated = upsampled.interpolate(method='spline', order=2)
+print(interpolated.head(32))
+interpolated.plot()
+pyplot.show()
+Month
+1901-01-01 266.000000
+1901-01-02 258.630160
+1901-01-03 251.560886
+1901-01-04 244.720748
+1901-01-05 238.109746
+1901-01-06 231.727880
+1901-01-07 225.575149
+1901-01-08 219.651553
+1901-01-09 213.957094
+1901-01-10 208.491770
+1901-01-11 203.255582
+1901-01-12 198.248529
+1901-01-13 193.470612
+1901-01-14 188.921831
+1901-01-15 184.602185
+1901-01-16 180.511676
+1901-01-17 176.650301
+1901-01-18 173.018063
+1901-01-19 169.614960
+1901-01-20 166.440993
+1901-01-21 163.496161
+1901-01-22 160.780465
+1901-01-23 158.293905
+1901-01-24 156.036481
+1901-01-25 154.008192
+1901-01-26 152.209039
+1901-01-27 150.639021
+1901-01-28 149.298139
+1901-01-29 148.186393
+1901-01-30 147.303783
+1901-01-31 146.650308
+1901-02-01 145.900000
+from pandas import read_csv
+from pandas import datetime
+from matplotlib import pyplot
+
+def parser(x):
+	return datetime.strptime('190'+x, '%Y-%m')
+
+series = read_csv('shampoo-sales.csv', header=0, parse_dates=[0], index_col=0, squeeze=True, date_parser=parser)
+resample = series.resample('Q')
+quarterly_mean_sales = resample.mean()
+print(quarterly_mean_sales.head())
+quarterly_mean_sales.plot()
+pyplot.show()
+Month
+1901-03-31 198.333333
+1901-06-30 156.033333
+1901-09-30 216.366667
+1901-12-31 215.100000
+1902-03-31 184.633333
+Freq: Q-DEC, Name: Sales, dtype: float64
+from pandas import read_csv
+from pandas import datetime
+from matplotlib import pyplot
+
+def parser(x):
+	return datetime.strptime('190'+x, '%Y-%m')
+
+series = read_csv('shampoo-sales.csv', header=0, parse_dates=[0], index_col=0, squeeze=True, date_parser=parser)
+resample = series.resample('A')
+quarterly_mean_sales = resample.sum()
+print(quarterly_mean_sales.head())
+quarterly_mean_sales.plot()
+pyplot.show()
+'''

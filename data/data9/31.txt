@@ -1,0 +1,165 @@
+One-vs-Rest and One-vs-One for Multi-Class Classification
+https://machinelearningmastery.com/one-vs-rest-and-one-vs-one-for-multi-class-classification/
+2020-04-12
+Not all classification predictive models support multi-class classification.
+Algorithms such as the Perceptron, Logistic Regression, and Support Vector Machines were designed for binary classification and do not natively support classification tasks with more than two classes.
+One approach for using binary classification algorithms for multi-classification problems is to split the multi-class classification dataset into multiple binary classification datasets and fit a binary classification model on each. Two different examples of this approach are the One-vs-Rest and One-vs-One strategies.
+In this tutorial, you will discover One-vs-Rest and One-vs-One strategies for multi-class classification.
+After completing this tutorial, you will know:
+- Binary classification models like logistic regression and SVM do not support multi-class classification natively and require meta-strategies.
+- The One-vs-Rest strategy splits a multi-class classification into one binary classification problem per class.
+- The One-vs-One strategy splits a multi-class classification into one binary classification problem per each pair of classes.
+Kick-start your project with my new book Ensemble Learning Algorithms With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Use One-vs-Rest and One-vs-One for Multi-Class ClassificationPhoto by Espen Sundve, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Binary Classifiers for Multi-Class Classification
+- One-Vs-Rest for Multi-Class Classification
+- One-Vs-One for Multi-Class Classification
+# Binary Classifiers for Multi-Class Classification
+Classification is a predictive modeling problem that involves assigning a class label to an example.
+Binary classification are those tasks where examples are assigned exactly one of two classes. Multi-class classification is those tasks where examples are assigned exactly one of more than two classes.
+- Binary Classification: Classification tasks with two classes.
+- Multi-class Classification: Classification tasks with more than two classes.
+Some algorithms are designed for binary classification problems. Examples include:
+- Logistic Regression
+- Perceptron
+- Support Vector Machines
+As such, they cannot be used for multi-class classification tasks, at least not directly.
+Instead, heuristic methods can be used to split a multi-class classification problem into multiple binary classification datasets and train a binary classification model each.
+Two examples of these heuristic methods include:
+- One-vs-Rest (OvR)
+- One-vs-One (OvO)
+Let’s take a closer look at each.
+# One-Vs-Rest for Multi-Class Classification
+One-vs-rest (OvR for short, also referred to as One-vs-All or OvA) is a heuristic method for using binary classification algorithms for multi-class classification.
+It involves splitting the multi-class dataset into multiple binary classification problems. A binary classifier is then trained on each binary classification problem and predictions are made using the model that is the most confident.
+For example, given a multi-class classification problem with examples for each class ‘red,’ ‘blue,’ and ‘green‘. This could be divided into three binary classification datasets as follows:
+- Binary Classification Problem 1: red vs [blue, green]
+- Binary Classification Problem 2: blue vs [red, green]
+- Binary Classification Problem 3: green vs [red, blue]
+A possible downside of this approach is that it requires one model to be created for each class. For example, three classes requires three models. This could be an issue for large datasets (e.g. millions of rows), slow models (e.g. neural networks), or very large numbers of classes (e.g. hundreds of classes).
+The obvious approach is to use a one-versus-the-rest approach (also called one-vs-all), in which we train C binary classifiers, fc(x), where the data from class c is treated as positive, and the data from all the other classes is treated as negative.
+— Page 503, Machine Learning: A Probabilistic Perspective, 2012.
+This approach requires that each model predicts a class membership probability or a probability-like score. The argmax of these scores (class index with the largest score) is then used to predict a class.
+This approach is commonly used for algorithms that naturally predict numerical class membership probability or score, such as:
+- Logistic Regression
+- Perceptron
+As such, the implementation of these algorithms in the scikit-learn library implements the OvR strategy by default when using these algorithms for multi-class classification.
+We can demonstrate this with an example on a 3-class classification problem using the LogisticRegression algorithm. The strategy for handling multi-class classification can be set via the “multi_class” argument and can be set to “ovr” for the one-vs-rest strategy.
+The complete example of fitting a logistic regression model for multi-class classification using the built-in one-vs-rest strategy is listed below.
+The scikit-learn library also provides a separate OneVsRestClassifier class that allows the one-vs-rest strategy to be used with any classifier.
+This class can be used to use a binary classifier like Logistic Regression or Perceptron for multi-class classification, or even other classifiers that natively support multi-class classification.
+It is very easy to use and requires that a classifier that is to be used for binary classification be provided to the OneVsRestClassifier as an argument.
+The example below demonstrates how to use the OneVsRestClassifier class with a LogisticRegression class used as the binary classification model.
+
+
+# One-Vs-One for Multi-Class Classification
+One-vs-One (OvO for short) is another heuristic method for using binary classification algorithms for multi-class classification.
+Like one-vs-rest, one-vs-one splits a multi-class classification dataset into binary classification problems. Unlike one-vs-rest that splits it into one binary dataset for each class, the one-vs-one approach splits the dataset into one dataset for each class versus every other class.
+For example, consider a multi-class classification problem with four classes: ‘red,’ ‘blue,’ and ‘green,’ ‘yellow.’ This could be divided into six binary classification datasets as follows:
+- Binary Classification Problem 1: red vs. blue
+- Binary Classification Problem 2: red vs. green
+- Binary Classification Problem 3: red vs. yellow
+- Binary Classification Problem 4: blue vs. green
+- Binary Classification Problem 5: blue vs. yellow
+- Binary Classification Problem 6: green vs. yellow
+This is significantly more datasets, and in turn, models than the one-vs-rest strategy described in the previous section.
+The formula for calculating the number of binary datasets, and in turn, models, is as follows:
+- (NumClasses * (NumClasses – 1)) / 2
+We can see that for four classes, this gives us the expected value of six binary classification problems:
+- (NumClasses * (NumClasses – 1)) / 2
+- (4 * (4 – 1)) / 2
+- (4 * 3) / 2
+- 12 / 2
+- 6
+Each binary classification model may predict one class label and the model with the most predictions or votes is predicted by the one-vs-one strategy.
+An alternative is to introduce K(K − 1)/2 binary discriminant functions, one for every possible pair of classes. This is known as a one-versus-one classifier. Each point is then classified according to a majority vote amongst the discriminant functions.
+— Page 183, Pattern Recognition and Machine Learning, 2006.
+Similarly, if the binary classification models predict a numerical class membership, such as a probability, then the argmax of the sum of the scores (class with the largest sum score) is predicted as the class label.
+Classically, this approach is suggested for support vector machines (SVM) and related kernel-based algorithms. This is believed because the performance of kernel methods does not scale in proportion to the size of the training dataset and using subsets of the training data may counter this effect.
+The support vector machine implementation in the scikit-learn is provided by the SVC class and supports the one-vs-one method for multi-class classification problems. This can be achieved by setting the “decision_function_shape” argument to ‘ovo‘.
+The example below demonstrates SVM for multi-class classification using the one-vs-one method.
+The scikit-learn library also provides a separate OneVsOneClassifier class that allows the one-vs-one strategy to be used with any classifier.
+This class can be used with a binary classifier like SVM, Logistic Regression or Perceptron for multi-class classification, or even other classifiers that natively support multi-class classification.
+It is very easy to use and requires that a classifier that is to be used for binary classification be provided to the OneVsOneClassifier as an argument.
+The example below demonstrates how to use the OneVsOneClassifier class with an SVC class used as the binary classification model.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Pattern Recognition and Machine Learning, 2006.
+- Machine Learning: A Probabilistic Perspective, 2012.
+- Multiclass and multilabel algorithms, scikit-learn API.
+- sklearn.multiclass.OneVsRestClassifier API.
+- sklearn.multiclass.OneVsOneClassifier API.
+- Multiclass classification, Wikipedia.
+# Summary
+In this tutorial, you discovered One-vs-Rest and One-vs-One strategies for multi-class classification.
+Specifically, you learned:
+- Binary classification models like logistic regression and SVM do not support multi-class classification natively and require meta-strategies.
+- The One-vs-Rest strategy splits a multi-class classification into one binary classification problem per class.
+- The One-vs-One strategy splits a multi-class classification into one binary classification problem per each pair of classes.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Modern Ensemble Learning!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Ensemble Learning Algorithms With Python
+It provides self-study tutorials with full working code on:
+Stacking, Voting, Boosting, Bagging, Blending, Super Learner,
+and much more...
+See What's Inside
+
+'''
+# logistic regression for multi-class classification using built-in one-vs-rest
+from sklearn.datasets import make_classification
+from sklearn.linear_model import LogisticRegression
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=10, n_informative=5, n_redundant=5, n_classes=3, random_state=1)
+# define model
+model = LogisticRegression(multi_class='ovr')
+# fit model
+model.fit(X, y)
+# make predictions
+yhat = model.predict(X)
+# logistic regression for multi-class classification using a one-vs-rest
+from sklearn.datasets import make_classification
+from sklearn.linear_model import LogisticRegression
+from sklearn.multiclass import OneVsRestClassifier
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=10, n_informative=5, n_redundant=5, n_classes=3, random_state=1)
+# define model
+model = LogisticRegression()
+# define the ovr strategy
+ovr = OneVsRestClassifier(model)
+# fit model
+ovr.fit(X, y)
+# make predictions
+yhat = ovr.predict(X)
+# SVM for multi-class classification using built-in one-vs-one
+from sklearn.datasets import make_classification
+from sklearn.svm import SVC
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=10, n_informative=5, n_redundant=5, n_classes=3, random_state=1)
+# define model
+model = SVC(decision_function_shape='ovo')
+# fit model
+model.fit(X, y)
+# make predictions
+yhat = model.predict(X)
+# SVM for multi-class classification using one-vs-one
+from sklearn.datasets import make_classification
+from sklearn.svm import SVC
+from sklearn.multiclass import OneVsOneClassifier
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=10, n_informative=5, n_redundant=5, n_classes=3, random_state=1)
+# define model
+model = SVC()
+# define ovo strategy
+ovo = OneVsOneClassifier(model)
+# fit model
+ovo.fit(X, y)
+# make predictions
+yhat = ovo.predict(X)
+'''

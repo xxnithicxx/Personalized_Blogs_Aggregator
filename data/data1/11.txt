@@ -1,0 +1,143 @@
+A Gentle Introduction to Generative Adversarial Network Loss Functions
+https://machinelearningmastery.com/generative-adversarial-network-loss-functions/
+2019-09-01
+The generative adversarial network, or GAN for short, is a deep learning architecture for training a generative model for image synthesis.
+The GAN architecture is relatively straightforward, although one aspect that remains challenging for beginners is the topic of GAN loss functions. The main reason is that the architecture involves the simultaneous training of two models: the generator and the discriminator.
+The discriminator model is updated like any other deep learning neural network, although the generator uses the discriminator as the loss function, meaning that the loss function for the generator is implicit and learned during training.
+In this post, you will discover an introduction to loss functions for generative adversarial networks.
+After reading this post, you will know:
+- The GAN architecture is defined with the minimax GAN loss, although it is typically implemented using the non-saturating loss function.
+- Common alternate loss functions used in modern GANs include the least squares and Wasserstein loss functions.
+- Large-scale evaluation of GAN loss functions suggests little difference when other concerns, such as computational budget and model hyperparameters, are held constant.
+Kick-start your project with my new book Generative Adversarial Networks with Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+A Gentle Introduction to Generative Adversarial Network Loss FunctionsPhoto by Haoliang Yang, some rights reserved.
+# Overview
+This tutorial is divided into four parts; they are:
+- Challenge of GAN Loss
+- Standard GAN Loss Functions
+- Alternate GAN Loss Functions
+- Effect of Different GAN Loss Functions
+# Challenge of GAN Loss
+The generative adversarial network, or GAN for short, is a deep learning architecture for training a generative model for image synthesis.
+They have proven very effective, achieving impressive results in generating photorealistic faces, scenes, and more.
+The GAN architecture is relatively straightforward, although one aspect that remains challenging for beginners is the topic of GAN loss functions.
+The GAN architecture is comprised of two models: a discriminator and a generator. The discriminator is trained directly on real and generated images and is responsible for classifying images as real or fake (generated). The generator is not trained directly and instead is trained via the discriminator model.
+Specifically, the discriminator is learned to provide the loss function for the generator.
+The two models compete in a two-player game, where simultaneous improvements are made to both generator and discriminator models that compete.
+We typically seek convergence of a model on a training dataset observed as the minimization of the chosen loss function on the training dataset. In a GAN, convergence signals the end of the two player game. Instead, equilibrium between generator and discriminator loss is sought.
+We will take a closer look at the official GAN loss function used to train the generator and discriminator models and some alternate popular loss functions that may be used instead.
+# Standard GAN Loss Functions
+The GAN architecture was described by Ian Goodfellow, et al. in their 2014 paper titled “Generative Adversarial Networks.”
+The approach was introduced with two loss functions: the first that has become known as the Minimax GAN Loss and the second that has become known as the Non-Saturating GAN Loss.
+Under both schemes, the discriminator loss is the same. The discriminator seeks to maximize the probability assigned to real and fake images.
+We train D to maximize the probability of assigning the correct label to both training examples and samples from G.
+— Generative Adversarial Networks, 2014.
+Described mathematically, the discriminator seeks to maximize the average of the log probability for real images and the log of the inverted probabilities of fake images.
+- maximize log D(x) + log(1 – D(G(z)))
+If implemented directly, this would require changes be made to model weights using stochastic ascent rather than stochastic descent.
+It is more commonly implemented as a traditional binary classification problem with labels 0 and 1 for generated and real images respectively.
+The model is fit seeking to minimize the average binary cross entropy, also called log loss.
+- minimize y_true * -log(y_predicted) + (1 – y_true) * -log(1 – y_predicted)
+Minimax GAN loss refers to the minimax simultaneous optimization of the discriminator and generator models.
+Minimax refers to an optimization strategy in two-player turn-based games for minimizing the loss or cost for the worst case of the other player.
+For the GAN, the generator and discriminator are the two players and take turns involving updates to their model weights. The min and max refer to the minimization of the generator loss and the maximization of the discriminator’s loss.
+- min max(D, G)
+As stated above, the discriminator seeks to maximize the average of the log probability of real images and the log of the inverse probability for fake images.
+- discriminator: maximize log D(x) + log(1 – D(G(z)))
+The generator seeks to minimize the log of the inverse probability predicted by the discriminator for fake images. This has the effect of encouraging the generator to generate samples that have a low probability of being fake.
+- generator: minimize log(1 – D(G(z)))
+Here the generator learns to generate samples that have a low probability of being fake.
+— Are GANs Created Equal? A Large-Scale Study, 2018.
+This framing of the loss for the GAN was found to be useful in the analysis of the model as a minimax game, but in practice, it was found that, in practice, this loss function for the generator saturates.
+This means that if it cannot learn as quickly as the discriminator, the discriminator wins, the game ends, and the model cannot be trained effectively.
+In practice, [the loss function] may not provide sufficient gradient for G to learn well. Early in learning, when G is poor, D can reject samples with high confidence because they are clearly different from the training data.
+— Generative Adversarial Networks, 2014.
+The Non-Saturating GAN Loss is a modification to the generator loss to overcome the saturation problem.
+It is a subtle change that involves the generator maximizing the log of the discriminator probabilities for generated images instead of minimizing the log of the inverted discriminator probabilities for generated images.
+- generator: maximize log(D(G(z)))
+This is a change in the framing of the problem.
+In the previous case, the generator sought to minimize the probability of images being predicted as fake. Here, the generator seeks to maximize the probability of images being predicted as real.
+To improve the gradient signal, the authors also propose the non-saturating loss, where the generator instead aims to maximize the probability of generated samples being real.
+— Are GANs Created Equal? A Large-Scale Study, 2018.
+The result is better gradient information when updating the weights of the generator and a more stable training process.
+This objective function results in the same fixed point of the dynamics of G and D but provides much stronger gradients early in learning.
+— Generative Adversarial Networks, 2014.
+In practice, this is also implemented as a binary classification problem, like the discriminator. Instead of maximizing the loss, we can flip the labels for real and fake images and minimize the cross-entropy.
+… one approach is to continue to use cross-entropy minimization for the generator. Instead of flipping the sign on the discriminator’s cost to obtain a cost for the generator, we flip the target used to construct the cross-entropy cost.
+— NIPS 2016 Tutorial: Generative Adversarial Networks, 2016.
+# Alternate GAN Loss Functions
+The choice of loss function is a hot research topic and many alternate loss functions have been proposed and evaluated.
+Two popular alternate loss functions used in many GAN implementations are the least squares loss and the Wasserstein loss.
+The least squares loss was proposed by Xudong Mao, et al. in their 2016 paper titled “Least Squares Generative Adversarial Networks.”
+Their approach was based on the observation of the limitations for using binary cross entropy loss when generated images are very different from real images, which can lead to very small or vanishing gradients, and in turn, little or no update to the model.
+… this loss function, however, will lead to the problem of vanishing gradients when updating the generator using the fake samples that are on the correct side of the decision boundary, but are still far from the real data.
+— Least Squares Generative Adversarial Networks, 2016.
+The discriminator seeks to minimize the sum squared difference between predicted and expected values for real and fake images.
+- discriminator: minimize (D(x) – 1)^2 + (D(G(z)))^2
+The generator seeks to minimize the sum squared difference between predicted and expected values as though the generated images were real.
+- generator: minimize (D(G(z)) – 1)^2
+In practice, this involves maintaining the class labels of 0 and 1 for fake and real images respectively, minimizing the least squares, also called mean squared error or L2 loss.
+- l2 loss = sum (y_predicted – y_true)^2
+The benefit of the least squares loss is that it gives more penalty to larger errors, in turn resulting in a large correction rather than a vanishing gradient and no model update.
+… the least squares loss function is able to move the fake samples toward the decision boundary, because the least squares loss function penalizes samples that lie in a long way on the correct side of the decision boundary.
+— Least Squares Generative Adversarial Networks, 2016.
+The Wasserstein loss was proposed by Martin Arjovsky, et al. in their 2017 paper titled “Wasserstein GAN.”
+The Wasserstein loss is informed by the observation that the traditional GAN is motivated to minimize the distance between the actual and predicted probability distributions for real and generated images, the so-called Kullback-Leibler divergence, or the Jensen-Shannon divergence.
+Instead, they propose modeling the problem on the Earth-Mover’s distance, also referred to as the Wasserstein-1 distance. The Earth-Mover’s distance calculates the distance between two probability distributions in terms of the cost of turning one distribution (pile of earth) into another.
+The GAN using Wasserstein loss involves changing the notion of the discriminator into a critic that is updated more often (e.g. five times more often) than the generator model. The critic scores images with a real value instead of predicting a probability. It also requires that model weights be kept small, e.g. clipped to a hypercube of [-0.01, 0.01].
+The score is calculated such that the distance between scores for real and fake images are maximally separate.
+The loss function can be implemented by calculating the average predicted score across real and fake images and multiplying the average score by 1 and -1 respectively. This has the desired effect of driving the scores for real and fake images apart.
+The benefit of Wasserstein loss is that it provides a useful gradient almost everywhere, allowing for the continued training of the models. It also means that a lower Wasserstein loss correlates with better generator image quality, meaning that we are explicitly seeking a minimization of generator loss.
+To our knowledge, this is the first time in GAN literature that such a property is shown, where the loss of the GAN shows properties of convergence.
+— Wasserstein GAN, 2017.
+# Effect of Different GAN Loss Functions
+Many loss functions have been developed and evaluated in an effort to improve the stability of training GAN models.
+The most common is the non-saturating loss, generally, and the Least Squares and Wasserstein loss in larger and more recent GAN models.
+As such, there is much interest in whether one loss function is truly better than another for a given model implementation.
+This question motivated a large study of GAN loss functions by Mario Lucic, et al. in their 2018 paper titled “Are GANs Created Equal? A Large-Scale Study.”
+Despite a very rich research activity leading to numerous interesting GAN algorithms, it is still very hard to assess which algorithm(s) perform better than others. We conduct a neutral, multi-faceted large-scale empirical study on state-of-the-art models and evaluation measures.
+— Are GANs Created Equal? A Large-Scale Study, 2018.
+They fix the computational budget and hyperparameter configuration for models and look at a suite of seven loss functions.
+This includes the Minimax loss (MM GAN), Non-Saturating loss (NS GAN), Wasserstein loss (WGAN), and Least-Squares loss (LS GAN) described above. The study also includes an extension of Wasserstein loss to remove the weight clipping called Wasserstein Gradient Penalty loss (WGAN GP) and two others, DRAGAN and BEGAN.
+The table below, taken from the paper, provides a useful summary of the different loss functions for both the discriminator and generator.
+Summary of Different GAN Loss Functions.Taken from: Are GANs Created Equal? A Large-Scale Study.
+The models were evaluated systematically using a range of GAN evaluation metrics, including the popular Frechet Inception Distance, or FID.
+Surprisingly, they discover that all evaluated loss functions performed approximately the same when all other elements were held constant.
+We provide a fair and comprehensive comparison of the state-of-the-art GANs, and empirically demonstrate that nearly all of them can reach similar values of FID, given a high enough computational budget.
+— Are GANs Created Equal? A Large-Scale Study, 2018.
+This does not mean that the choice of loss does not matter for specific problems and model configurations.
+Instead, the result suggests that the difference in the choice of loss function disappears when the other concerns of the model are held constant, such as computational budget and model configuration.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Generative Adversarial Networks, 2014.
+- NIPS 2016 Tutorial: Generative Adversarial Networks, 2016.
+- Least Squares Generative Adversarial Networks, 2016.
+- Wasserstein GAN, 2017.
+- Improved Training of Wasserstein GANs, 2017.
+- Are GANs Created Equal? A Large-Scale Study, 2018.
+- Minimax, Wikipedia.
+- Earth mover’s distance, Wikipedia.
+# Summary
+In this post, you discovered an introduction to loss functions for generative adversarial networks.
+Specifically, you learned:
+- The GAN architecture is defined with the minimax GAN loss, although it is typically implemented using the non-saturating loss function.
+- Common alternate loss functions used in modern GANs include the least squares and Wasserstein loss functions.
+- Large-scale evaluation of GAN loss functions suggests little difference when other concerns, such as computational budget and model hyperparameters, are held constant.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop Generative Adversarial Networks Today!
+
+
+Discover how in my new Ebook:
+Generative Adversarial Networks with Python
+It provides self-study tutorials and end-to-end projects on:
+DCGAN, conditional GANs, image translation, Pix2Pix, CycleGAN
+and much more...
+
+
+See What's Inside
+
+'''
+
+'''

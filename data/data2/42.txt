@@ -1,0 +1,465 @@
+How To Implement Learning Vector Quantization (LVQ) From Scratch With Python
+https://machinelearningmastery.com/implement-learning-vector-quantization-scratch-python/
+2016-11-03
+A limitation of k-Nearest Neighbors is that you must keep a large database of training examples in order to make predictions.
+The Learning Vector Quantization algorithm addresses this by learning a much smaller subset of patterns that best represent the training data.
+In this tutorial, you will discover how to implement the Learning Vector Quantization algorithm from scratch with Python.
+After completing this tutorial, you will know:
+- How to learn a set of codebook vectors from a training data set.
+- How to make predictions using learned codebook vectors.
+- How to apply Learning Vector Quantization to a real predictive modeling problem.
+Kick-start your project with my new book Machine Learning Algorithms From Scratch, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Update Jan/2017: Changed the calculation of fold_size in cross_validation_split() to always be an integer. Fixes issues with Python 3.
+- Update Aug/2018: Tested and updated to work with Python 3.6.
+How To Implement Learning Vector Quantization From Scratch With PythonPhoto by Tony Faiola, some rights reserved.
+# Description
+This section provides a brief introduction to the Learning Vector Quantization algorithm and the Ionosphere classification problem that we will use in this tutorial
+The Learning Vector Quantization (LVQ) algorithm is a lot like k-Nearest Neighbors.
+Predictions are made by finding the best match among a library of patterns. The difference is that the library of patterns is learned from training data, rather than using the training patterns themselves.
+The library of patterns are called codebook vectors and each pattern is called a codebook. The codebook vectors are initialized to randomly selected values from the training dataset. Then, over a number of epochs, they are adapted to best summarize the training data using a learning algorithm.
+The learning algorithm shows one training record at a time, finds the best matching unit among the codebook vectors and moves it closer to the training record if they have the same class, or further away if they have different classes.
+Once prepared, the codebook vectors are used to make predictions using the k-Nearest Neighbors algorithm where k=1.
+The algorithm was developed for classification predictive modeling problems, but can be adapted for use with regression problems.
+The Ionosphere dataset predicts the structure of the ionosphere given radar return data.
+Each instance describes the properties of radar returns from the atmosphere and the task is to predict whether or not there is structure in the ionosphere.
+There are 351 instances and 34 numerical input variables, 17 pairs of 2 for each radar pulse that generally have the same scale of 0-1. The class value is a string with a value of either a “g” for good return or “b” for a bad return.
+Using the Zero Rule Algorithm that predicts the class with the most observations, a baseline accuracy of 64.286% can be achieved.
+You can learn more and download the dataset from the UCI Machine Learning Repository.
+Download the dataset and place it in your current working directory with the name ionosphere.csv.
+# Tutorial
+This tutorial is broken down into 4 parts:
+- Euclidean Distance.
+- Best Matching Unit.
+- Training Codebook Vectors.
+- Ionosphere Case Study.
+These steps will lay the foundation for implementing and applying the LVQ algorithm to your own predictive modeling problems.
+The first step needed is to calculate the distance between two rows in a dataset.
+Rows of data are mostly made up of numbers and an easy way to calculate the distance between two rows or vectors of numbers is to draw a straight line. This makes sense in 2D or 3D and scales nicely to higher dimensions.
+We can calculate the straight line distance between two vectors using the Euclidean distance measure. It is calculated as the square root of the sum of the squared differences between the two vectors.
+Where x1 is the first row of data, x2 is the second row of data and i is the index for a specific column as we sum across all columns.
+With Euclidean distance, the smaller the value, the more similar two records will be. A value of 0 means that there is no difference between two records.
+Below is a function named euclidean_distance() that implements this in Python.
+You can see that the function assumes that the last column in each row is an output value which is ignored from the distance calculation.
+We can test this distance function with a small contrived classification dataset. We will use this dataset a few times as we construct the elements needed for the LVQ algorithm.
+Putting this all together, we can write a small example to test our distance function by printing the distance between the first row and all other rows. We would expect the distance between the first row and itself to be 0, a good thing to look out for.
+The full example is listed below.
+Running this example prints the distances between the first row and every row in the dataset, including itself.
+Now it is time to use the distance calculation to locate the best matching unit within a dataset.
+The Best Matching Unit or BMU is the codebook vector that is most similar to a new piece of data.
+To locate the BMU for a new piece of data within a dataset we must first calculate the distance between each codebook to the new piece of data. We can do this using our distance function above.
+Once distances are calculated, we must sort all of the codebooks by their distance to the new data. We can then return the first or most similar codebook vector.
+We can do this by keeping track of the distance for each record in the dataset as a tuple, sort the list of tuples by the distance (in descending order) and then retrieve the BMU.
+Below is a function named get_best_matching_unit() that implements this.
+You can see that the euclidean_distance() function developed in the previous step is used to calculate the distance between each codebook and the new test_row.
+The list of codebook and distance tuples is sorted where a custom key is used ensuring that the second item in the tuple (tup[1]) is used in the sorting operation.
+Finally, the top or most similar codebook vector is returned as the BMU.
+We can test this function with the small contrived dataset prepared in the previous section.
+The complete example is listed below.
+Running this example prints the BMU in the dataset to the first record. As expected, the first record is the most similar to itself and is at the top of the list.
+Make predictions with a set of codebook vectors is the same thing.
+We use the 1-nearest neighbor algorithm. That is, for each new pattern we wish to make a prediction for, we locate the most similar codebook vector in the set and return its associated class value.
+Now that we know how to get the best matching unit from a set of codebook vectors, we need to learn how to train them.
+The first step in training a set of codebook vectors is to initialize the set.
+We can initialize it with patterns constructed from random features in the training dataset.
+Below is a function named random_codebook() that implements this. Random input and output features are selected from the training data.
+After the codebook vectors are initialized to a random set, they must be adapted to best summarize the training data.
+This is done iteratively.
+- Epochs: At the top level, the process is repeated for a fixed number of epochs or exposures of the training data.
+- Training Dataset: Within an epoch, each training pattern is used one at a time to update the set of codebook vectors.
+- Pattern Features: For a given training pattern, each feature of a best matching codebook vector is updated to move it closer or further away.
+The best matching unit is found for each training pattern and only this best matching unit is updated. The difference between the training pattern and the BMU is calculated as the error. The class values (assumed to be the last value in the list) are compared. If they match, the error is added to the BMU to bring it closer to the training pattern, otherwise, it is subtracted to push it further away.
+The amount that the BMU is adjusted is controlled by a learning rate. This is a weighting on the amount of change made to all BMUs. For example, a learning rate of 0.3 means that BMUs are only moved by 30% of the error or difference between training patterns and BMUs.
+Further, the learning rate is adjusted so that it has maximum effect in the first epoch and less effect as training continues until it has a minimal effect in the final epoch. This is called a linear decay learning rate schedule and can also be used in artificial neural networks.
+We can summarize this decay in learning rate by epoch number as follows:
+We can test this equation by assuming a learning rate of 0.3 and 10 epochs. The learning rate each epoch would be as follows:
+We can put all of this together. Below is a function named train_codebooks() that implements the procedure for training a set of codebook vectors given a training dataset.
+The function takes 3 additional arguments to the training dataset, the number of codebook vectors to create and train, the initial learning rate and the number of epochs for which to train the codebook vectors.
+You can also see that the function keeps track of the sum squared error each epoch and prints a message showing the epoch number, effective learning rate and sum squared error score. This is helpful when debugging the training function or the specific configuration for a given prediction problem.
+You can see the use of the random_codebook() to initialize the codebook vectors and the get_best_matching_unit() function to find the BMU for each training pattern within an epoch.
+We can put this together with the examples above and learn a set of codebook vectors for our contrived dataset.
+Below is the complete example.
+Running this example trains a set of 2 codebook vectors for 10 epochs with an initial learning rate of 0.3. The details are printed each epoch and the set of 2 codebook vectors learned from the training data is displayed.
+We can see that the changes to learning rate meet our expectations explored above for each epoch. We can also see that the sum squared error each epoch does continue to drop at the end of training and that there may be an opportunity to tune the example further to achieve less error.
+Now that we know how to train a set of codebook vectors, let’s see how we can use this algorithm on a real dataset.
+In this section, we will apply the Learning Vector Quantization algorithm to the Ionosphere dataset.
+The first step is to load the dataset and convert the loaded data to numbers that we can use with the Euclidean distance calculation. For this we will use the helper function load_csv() to load the file, str_column_to_float() to convert string numbers to floats and str_column_to_int() to convert the class column to integer values.
+We will evaluate the algorithm using k-fold cross-validation with 5 folds. This means that 351/5=70.2 or just over 70 records will be in each fold. We will use the helper functions evaluate_algorithm() to evaluate the algorithm with cross-validation and accuracy_metric() to calculate the accuracy of predictions.
+The complete example is listed below.
+Running this example prints the classification accuracy on each fold and the mean classification accuracy across all folds.
+We can see that the accuracy of 87.143% is better than the baseline of 64.286%. We can also see that our library of 20 codebook vectors is far fewer than holding the entire training dataset.
+
+# Extensions
+This section lists extensions to the tutorial that you may wish to explore.
+- Tune Parameters. The parameters in the above example were not tuned, try different values to improve the classification accuracy.
+- Different Distance Measures. Experiment with different distance measures such as Manhattan distance and Minkowski distance.
+- Multiple-Pass LVQ. The codebook vectors may be updated by multiple training runs. Experiment by training with large learning rates followed by a large number of epochs with smaller learning rates to fine tune the codebooks.
+- Update More BMUs. Experiment with selecting more than one BMU when training and pushing and pulling them away from the training data.
+- More Problems. Apply LVQ to more classification problems on the UCI Machine Learning Repository.
+Did you explore any of these extensions?
+Share your experiences in the comments below.
+# Review
+In this tutorial, you discovered how to implement the learning vector quantization algorithm from scratch in Python.
+Specifically, you learned:
+- How to calculate the distance between patterns and locate the best matching unit.
+- How to train a set of codebook vectors to best summarize the training dataset.
+- How to apply the learning vector quantization algorithm to a real predictive modeling problem.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Discover How to Code Algorithms From Scratch!
+...with step-by-step tutorials on real-world datasets
+Discover how in my new Ebook:
+Machine Learning Algorithms From Scratch
+It covers 18 tutorials with all the code for 12 top algorithms, like:
+Linear Regression, k-Nearest Neighbors, Stochastic Gradient Descent and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+distance = sqrt( sum( (x1_i - x2_i)^2 )
+# calculate the Euclidean distance between two vectors
+def euclidean_distance(row1, row2):
+	distance = 0.0
+	for i in range(len(row1)-1):
+		distance += (row1[i] - row2[i])**2
+	return sqrt(distance)
+X1			X2			Y
+2.7810836		2.550537003		0
+1.465489372		2.362125076		0
+3.396561688		4.400293529		0
+1.38807019		1.850220317		0
+3.06407232		3.005305973		0
+7.627531214		2.759262235		1
+5.332441248		2.088626775		1
+6.922596716		1.77106367		1
+8.675418651		-0.242068655		1
+7.673756466		3.508563011		1
+from math import sqrt
+
+# calculate the Euclidean distance between two vectors
+def euclidean_distance(row1, row2):
+	distance = 0.0
+	for i in range(len(row1)-1):
+		distance += (row1[i] - row2[i])**2
+	return sqrt(distance)
+
+# Test distance function
+dataset = [[2.7810836,2.550537003,0],
+	[1.465489372,2.362125076,0],
+	[3.396561688,4.400293529,0],
+	[1.38807019,1.850220317,0],
+	[3.06407232,3.005305973,0],
+	[7.627531214,2.759262235,1],
+	[5.332441248,2.088626775,1],
+	[6.922596716,1.77106367,1],
+	[8.675418651,-0.242068655,1],
+	[7.673756466,3.508563011,1]]
+
+row0 = dataset[0]
+for row in dataset:
+	distance = euclidean_distance(row0, row)
+	print(distance)
+0.0
+1.32901739153
+1.94946466557
+1.55914393855
+0.535628072194
+4.85094018699
+2.59283375995
+4.21422704263
+6.52240998823
+4.98558538245
+# Locate the best matching unit
+def get_best_matching_unit(codebooks, test_row):
+	distances = list()
+	for codebook in codebooks:
+		dist = euclidean_distance(codebook, test_row)
+		distances.append((codebook, dist))
+	distances.sort(key=lambda tup: tup[1])
+	return distances[0][0]
+from math import sqrt
+
+# calculate the Euclidean distance between two vectors
+def euclidean_distance(row1, row2):
+	distance = 0.0
+	for i in range(len(row1)-1):
+		distance += (row1[i] - row2[i])**2
+	return sqrt(distance)
+
+# Locate the best matching unit
+def get_best_matching_unit(codebooks, test_row):
+	distances = list()
+	for codebook in codebooks:
+		dist = euclidean_distance(codebook, test_row)
+		distances.append((codebook, dist))
+	distances.sort(key=lambda tup: tup[1])
+	return distances[0][0]
+
+# Test best matching unit function
+dataset = [[2.7810836,2.550537003,0],
+	[1.465489372,2.362125076,0],
+	[3.396561688,4.400293529,0],
+	[1.38807019,1.850220317,0],
+	[3.06407232,3.005305973,0],
+	[7.627531214,2.759262235,1],
+	[5.332441248,2.088626775,1],
+	[6.922596716,1.77106367,1],
+	[8.675418651,-0.242068655,1],
+	[7.673756466,3.508563011,1]]
+test_row = dataset[0]
+bmu = get_best_matching_unit(dataset, test_row)
+print(bmu)
+[2.7810836, 2.550537003, 0]
+# Create a random codebook vector
+def random_codebook(train):
+	n_records = len(train)
+	n_features = len(train[0])
+	codebook = [train[randrange(n_records)][i] for i in range(n_features)]
+	return codebook
+rate = learning_rate * (1.0 - (epoch/total_epochs))
+Epoch		Effective Learning Rate
+0		0.3
+1		0.27
+2		0.24
+3		0.21
+4		0.18
+5		0.15
+6		0.12
+7		0.09
+8		0.06
+9		0.03
+# Train a set of codebook vectors
+def train_codebooks(train, n_codebooks, lrate, epochs):
+	codebooks = [random_codebook(train) for i in range(n_codebooks)]
+	for epoch in range(epochs):
+		rate = lrate * (1.0-(epoch/float(epochs)))
+		sum_error = 0.0
+		for row in train:
+			bmu = get_best_matching_unit(codebooks, row)
+			for i in range(len(row)-1):
+				error = row[i] - bmu[i]
+				sum_error += error**2
+				if bmu[-1] == row[-1]:
+					bmu[i] += rate * error
+				else:
+					bmu[i] -= rate * error
+		print('>epoch=%d, lrate=%.3f, error=%.3f' % (epoch, rate, sum_error))
+	return codebooks
+from math import sqrt
+from random import randrange
+from random import seed
+
+# calculate the Euclidean distance between two vectors
+def euclidean_distance(row1, row2):
+	distance = 0.0
+	for i in range(len(row1)-1):
+		distance += (row1[i] - row2[i])**2
+	return sqrt(distance)
+
+# Locate the best matching unit
+def get_best_matching_unit(codebooks, test_row):
+	distances = list()
+	for codebook in codebooks:
+		dist = euclidean_distance(codebook, test_row)
+		distances.append((codebook, dist))
+	distances.sort(key=lambda tup: tup[1])
+	return distances[0][0]
+
+# Create a random codebook vector
+def random_codebook(train):
+	n_records = len(train)
+	n_features = len(train[0])
+	codebook = [train[randrange(n_records)][i] for i in range(n_features)]
+	return codebook
+
+# Train a set of codebook vectors
+def train_codebooks(train, n_codebooks, lrate, epochs):
+	codebooks = [random_codebook(train) for i in range(n_codebooks)]
+	for epoch in range(epochs):
+		rate = lrate * (1.0-(epoch/float(epochs)))
+		sum_error = 0.0
+		for row in train:
+			bmu = get_best_matching_unit(codebooks, row)
+			for i in range(len(row)-1):
+				error = row[i] - bmu[i]
+				sum_error += error**2
+				if bmu[-1] == row[-1]:
+					bmu[i] += rate * error
+				else:
+					bmu[i] -= rate * error
+		print('>epoch=%d, lrate=%.3f, error=%.3f' % (epoch, rate, sum_error))
+	return codebooks
+
+# Test the training function
+seed(1)
+dataset = [[2.7810836,2.550537003,0],
+	[1.465489372,2.362125076,0],
+	[3.396561688,4.400293529,0],
+	[1.38807019,1.850220317,0],
+	[3.06407232,3.005305973,0],
+	[7.627531214,2.759262235,1],
+	[5.332441248,2.088626775,1],
+	[6.922596716,1.77106367,1],
+	[8.675418651,-0.242068655,1],
+	[7.673756466,3.508563011,1]]
+learn_rate = 0.3
+n_epochs = 10
+n_codebooks = 2
+codebooks = train_codebooks(dataset, n_codebooks, learn_rate, n_epochs)
+print('Codebooks: %s' % codebooks)
+>epoch=0, lrate=0.300, error=43.270
+>epoch=1, lrate=0.270, error=30.403
+>epoch=2, lrate=0.240, error=27.146
+>epoch=3, lrate=0.210, error=26.301
+>epoch=4, lrate=0.180, error=25.537
+>epoch=5, lrate=0.150, error=24.789
+>epoch=6, lrate=0.120, error=24.058
+>epoch=7, lrate=0.090, error=23.346
+>epoch=8, lrate=0.060, error=22.654
+>epoch=9, lrate=0.030, error=21.982
+Codebooks: [[2.432316086217663, 2.839821664184211, 0], [7.319592257892681, 1.97013382654341, 1]]
+# LVQ for the Ionosphere Dataset
+from random import seed
+from random import randrange
+from csv import reader
+from math import sqrt
+
+# Load a CSV file
+def load_csv(filename):
+	dataset = list()
+	with open(filename, 'r') as file:
+		csv_reader = reader(file)
+		for row in csv_reader:
+			if not row:
+				continue
+			dataset.append(row)
+	return dataset
+
+# Convert string column to float
+def str_column_to_float(dataset, column):
+	for row in dataset:
+		row[column] = float(row[column].strip())
+
+# Convert string column to integer
+def str_column_to_int(dataset, column):
+	class_values = [row[column] for row in dataset]
+	unique = set(class_values)
+	lookup = dict()
+	for i, value in enumerate(unique):
+		lookup[value] = i
+	for row in dataset:
+		row[column] = lookup[row[column]]
+	return lookup
+
+# Split a dataset into k folds
+def cross_validation_split(dataset, n_folds):
+	dataset_split = list()
+	dataset_copy = list(dataset)
+	fold_size = int(len(dataset) / n_folds)
+	for i in range(n_folds):
+		fold = list()
+		while len(fold) < fold_size:
+			index = randrange(len(dataset_copy))
+			fold.append(dataset_copy.pop(index))
+		dataset_split.append(fold)
+	return dataset_split
+
+# Calculate accuracy percentage
+def accuracy_metric(actual, predicted):
+	correct = 0
+	for i in range(len(actual)):
+		if actual[i] == predicted[i]:
+			correct += 1
+	return correct / float(len(actual)) * 100.0
+
+# Evaluate an algorithm using a cross validation split
+def evaluate_algorithm(dataset, algorithm, n_folds, *args):
+	folds = cross_validation_split(dataset, n_folds)
+	scores = list()
+	for fold in folds:
+		train_set = list(folds)
+		train_set.remove(fold)
+		train_set = sum(train_set, [])
+		test_set = list()
+		for row in fold:
+			row_copy = list(row)
+			test_set.append(row_copy)
+			row_copy[-1] = None
+		predicted = algorithm(train_set, test_set, *args)
+		actual = [row[-1] for row in fold]
+		accuracy = accuracy_metric(actual, predicted)
+		scores.append(accuracy)
+	return scores
+
+# calculate the Euclidean distance between two vectors
+def euclidean_distance(row1, row2):
+	distance = 0.0
+	for i in range(len(row1)-1):
+		distance += (row1[i] - row2[i])**2
+	return sqrt(distance)
+
+# Locate the best matching unit
+def get_best_matching_unit(codebooks, test_row):
+	distances = list()
+	for codebook in codebooks:
+		dist = euclidean_distance(codebook, test_row)
+		distances.append((codebook, dist))
+	distances.sort(key=lambda tup: tup[1])
+	return distances[0][0]
+
+# Make a prediction with codebook vectors
+def predict(codebooks, test_row):
+	bmu = get_best_matching_unit(codebooks, test_row)
+	return bmu[-1]
+
+# Create a random codebook vector
+def random_codebook(train):
+	n_records = len(train)
+	n_features = len(train[0])
+	codebook = [train[randrange(n_records)][i] for i in range(n_features)]
+	return codebook
+
+# Train a set of codebook vectors
+def train_codebooks(train, n_codebooks, lrate, epochs):
+	codebooks = [random_codebook(train) for i in range(n_codebooks)]
+	for epoch in range(epochs):
+		rate = lrate * (1.0-(epoch/float(epochs)))
+		for row in train:
+			bmu = get_best_matching_unit(codebooks, row)
+			for i in range(len(row)-1):
+				error = row[i] - bmu[i]
+				if bmu[-1] == row[-1]:
+					bmu[i] += rate * error
+				else:
+					bmu[i] -= rate * error
+	return codebooks
+
+# LVQ Algorithm
+def learning_vector_quantization(train, test, n_codebooks, lrate, epochs):
+	codebooks = train_codebooks(train, n_codebooks, lrate, epochs)
+	predictions = list()
+	for row in test:
+		output = predict(codebooks, row)
+		predictions.append(output)
+	return(predictions)
+
+# Test LVQ on Ionosphere dataset
+seed(1)
+# load and prepare data
+filename = 'ionosphere.csv'
+dataset = load_csv(filename)
+for i in range(len(dataset[0])-1):
+	str_column_to_float(dataset, i)
+# convert class column to integers
+str_column_to_int(dataset, len(dataset[0])-1)
+# evaluate algorithm
+n_folds = 5
+learn_rate = 0.3
+n_epochs = 50
+n_codebooks = 20
+scores = evaluate_algorithm(dataset, learning_vector_quantization, n_folds, n_codebooks, learn_rate, n_epochs)
+print('Scores: %s' % scores)
+print('Mean Accuracy: %.3f%%' % (sum(scores)/float(len(scores))))
+Scores: [90.0, 88.57142857142857, 84.28571428571429, 87.14285714285714, 85.71428571428571]
+Mean Accuracy: 87.143%
+'''

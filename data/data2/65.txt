@@ -1,0 +1,109 @@
+How to Prepare Sequence Prediction for Truncated BPTT in Keras
+https://machinelearningmastery.com/truncated-backpropagation-through-time-in-keras/
+2017-06-27
+Recurrent neural networks are able to learn the temporal dependence across multiple timesteps in sequence prediction problems.
+Modern recurrent neural networks like the Long Short-Term Memory, or LSTM, network are trained with a variation of the Backpropagation algorithm called Backpropagation Through Time. This algorithm has been modified further for efficiency on sequence prediction problems with very long sequences and is called Truncated Backpropagation Through Time.
+An important configuration parameter when training recurrent neural networks like LSTMs using Truncated Backpropagation Through Time is deciding how many timesteps to use as input. That is, how exactly to split up your very long input sequences into subsequences in order to get the best performance.
+In this post, you will discover 6 different ways you can split up very long input sequences to effectively train recurrent neural networks using Truncated Backpropagation Through Time in Python with Keras.
+After reading this post, you will know:
+- What Truncated Backpropagation Through Time is and how it has been implemented in the Python deep learning library Keras.
+- How exactly the choice of the number of input timesteps affects learning within recurrent neural networks.
+- 6 different techniques you can use to split up your very long sequence prediction problems to make best use of the Truncated Backpropagation Through Time training algorithm.
+Kick-start your project with my new book Long Short-Term Memory Networks With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Prepare Sequence Prediction for Truncated Backpropagation Through Time in KerasPhoto by Giò, some rights reserved.
+# Truncated Backpropagation Through Time
+Backpropagation is the training algorithm used to update the weights in a neural network in order to minimize the error between the expected output and the predicted output for a given input.
+For sequence prediction problems where there is an order dependence between observations, recurrent neural networks are used instead of classical feed-forward neural networks. Recurrent neural networks are trained using a variation of the Backpropagation algorithm called Backpropagation Through Time, or BPTT for short.
+In effect, BPTT unrolls the recurrent neural network and propagates the error backward over the entire input sequence, one timestep at a time. The weights are then updated with the accumulated gradients.
+BPTT can be slow to train recurrent neural networks on problems with very long input sequences. In addition to speed, the accumulation of gradients over so many timesteps can result in a shrinking of values to zero, or a growth of values that eventually overflow, or explode.
+A modification of BPTT is to limit the number of timesteps used on the backward pass and in effect estimate the gradient used to update the weights rather than calculate it fully.
+This variation is called Truncated Backpropagation Through Time, or TBPTT.
+The TBPTT training algorithm has two parameters:
+- k1: Defines the number of timesteps shown to the network on the forward pass.
+- k2: Defines the number of timesteps to look at when estimating the gradient on the backward pass.
+As such, we can use the notation TBPTT(k1, k2) when considering how to configure the training algorithm, where k1 = k2 = n, where n is the input sequence length for classical non-truncated BPTT.
+# Impact of TBPTT Configuration on the RNN Sequence Model
+Modern recurrent neural networks like LSTMs can use their internal state to remember over very long input sequences. Such as over thousands of timesteps.
+This means that the configuration of TBPTT does not necessarily define the memory of the network that you are optimizing with the choice of the number of timesteps. You can choose when the internal state of the network is reset separately from the regime used to update network weights.
+Instead, the choice of TBPTT parameters influences how the network estimates the error gradient used to update the weights. More generally, the configuration defines the number of timesteps from which the network may be considered to model your sequence problem.
+We can state this formally as something like:
+Where yhat is the output for a specific timestep, f(…) is the relationship that the recurrent neural network is approximating, and X(t) are observations at specific timesteps.
+It is conceptually similar (but quite different in practice) to the window size on Multilayer Perceptrons trained on time series problems or to the p and q parameters of linear time series models like ARIMA. The TBPTT defines the scope of the input sequence for the model during training.
+# Keras Implementation of TBPTT
+The Keras deep learning library provides an implementation of TBPTT for training recurrent neural networks.
+The implementation is more restricted than the general version listed above.
+Specifically, the k1 and k2 values are equal to each other and fixed.
+- TBPTT(k1, k2), where k1 = k2
+This is realized by the fixed sized three-dimensional input required to train recurrent neural networks like the Long Short-Term Memory network, or LSTM.
+The LSTM expects input data to have the dimensions: samples, timesteps, and features.
+It is the second dimension of this input format, the timesteps that defines the number of timesteps used for forward and backward passes on your sequence prediction problem.
+Therefore, careful choice must be given to the number of timesteps specified when preparing your input data for sequence prediction problems in Keras.
+The choice of timesteps will influence both:
+- The internal state accumulated during the forward pass.
+- The gradient estimate used to update weights on the backward pass.
+Note that by default, the internal state of the network is reset after each batch, but more explicit control over when the internal state is reset can be achieved by using a so-called stateful LSTM and calling the reset operation manually.
+For more on stateful LSTMs in Keras, see the posts:
+- How to Seed State for LSTMs for Time Series Forecasting in Python
+- Stateful and Stateless LSTM for Time Series Forecasting with Python
+- Understanding Stateful LSTM Recurrent Neural Networks in Python with Keras
+# Prepare Sequence Data for TBPTT in Keras
+The way that you break up your sequence data will define the number of timesteps used in the forward and backward passes of BPTT.
+As such, you must put careful thought into how you will prepare your training data.
+This section lists 6 techniques you may consider.
+You may use your input sequences as-is if the number of timesteps in each sequence is modest, such as tens or a few hundred timesteps.
+Practical limits have been suggested for TBPTT of about 200-to-400 timesteps.
+If your sequence data is less than or equal to this range, you may reshape the sequence observations as timesteps for the input data.
+For example, if you had a collection of 100 univariate sequences of 25 timesteps, this could be reshaped as 100 samples, 25 timesteps, and 1 feature or [100, 25, 1].
+If you have long input sequences, such as thousands of timesteps, you may need to break the long input sequences into multiple contiguous subsequences.
+This will require the use of a stateful LSTM in Keras so that internal state is preserved across the input of the sub-sequences and only reset at the end of a true fuller input sequence.
+For example, if you had 100 input sequences of 50,000 timesteps, then each input sequence could be divided into 100 subsequences of 500 timesteps. One input sequence would become 100 samples, therefore the 100 original samples would become 10,000. The dimensionality of the input for Keras would be 10,000 samples, 500 timesteps, and 1 feature or [10000, 500, 1]. Care would be needed to preserve state across each 100 subsequences and reset the internal state after each 100 samples either explicitly or by using a batch size of 100.
+A split that neatly divides the full sequence into fixed-sized subsequences is preferred. The choice of the factor of the full sequence (subsequence length) is arbitrary, hence the name “naive data split”.
+The splitting of the sequence into subsequences does not take into account domain information about a suitable number of timesteps to estimate the error gradient used to update weights.
+It can be hard to know the correct number of timesteps required to provide a useful estimate of the error gradient.
+We can use the naive approach (above) to get a model quickly, but the model may be far from optimized.
+Alternately, we can use domain specific information to estimate the number of timesteps that will be relevant to the model while learning the problem.
+For example, if the sequence problem is a regression time series, perhaps a review of the autocorrelation and partial autocorrelation plots can inform the choice of the number of the timesteps.
+If the sequence problem is a natural language processing problem, perhaps the input sequence can be divided by sentence and then padded to a fixed length, or split according to the average sentence length in the domain.
+Think broadly and consider what knowledge specific to your domain that you can use to split up the sequence into meaningful chunks.
+Rather than guessing at a suitable number of timesteps, you can systematically evaluate a suite of different subsequence lengths for your sequence prediction problem.
+You could perform a grid search over each sub-sequence length and adopt the configuration that results in the best performing model on average.
+Some notes of caution if you are considering this approach:
+- Start with subsequence lengths that are a factor of the full sequence length.
+- Use padding and perhaps masking if exploring subsequence lengths that are not a factor of the full sequence length.
+- Consider using a slightly over-prescribed network (more memory cells and more training epochs) than is required to address the problem to help rule out network capacity as a limitation on your experiment.
+- Take the average performance over multiple runs (e.g. 30) of each different configuration.
+If compute resources are not a limitation, then a systematic investigation of different numbers of timesteps is recommended.
+You can reformulate your sequence prediction problem as having one input and one output each timestep.
+For example, if you had 100 sequences of 50 timesteps, each timestep would become a new sample. The 100 samples would become 5,000. The three-dimensional input would become 5,000 samples, 1 timestep, and 1 feature, or [5000, 1, 1].
+Again, this would require the internal state to be preserved across each timestep of the sequence and reset at the end of each actual sequence (50 samples).
+This would put the burden of learning the sequence prediction problem on the internal state of the recurrent neural network. Depending on the type of problem, it may be more than the network can handle and the prediction problem may not be learnable.
+Personal experience suggests that this formulation may work well for prediction problems that require memory over the sequence, but perform poorly when the outcome is a complex function of past observations.
+The Keras deep learning library used to support a decoupled number of timesteps for the forward and backward pass of Truncated Backpropagation Through Time.
+In essence, the k1 parameter could be specified by the number of timesteps on input sequences and the k2 parameter could be specified by a “truncate_gradient” argument on the LSTM layer.
+This is no longer supported, but there is some desire to have this feature re-added to the library. It is unclear exactly why it was removed, although evidence suggests it was done for efficiency reasons.
+You could explore this approach in Keras. Some ideas include:
+- Install and use an older version of the Keras library that supports the “truncate_gradient” argument (circa 2015).
+- Extend the LSTM layer implementation in Keras to support a “truncate_gradient” type behavior.
+Perhaps there are third-party extensions available for Keras that support this behavior.
+If you find any, let me know in the comments below.
+# Summary
+In this post, you discovered how you can prepare your sequence prediction problem data to make effective use of the Truncated Backpropagation Through Time training algorithm in the Python deep learning library Keras.
+Specifically, you learned:
+- How Truncated Backpropagation Through Time works and how this is implemented in Keras.
+- How to reformulate or split your data with very long input sequences in the context of TBPTT.
+- How to systematically investigate different TBPTT configurations in Keras.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop LSTMs for Sequence Prediction Today!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Long Short-Term Memory Networks with Python
+It provides self-study tutorials on topics like:
+CNN LSTMs, Encoder-Decoder LSTMs, generative models, data preparation, making predictions and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+yhat(t) = f(X(t), X(t-1), X(t-2), ... X(t-n))
+'''

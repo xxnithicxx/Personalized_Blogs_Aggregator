@@ -1,0 +1,252 @@
+How to Manually Scale Image Pixel Data for Deep Learning
+https://machinelearningmastery.com/how-to-manually-scale-image-pixel-data-for-deep-learning/
+2019-03-24
+Images are comprised of matrices of pixel values.
+Black and white images are single matrix of pixels, whereas color images have a separate array of pixel values for each color channel, such as red, green, and blue.
+Pixel values are often unsigned integers in the range between 0 and 255. Although these pixel values can be presented directly to neural network models in their raw format, this can result in challenges during modeling, such as in the slower than expected training of the model.
+Instead, there can be great benefit in preparing the image pixel values prior to modeling, such as simply scaling pixel values to the range 0-1 to centering and even standardizing the values.
+In this tutorial, you will discover image data for modeling with deep learning neural networks.
+After completing this tutorial, you will know:
+- How to normalize pixel values to a range between zero and one.
+- How to center pixel values both globally across channels and locally per channel.
+- How to standardize pixel values and how to shift standardized pixel values to the positive domain.
+Kick-start your project with my new book Deep Learning for Computer Vision, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+# Tutorial Overview
+This tutorial is divided into four parts; they are:
+- Sample Image
+- Normalize Pixel Values
+- Center Pixel Values
+- Standardize Pixel Values
+# Sample Image
+We need a sample image for testing in this tutorial.
+We will use a photograph of the Sydney Harbor Bridge taken by “Bernard Spragg. NZ” and released under a permissive license.
+Sydney Harbor Bridge taken by “Bernard Spragg. NZ”Some rights reserved.
+Download the photograph and place it into your current working directory with the filename “sydney_bridge.jpg“.
+- Click to Download the Photograph (sydney_bridge.jpg)
+The example below will load the image, display some properties about the loaded image, then show the image.
+This example and the rest of the tutorial assumes that you have the Pillow Python library installed.
+Running the example reports the format of the image, which is JPEG, and the mode, which is RGB for the three color channels.
+Next, the size of the image is reported, showing 640 pixels in width and 374 pixels in height.
+The image is then previewed using the default application for showing images on your workstation.
+The Sydney Harbor Bridge Photograph Loaded From File
+# Normalize Pixel Values
+For most image data, the pixel values are integers with values between 0 and 255.
+Neural networks process inputs using small weight values, and inputs with large integer values can disrupt or slow down the learning process. As such it is good practice to normalize the pixel values so that each pixel value has a value between 0 and 1.
+It is valid for images to have pixel values in the range 0-1 and images can be viewed normally.
+This can be achieved by dividing all pixels values by the largest pixel value; that is 255. This is performed across all channels, regardless of the actual range of pixel values that are present in the image.
+The example below loads the image and converts it into a NumPy array. The data type of the array is reported and the minimum and maximum pixels values across all three channels are then printed. Next, the array is converted to the float data type before the pixel values are normalized and the new range of pixel values is reported.
+Running the example prints the data type of the NumPy array of pixel values, which we can see is an 8-bit unsigned integer.
+The min and maximum pixel values are printed, showing the expected 0 and 255 respectively. The pixel values are normalized and the new minimum and maximum of 0.0 and 1.0 are then reported.
+Normalization is a good default data preparation that can be performed if you are in doubt as to the type of data preparation to perform.
+It can be performed per image and does not require the calculation of statistics across the training dataset, as the range of pixel values is a domain standard.
+# Center Pixel Values
+A popular data preparation technique for image data is to subtract the mean value from the pixel values.
+This approach is called centering, as the distribution of the pixel values is centered on the value of zero.
+Centering can be performed before or after normalization. Centering the pixels then normalizing will mean that the pixel values will be centered close to 0.5 and be in the range 0-1. Centering after normalization will mean that the pixels will have positive and negative values, in which case images will not display correctly (e.g. pixels are expected to have value in the range 0-255 or 0-1). Centering after normalization might be preferred, although it might be worth testing both approaches.
+Centering requires that a mean pixel value be calculated prior to subtracting it from the pixel values. There are multiple ways that the mean can be calculated; for example:
+- Per image.
+- Per mini-batch of images (under stochastic gradient descent).
+- Per training dataset.
+The mean can be calculated for all pixels in the image, referred to as a global centering, or it can be calculated for each channel in the case of color images, referred to as local centering.
+- Global Centering: Calculating and subtracting the mean pixel value across color channels.
+- Local Centering: Calculating and subtracting the mean pixel value per color channel.
+Per-image global centering is common because it is trivial to implement. Also common is per mini-batch global or local centering for the same reason: it is fast and easy to implement.
+In some cases, per-channel means are pre-calculated across an entire training dataset. In this case, the image means must be stored and used both during training and any inference with the trained models in the future. For example, the per-channel pixel means calculated for the ImageNet training dataset are as follows:
+- ImageNet Training Dataset Means: [0.485, 0.456, 0.406]
+For models trained on images centered using these means that may be used for transfer learning on new tasks, it can be beneficial or even required to normalize images for the new task using the same means.
+Let’s look at a few examples.
+The example below calculates a global mean across all three color channels in the loaded image, then centers the pixel values using the global mean.
+Running the example, we can see that the mean pixel value is about 152.
+Once centered, we can confirm that the new mean for the pixel values is 0.0 and that the new data range is negative and positive around this mean.
+
+The example below calculates the mean for each color channel in the loaded image, then centers the pixel values for each channel separately.
+Note that NumPy allows us to specify the dimensions over which a statistic like the mean, min, and max are calculated via the “axis” argument. In this example, we set this to (0,1) for the width and height dimensions, which leaves the third dimension or channels. The result is one mean, min, or max for each of the three channel arrays.
+Also note that when we calculate the mean that we specify the dtype as ‘float64‘; this is required as it will cause all sub-operations of the mean, such as the sum, to be performed with 64-bit precision. Without this, the sum will be performed at lower resolution and the resulting mean will be wrong given the accumulated errors in the loss of precision, in turn meaning the mean of the centered pixel values for each channel will not be zero (or a very small number close to zero).
+Running the example first reports the mean pixels values for each channel, as well as the min and max values for each channel. The pixel values are centered, then the new means and min/max pixel values across each channel are reported.
+We can see that the new mean pixel values are very small numbers close to zero and the values are negative and positive values centered on zero.
+
+# Standardize Pixel Values
+The distribution of pixel values often follows a Normal or Gaussian distribution, e.g. bell shape.
+This distribution may be present per image, per mini-batch of images, or across the training dataset and globally or per channel.
+As such, there may be benefit in transforming the distribution of pixel values to be a standard Gaussian: that is both centering the pixel values on zero and normalizing the values by the standard deviation. The result is a standard Gaussian of pixel values with a mean of 0.0 and a standard deviation of 1.0.
+As with centering, the operation can be performed per image, per mini-batch, and across the entire training dataset, and it can be performed globally across channels or locally per channel.
+Standardization may be preferred to normalization and centering alone and it results in both zero-centered values of small input values, roughly in the range -3 to 3, depending on the specifics of the dataset.
+For consistency of the input data, it may make more sense to standardize images per-channel using statistics calculated per mini-batch or across the training dataset, if possible.
+Let’s look at some examples.
+The example below calculates the mean and standard deviation across all color channels in the loaded image, then uses these values to standardize the pixel values.
+Running the example first calculates the global mean and standard deviation pixel values, standardizes the pixel values, then confirms the transform by reporting the new global mean and standard deviation of 0.0 and 1.0 respectively.
+
+There may be a desire to maintain the pixel values in the positive domain, perhaps so the images can be visualized or perhaps for the benefit of a chosen activation function in the model.
+A popular way of achieving this is to clip the standardized pixel values to the range [-1, 1] and then rescale the values from [-1,1] to [0,1].
+The example below updates the global standardization example to demonstrate this additional rescaling.
+Running the example first reports the global mean and standard deviation pixel values; the pixels are standardized then rescaled.
+Next, the new mean and standard deviation are reported of about 0.5 and 0.3 respectively and the new minimum and maximum values are confirmed of 0.0 and 1.0.
+
+The example below calculates the mean and standard deviation of the loaded image per-channel, then uses these statistics to standardize the pixels separately in each channel.
+Running the example first calculates and reports the means and standard deviation of the pixel values in each channel.
+The pixel values are then standardized and statistics are re-calculated, confirming the new zero-mean and unit standard deviation.
+
+# Extensions
+This section lists some ideas for extending the tutorial that you may wish to explore.
+- Develop Function. Develop a function to scale a provided image, using arguments to choose the type of preparation to perform,
+- Projection Methods. Investigate and implement data preparation methods that remove linear correlations from the pixel data, such as PCA and ZCA.
+- Dataset Statistics. Select and update one of the centering or standardization examples to calculate statistics across an entire training dataset, then apply those statistics when preparing image data for training or inference.
+If you explore any of these extensions, I’d love to know.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- numpy.mean API
+- numpy.mean along multiple axis gives wrong result for large arrays, Issue.
+- Data Preprocessing, CS231n Convolutional Neural Networks for Visual Recognition
+- Why normalize images by subtracting dataset’s image mean, instead of the current image mean in deep learning?
+- What are some ways of pre-processing images before applying convolutional neural networks for the task of image classification?
+- Confused about the image preprocessing in classification, Pytorch Issue.
+# Summary
+In this tutorial, you discovered how to prepare image data for modeling with deep learning neural networks.
+Specifically, you learned:
+- How to normalize pixel values to a range between zero and one.
+- How to center pixel values both globally across channels and locally per channel.
+- How to standardize pixel values and how to shift standardized pixel values to the positive domain.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+
+'''
+# load and show an image with Pillow
+from PIL import Image
+# load the image
+image = Image.open('sydney_bridge.jpg')
+# summarize some details about the image
+print(image.format)
+print(image.mode)
+print(image.size)
+# show the image
+image.show()
+JPEG
+RGB
+(640, 374)
+# example of pixel normalization
+from numpy import asarray
+from PIL import Image
+# load image
+image = Image.open('sydney_bridge.jpg')
+pixels = asarray(image)
+# confirm pixel range is 0-255
+print('Data Type: %s' % pixels.dtype)
+print('Min: %.3f, Max: %.3f' % (pixels.min(), pixels.max()))
+# convert from integers to floats
+pixels = pixels.astype('float32')
+# normalize to the range 0-1
+pixels /= 255.0
+# confirm the normalization
+print('Min: %.3f, Max: %.3f' % (pixels.min(), pixels.max()))
+Data Type: uint8
+Min: 0.000, Max: 255.000
+Min: 0.000, Max: 1.000
+# example of global centering (subtract mean)
+from numpy import asarray
+from PIL import Image
+# load image
+image = Image.open('sydney_bridge.jpg')
+pixels = asarray(image)
+# convert from integers to floats
+pixels = pixels.astype('float32')
+# calculate global mean
+mean = pixels.mean()
+print('Mean: %.3f' % mean)
+print('Min: %.3f, Max: %.3f' % (pixels.min(), pixels.max()))
+# global centering of pixels
+pixels = pixels - mean
+# confirm it had the desired effect
+mean = pixels.mean()
+print('Mean: %.3f' % mean)
+print('Min: %.3f, Max: %.3f' % (pixels.min(), pixels.max()))
+Mean: 152.149
+Min: 0.000, Max: 255.000
+Mean: -0.000
+Min: -152.149, Max: 102.851
+# example of per-channel centering (subtract mean)
+from numpy import asarray
+from PIL import Image
+# load image
+image = Image.open('sydney_bridge.jpg')
+pixels = asarray(image)
+# convert from integers to floats
+pixels = pixels.astype('float32')
+# calculate per-channel means and standard deviations
+means = pixels.mean(axis=(0,1), dtype='float64')
+print('Means: %s' % means)
+print('Mins: %s, Maxs: %s' % (pixels.min(axis=(0,1)), pixels.max(axis=(0,1))))
+# per-channel centering of pixels
+pixels -= means
+# confirm it had the desired effect
+means = pixels.mean(axis=(0,1), dtype='float64')
+print('Means: %s' % means)
+print('Mins: %s, Maxs: %s' % (pixels.min(axis=(0,1)), pixels.max(axis=(0,1))))
+Means: [148.61581718 150.64154412 157.18977691]
+Mins: [0. 0. 0.], Maxs: [255. 255. 255.]
+Means: [1.14413078e-06 1.61369515e-06 1.37722619e-06]
+Mins: [-148.61581 -150.64154 -157.18977], Maxs: [106.384186 104.35846 97.81023 ]
+# example of global pixel standardization
+from numpy import asarray
+from PIL import Image
+# load image
+image = Image.open('sydney_bridge.jpg')
+pixels = asarray(image)
+# convert from integers to floats
+pixels = pixels.astype('float32')
+# calculate global mean and standard deviation
+mean, std = pixels.mean(), pixels.std()
+print('Mean: %.3f, Standard Deviation: %.3f' % (mean, std))
+# global standardization of pixels
+pixels = (pixels - mean) / std
+# confirm it had the desired effect
+mean, std = pixels.mean(), pixels.std()
+print('Mean: %.3f, Standard Deviation: %.3f' % (mean, std))
+Mean: 152.149, Standard Deviation: 70.642
+Mean: -0.000, Standard Deviation: 1.000
+# example of global pixel standardization shifted to positive domain
+from numpy import asarray
+from numpy import clip
+from PIL import Image
+# load image
+image = Image.open('sydney_bridge.jpg')
+pixels = asarray(image)
+# convert from integers to floats
+pixels = pixels.astype('float32')
+# calculate global mean and standard deviation
+mean, std = pixels.mean(), pixels.std()
+print('Mean: %.3f, Standard Deviation: %.3f' % (mean, std))
+# global standardization of pixels
+pixels = (pixels - mean) / std
+# clip pixel values to [-1,1]
+pixels = clip(pixels, -1.0, 1.0)
+# shift from [-1,1] to [0,1] with 0.5 mean
+pixels = (pixels + 1.0) / 2.0
+# confirm it had the desired effect
+mean, std = pixels.mean(), pixels.std()
+print('Mean: %.3f, Standard Deviation: %.3f' % (mean, std))
+print('Min: %.3f, Max: %.3f' % (pixels.min(), pixels.max()))
+Mean: 152.149, Standard Deviation: 70.642
+Mean: 0.510, Standard Deviation: 0.388
+Min: 0.000, Max: 1.000
+# example of per-channel pixel standardization
+from numpy import asarray
+from PIL import Image
+# load image
+image = Image.open('sydney_bridge.jpg')
+pixels = asarray(image)
+# convert from integers to floats
+pixels = pixels.astype('float32')
+# calculate per-channel means and standard deviations
+means = pixels.mean(axis=(0,1), dtype='float64')
+stds = pixels.std(axis=(0,1), dtype='float64')
+print('Means: %s, Stds: %s' % (means, stds))
+# per-channel standardization of pixels
+pixels = (pixels - means) / stds
+# confirm it had the desired effect
+means = pixels.mean(axis=(0,1), dtype='float64')
+stds = pixels.std(axis=(0,1), dtype='float64')
+print('Means: %s, Stds: %s' % (means, stds))
+Means: [148.61581718 150.64154412 157.18977691], Stds: [70.21666738 70.6718887 70.75185228]
+Means: [ 6.26286458e-14 -4.40909176e-14 -8.38046276e-13], Stds: [1. 1. 1.]
+'''

@@ -1,0 +1,508 @@
+Developing a Python Program Using Inspection Tools
+https://machinelearningmastery.com/developing-a-python-program-using-inspection-tools/
+2022-05-28
+Python is an interpreting language. It means there is an interpreter to run our program, rather than compiling the code and running natively. In Python, a REPL (read-eval-print loop) can run commands line by line. Together with some inspection tools provided by Python, it helps to develop codes.
+In the following, you will see how to make use of the Python interpreter to inspect an object and develop a program.
+After finishing this tutorial, you will learn:
+- How to work in the Python interpreter
+- How to use the inspection functions in Python
+- How to develop a solution step by step with the help of inspection functions
+
+Kick-start your project with my new book Python for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+
+Developing a Python Program Using Inspection Tools. Photo by Tekton. Some rights reserved.
+# Tutorial Overview
+This tutorial is in four parts; they are:
+- PyTorch and TensorFlow
+- Looking for Clues
+- Learning from the Weights
+- Making a Copier
+# PyTorch and TensorFlow
+PyTorch and TensorFlow are the two biggest neural network libraries in Python. Their code is different, but the things they can do are similar.
+Consider the classic MNIST handwritten digit recognition problem; you can build a LeNet-5 model to classify the digits as follows:
+This is a simplified code that does not need any validation or testing. The counterpart in TensorFlow is the following:
+Running this program would give you the file lenet5.pt from the PyTorch code and lenet5.h5 from the TensorFlow code.
+# Looking for Clues
+If you understand what the above neural networks are doing, you should be able to tell that there is nothing but many multiply and add calculations in each layer. Mathematically, there is a matrix multiplication between the input and the kernel of each fully-connected layer before adding the bias to the result. In the convolutional layers, there is the element-wise multiplication of the kernel to a portion of the input matrix before taking the sum of the result and adding the bias as one output element of the feature map.
+While developing the same LeNet-5 model using two different frameworks, it should be possible to make them work identically if their weights are the same. How can you copy over the weight from one model to another, given their architectures are identical?
+You can load the saved models as follows:
+This probably does not tell you much. But if you run python in the command line without any parameters, you launch the REPL, in which you can type in the above code (you can leave the REPL with quit()):
+Nothing shall be printed in the above. But you can check the two models that were loaded using the type() built-in command:
+So here you know they are neural network models from PyTorch and Keras, respectively. Since they are trained models, the weight must be stored inside. So how can you find the weights in these models? Since they are objects, the easiest way is to use dir() built-in function to inspect their members:
+There are a lot of members in each object. Some are attributes, and some are methods of the class. By convention, those that begin with an underscore are internal members that you are not supposed to access in normal circumstances. If you want to see more of each member, you can use the getmembers() function from the inspect module:
+The output of the getmembers() function is a list of tuples, in which each tuple is the name of the member and the member itself. From the above, for example, you know that __call__ is a “bound method,” i.e., a member method of a class.
+By carefully looking at the members’ names, you can see that in the PyTorch model, the “state” should be your interest, while in the Keras model, you have some member with the name “weights.” To shortlist the names of them, you can do the following in the interpreter:
+This might take some time in trial and error. But it’s not too difficult, and you may discover that you can see the weight with state_dict in the torch model:
+For the TensorFlow/Keras model, you can find the weights with get_weights():
+Here it is also with the attribute weights:
+Here,  you can observe the following: In the PyTorch model, the function state_dict() gives an OrderedDict, which is a dictionary with the key in a specified order. There are keys such as 0.weight, and they are mapped to a tensor value. In the Keras model, the get_weights() function returns a list. Each element in the list is a NumPy array. The weight attribute also holds a list, but the elements are tf.Variable type.
+You can know more by checking the shape of each tensor or array:
+While you do not see the name of the layers from the Keras model above, in fact, you can use similar reasoning to find the layers and get their name:
+
+# Learning from the Weights
+By comparing the result of state_dict() from the PyTorch model and that of get_weights() from the Keras model, you can see that they both contain 10 elements. From the shape of the PyTorch tensors and NumPy arrays, you can further notice that they are in similar shapes. This is probably because both frameworks recognize a model in the order from input to output. You can further confirm that from the key of the state_dict() output compared to the layer names from the Keras model.
+You can check how you can manipulate a PyTorch tensor by extracting one and inspecting:
+From the output of dir() on a PyTorch tensor, you found a member named numpy, and by calling that function, it seems to convert a tensor into a NumPy array. You can be quite confident about that because you see the numbers match and the shape matches. In fact, you can be more confident by looking at the documentation:
+The help() function will show you the docstring of a function, which usually is its documentation.
+Since this is the kernel of the first convolution layer, by comparing the shape of this kernel to that of the Keras model, you can note their shapes are different:
+Know that the input to the first layer is a 28×28×1 image array while the output is 6 feature maps. It is natural to correspond the 1 and 6 in the kernel shape to be the number of channels in the input and output. Also, from our understanding of the mechanism of a convolutional layer, the kernel should be a 5×5 matrix.
+At this point, you probably guessed that in the PyTorch convolutional layer, the kernel is represented as (output × input × height × width), while in Keras, it is represented as (height × width × input × output).
+Similarly, you also see in the fully-connected layers that PyTorch presents the kernel as (output × input) while Keras is in (input × output):
+Matching the weights and tensors and showing their shapes side by side should make these clearer:
+And we can also match the name of the Keras weights and PyTorch tensors:
+
+# Making a Copier
+Since you learned what the weights look like in each model, it doesn’t seem difficult to create a program to copy weights from one to another. The key is to answer:
+- How to set the weights in each model
+- What the weights are supposed to look like (shape and data type) in each model
+The first question can be answered from the previous inspection using the dir() built-in function. You saw the load_state_dict member in the PyTorch model, and it seems to be the tool. Similarly, in the Keras model, you saw a member named set_weight that is exactly the counterpart name for get_weight. You can further confirm it is the case by checking their documentation online or via the help() function:
+You confirmed that these are both functions, and their documentation explained they are what you believed them to be. From the documentation, you further learned that the load_state_dict() function of the PyTorch model expects the argument to be the same format as that returned from the state_dict() function; the set_weights() function of the Keras model expects the same format as returned from the get_weights() function.
+Now you have finished your adventure with the Python REPL (you can enter quit() to leave).
+By researching a bit on how to reshape the weights and cast from one data type to another, you come up with the following program:
+And the other way around, copying weights from the PyTorch model to the Keras model can be done similarly,
+Then, you can verify they work the same by passing a random array as input, in which you can expect the output tied out exactly:
+In our case, the output is:
+This agrees with each other at sufficient precision. Note that your result may not be exactly the same due to the random nature of training. Also, due to the nature of floating point calculation, the PyTorch and TensorFlow/Keras model would not produce the exact same output even if the weights were the same.
+However, the objective here is to show you how you can make use of Python’s inspection tools to understand something you didn’t know and develop a solution.
+# Further Readings
+This section provides more resources on the topic if you are looking to go deeper.
+- inspect module in Python Standard Libraries
+- dir built-in function
+- What is a state_dict in PyTorch
+- TensorFlow get_weights method
+# Summary
+In this tutorial, you learned how to work under the Python REPL and use the inspection functions to develop a solution. Specifically,
+- You learned how to use the inspection functions in REPL to learn the internal members of an object
+- You learned how to use REPL to experiment with Python code
+- As a result, you developed a program converting between a PyTorch and a Keras model
+# Get a Handle on Python for Machine Learning!
+...from learning the practical Python tricks
+Discover how in my new Ebook:
+Python for Machine Learning
+It provides self-study tutorials with hundreds of working code to equip you with skills including:
+debugging, profiling, duck typing, decorators, deployment,
+and much more...
+See What's Inside
+
+'''
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torchvision
+
+# Load MNIST training data
+transform = torchvision.transforms.Compose([
+    torchvision.transforms.ToTensor()
+])
+train = torchvision.datasets.MNIST('./datafiles/', train=True, download=True, transform=transform)
+train_loader = torch.utils.data.DataLoader(train, batch_size=32, shuffle=True)
+
+# LeNet5 model
+torch_model = nn.Sequential(
+    nn.Conv2d(1, 6, kernel_size=(5,5), stride=1, padding=2),
+    nn.Tanh(),
+    nn.AvgPool2d(kernel_size=2, stride=2),
+    nn.Conv2d(6, 16, kernel_size=5, stride=1, padding=0),
+    nn.Tanh(),
+    nn.AvgPool2d(kernel_size=2, stride=2),
+    nn.Conv2d(16, 120, kernel_size=5, stride=1, padding=0),
+    nn.Tanh(),
+    nn.Flatten(),
+    nn.Linear(120, 84),
+    nn.Tanh(),
+    nn.Linear(84, 10),
+    nn.Softmax(dim=1)
+)
+
+# Training loop
+def training_loop(model, optimizer, loss_fn, train_loader, n_epochs=100):
+    model.train()
+    for epoch in range(n_epochs):
+        for data, target in train_loader:
+            output = model(data)
+            loss = loss_fn(output, target)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+    model.eval()
+
+# Run training
+optimizer = optim.Adam(torch_model.parameters())
+loss_fn = nn.CrossEntropyLoss()
+training_loop(torch_model, optimizer, loss_fn, train_loader, n_epochs=20)
+
+# Save model
+torch.save(torch_model, "lenet5.pt")
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, Dense, AveragePooling2D, Flatten
+from tensorflow.keras.datasets import mnist
+
+# LeNet5 model
+keras_model = Sequential([
+    Conv2D(6, (5,5), input_shape=(28,28,1), padding="same", activation="tanh"),
+    AveragePooling2D((2,2), strides=2),
+    Conv2D(16, (5,5), activation="tanh"),
+    AveragePooling2D((2,2), strides=2),
+    Conv2D(120, (5,5), activation="tanh"),
+    Flatten(),
+    Dense(84, activation="tanh"),
+    Dense(10, activation="softmax")
+])
+
+# Reshape data to shape of (n_sample, height, width, n_channel)
+(X_train, y_train), (X_test, y_test) = mnist.load_data()
+X_train = np.expand_dims(X_train, axis=3).astype('float32')
+
+# Train
+keras_model.compile(loss="sparse_categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
+keras_model.fit(X_train, y_train, epochs=20, batch_size=32)
+
+# Save
+keras_model.save("lenet5.h5")
+import torch
+import tensorflow as tf
+torch_model = torch.load("lenet5.pt")
+keras_model = tf.keras.models.load_model("lenet5.h5")
+Python 3.9.13 (main, May 19 2022, 13:48:47)
+[Clang 13.1.6 (clang-1316.0.21.2)] on darwin
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import torch
+>>> import tensorflow as tf
+>>> torch_model = torch.load("lenet5.pt")
+>>> keras_model = tf.keras.models.load_model("lenet5.h5")
+>>> type(torch_model)
+<class 'torch.nn.modules.container.Sequential'>
+>>> type(keras_model)
+<class 'keras.engine.sequential.Sequential'>
+>>> dir(torch_model)
+['T_destination', '__annotations__', '__call__', '__class__', '__delattr__', 
+'__delitem__', '__dict__', '__dir__', '__doc__', '__eq__', '__format__', '__ge__', 
+...
+'_slow_forward', '_state_dict_hooks', '_version', 'add_module', 'append', 'apply', 
+'bfloat16', 'buffers', 'children', 'cpu', 'cuda', 'double', 'dump_patches', 'eval', 
+'extra_repr', 'float', 'forward', 'get_buffer', 'get_extra_state', 'get_parameter', 
+'get_submodule', 'half', 'load_state_dict', 'modules', 'named_buffers', 
+'named_children', 'named_modules', 'named_parameters', 'parameters', 
+'register_backward_hook', 'register_buffer', 'register_forward_hook', 
+'register_forward_pre_hook', 'register_full_backward_hook', 'register_module', 
+'register_parameter', 'requires_grad_', 'set_extra_state', 'share_memory', 'state_dict',
+'to', 'to_empty', 'train', 'training', 'type', 'xpu', 'zero_grad']
+>>> dir(keras_model)
+['_SCALAR_UPRANKING_ON', '_TF_MODULE_IGNORED_PROPERTIES', '__call__', '__class__', 
+'__copy__', '__deepcopy__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', 
+...
+'activity_regularizer', 'add', 'add_loss', 'add_metric', 'add_update', 'add_variable', 
+'add_weight', 'build', 'built', 'call', 'compile', 'compiled_loss', 'compiled_metrics', 
+'compute_dtype', 'compute_loss', 'compute_mask', 'compute_metrics', 
+'compute_output_shape', 'compute_output_signature', 'count_params', 
+'distribute_strategy', 'dtype', 'dtype_policy', 'dynamic', 'evaluate', 
+'evaluate_generator', 'finalize_state', 'fit', 'fit_generator', 'from_config', 
+'get_config', 'get_input_at', 'get_input_mask_at', 'get_input_shape_at', 'get_layer', 
+'get_output_at', 'get_output_mask_at', 'get_output_shape_at', 'get_weights', 'history', 
+'inbound_nodes', 'input', 'input_mask', 'input_names', 'input_shape', 'input_spec', 
+'inputs', 'layers', 'load_weights', 'loss', 'losses', 'make_predict_function', 
+'make_test_function', 'make_train_function', 'metrics', 'metrics_names', 'name', 
+'name_scope', 'non_trainable_variables', 'non_trainable_weights', 'optimizer', 
+'outbound_nodes', 'output', 'output_mask', 'output_names', 'output_shape', 'outputs', 
+'pop', 'predict', 'predict_function', 'predict_generator', 'predict_on_batch', 
+'predict_step', 'reset_metrics', 'reset_states', 'run_eagerly', 'save', 'save_spec', 
+'save_weights', 'set_weights', 'state_updates', 'stateful', 'stop_training', 
+'submodules', 'summary', 'supports_masking', 'test_function', 'test_on_batch', 
+'test_step', 'to_json', 'to_yaml', 'train_function', 'train_on_batch', 'train_step', 
+'train_tf_function', 'trainable', 'trainable_variables', 'trainable_weights', 'updates',
+'variable_dtype', 'variables', 'weights', 'with_name_scope']
+>>> import inspect
+>>> inspect(torch_model)
+>>> inspect.getmembers(torch_model)
+[('T_destination', ~T_destination), ('__annotations__', {'_modules': typing.Dict[str, 
+torch.nn.modules.module.Module]}), ('__call__', <bound method Module._call_impl of 
+Sequential(
+...
+>>> [n for n in dir(torch_model) if 'state' in n]
+['__setstate__', '_load_from_state_dict', '_load_state_dict_pre_hooks', 
+'_register_load_state_dict_pre_hook', '_register_state_dict_hook', 
+'_save_to_state_dict', '_state_dict_hooks', 'get_extra_state', 'load_state_dict', 
+'set_extra_state', 'state_dict']
+>>> [n for n in dir(keras_model) if 'weight' in n]
+['_assert_weights_created', '_captured_weight_regularizer', 
+'_check_sample_weight_warning', '_dedup_weights', '_handle_weight_regularization', 
+'_initial_weights', '_non_trainable_weights', '_trainable_weights', 
+'_undeduplicated_weights', 'add_weight', 'get_weights', 'load_weights', 
+'non_trainable_weights', 'save_weights', 'set_weights', 'trainable_weights', 'weights']
+>>> torch_model.state_dict
+<bound method Module.state_dict of Sequential(
+  (0): Conv2d(1, 6, kernel_size=(5, 5), stride=(1, 1), padding=(2, 2))
+  (1): Tanh()
+  (2): AvgPool2d(kernel_size=2, stride=2, padding=0)
+  (3): Conv2d(6, 16, kernel_size=(5, 5), stride=(1, 1))
+  (4): Tanh()
+  (5): AvgPool2d(kernel_size=2, stride=2, padding=0)
+  (6): Conv2d(16, 120, kernel_size=(5, 5), stride=(1, 1))
+  (7): Tanh()
+  (8): Flatten(start_dim=1, end_dim=-1)
+  (9): Linear(in_features=120, out_features=84, bias=True)
+  (10): Tanh()
+  (11): Linear(in_features=84, out_features=10, bias=True)
+  (12): Softmax(dim=1)
+)>
+>>> torch_model.state_dict()
+OrderedDict([('0.weight', tensor([[[[ 0.1559,  0.1681,  0.2726,  0.3187,  0.4909],
+          [ 0.1179,  0.1340, -0.0815, -0.3253,  0.0904],
+          [ 0.2326, -0.2079, -0.8614, -0.8643, -0.0632],
+          [ 0.3874, -0.3490, -0.7957, -0.5873, -0.0638],
+          [ 0.2800,  0.0947,  0.0308,  0.4065,  0.6916]]],
+
+
+        [[[ 0.5116,  0.1798, -0.1062, -0.4099, -0.3307],
+          [ 0.1090,  0.0689, -0.1010, -0.9136, -0.5271],
+          [ 0.2910,  0.2096, -0.2442, -1.5576, -0.0305],
+...
+>>> keras_model.get_weights
+<bound method Model.get_weights of <keras.engine.sequential.Sequential object at 0x159d93eb0>>
+>>> keras_model.get_weights()
+[array([[[[ 0.14078194,  0.04990018, -0.06204645, -0.03128023,
+          -0.22033708,  0.19721672]],
+
+        [[-0.06618818, -0.152075  ,  0.13130261,  0.22893831,
+           0.08880515,  0.01917628]],
+
+        [[-0.28716782, -0.23207009,  0.00505603,  0.2697424 ,
+          -0.1916888 , -0.25858143]],
+
+        [[-0.41863152, -0.20710683,  0.13254236,  0.18774481,
+          -0.14866787, -0.14398652]],
+
+        [[-0.25119543, -0.14405733, -0.048533  , -0.12108403,
+           0.06704573, -0.1196835 ]]],
+
+
+       [[[-0.2438466 ,  0.02499897, -0.1243961 , -0.20115352,
+          -0.0241346 ,  0.15888865]],
+
+        [[-0.20548582, -0.26495507,  0.21004884,  0.32183227,
+          -0.13990627, -0.02996112]],
+...
+>>> keras_model.weights
+[<tf.Variable 'conv2d/kernel:0' shape=(5, 5, 1, 6) dtype=float32, numpy=
+array([[[[ 0.14078194,  0.04990018, -0.06204645, -0.03128023,
+          -0.22033708,  0.19721672]],
+
+        [[-0.06618818, -0.152075  ,  0.13130261,  0.22893831,
+           0.08880515,  0.01917628]],
+...
+         8.25365111e-02, -1.72486171e-01,  3.16280037e-01,
+         4.12595004e-01]], dtype=float32)>, <tf.Variable 'dense_1/bias:0' shape=(10,) dtype=float32, numpy=
+array([-0.19007775,  0.14427921,  0.0571407 , -0.24149619, -0.03247226,
+        0.18109408, -0.17159976,  0.21736498, -0.10254183,  0.02417901],
+      dtype=float32)>]
+>>> [(key, val.shape) for key, val in torch_model.state_dict().items()]
+[('0.weight', torch.Size([6, 1, 5, 5])), ('0.bias', torch.Size([6])), ('3.weight', 
+torch.Size([16, 6, 5, 5])), ('3.bias', torch.Size([16])), ('6.weight', torch.Size([120,
+16, 5, 5])), ('6.bias', torch.Size([120])), ('9.weight', torch.Size([84, 120])), 
+('9.bias', torch.Size([84])), ('11.weight', torch.Size([10, 84])), ('11.bias', 
+torch.Size([10]))]
+>>> [arr.shape for arr in keras_model.get_weights()]
+[(5, 5, 1, 6), (6,), (5, 5, 6, 16), (16,), (5, 5, 16, 120), (120,), (120, 84), (84,), 
+(84, 10), (10,)]
+>>> keras_model.layers
+[<keras.layers.convolutional.conv2d.Conv2D object at 0x159ddd850>, 
+<keras.layers.pooling.average_pooling2d.AveragePooling2D object at 0x159ddd820>, 
+<keras.layers.convolutional.conv2d.Conv2D object at 0x15a12b1c0>, 
+<keras.layers.pooling.average_pooling2d.AveragePooling2D object at 0x15a1705e0>, 
+<keras.layers.convolutional.conv2d.Conv2D object at 0x15a1812b0>, 
+<keras.layers.reshaping.flatten.Flatten object at 0x15a194310>, 
+<keras.layers.core.dense.Dense object at 0x15a1947c0>, <keras.layers.core.dense.Dense 
+object at 0x15a194910>]
+>>> [layer.name for layer in keras_model.layers]
+['conv2d', 'average_pooling2d', 'conv2d_1', 'average_pooling2d_1', 'conv2d_2', 
+'flatten', 'dense', 'dense_1']
+>>>
+>>> torch_states = torch_model.state_dict()
+>>> torch_states.keys()
+odict_keys(['0.weight', '0.bias', '3.weight', '3.bias', '6.weight', '6.bias', '9.weight', '9.bias', '11.weight', '11.bias'])
+>>> torch_states["0.weight"]
+tensor([[[[ 0.1559,  0.1681,  0.2726,  0.3187,  0.4909],
+          [ 0.1179,  0.1340, -0.0815, -0.3253,  0.0904],
+          [ 0.2326, -0.2079, -0.8614, -0.8643, -0.0632],
+          [ 0.3874, -0.3490, -0.7957, -0.5873, -0.0638],
+          [ 0.2800,  0.0947,  0.0308,  0.4065,  0.6916]]],
+...
+        [[[ 0.0980,  0.0240,  0.3295,  0.4507,  0.4539],
+          [-0.1530, -0.3991, -0.3834, -0.2716,  0.0809],
+          [-0.4639, -0.5537, -1.0207, -0.8049, -0.4977],
+          [ 0.1825, -0.1284, -0.0669, -0.4652, -0.2961],
+          [ 0.3402,  0.4256,  0.4329,  0.1503,  0.4207]]]])
+>>> dir(torch_states["0.weight"])
+['H', 'T', '__abs__', '__add__', '__and__', '__array__', '__array_priority__', 
+'__array_wrap__', '__bool__', '__class__', '__complex__', '__contains__', 
+...
+'trunc', 'trunc_', 'type', 'type_as', 'unbind', 'unflatten', 'unfold', 'uniform_', 
+'unique', 'unique_consecutive', 'unsafe_chunk', 'unsafe_split', 
+'unsafe_split_with_sizes', 'unsqueeze', 'unsqueeze_', 'values', 'var', 'vdot', 'view', 
+'view_as', 'vsplit', 'where', 'xlogy', 'xlogy_', 'xpu', 'zero_']
+>>> torch_states["0.weight"].numpy()
+array([[[[ 0.15587455,  0.16805592,  0.27259687,  0.31871665,
+           0.49091515],
+         [ 0.11791296,  0.13400094, -0.08148099, -0.32530317,
+           0.09039831],
+...
+         [ 0.18252987, -0.12838107, -0.0669101 , -0.4652463 ,
+          -0.2960882 ],
+         [ 0.34022188,  0.4256311 ,  0.4328527 ,  0.15025541,
+           0.4207182 ]]]], dtype=float32)
+>>> torch_states["0.weight"].shape
+torch.Size([6, 1, 5, 5])
+>>> torch_states["0.weight"].numpy().shape
+(6, 1, 5, 5)
+>>> help(torch_states["0.weight"].numpy)
+>>> keras_weights = keras_model.get_weights()
+>>> keras_weights[0].shape
+(5, 5, 1, 6)
+>>> keras_weights[6].shape
+(120, 84)
+>>> list(torch_states.values())[6].shape
+torch.Size([84, 120])
+>>> for k,t in zip(keras_weights, torch_states.values()):
+...     print(f"Keras: {k.shape}, Torch: {t.shape}")
+...
+Keras: (5, 5, 1, 6), Torch: torch.Size([6, 1, 5, 5])
+Keras: (6,), Torch: torch.Size([6])
+Keras: (5, 5, 6, 16), Torch: torch.Size([16, 6, 5, 5])
+Keras: (16,), Torch: torch.Size([16])
+Keras: (5, 5, 16, 120), Torch: torch.Size([120, 16, 5, 5])
+Keras: (120,), Torch: torch.Size([120])
+Keras: (120, 84), Torch: torch.Size([84, 120])
+Keras: (84,), Torch: torch.Size([84])
+Keras: (84, 10), Torch: torch.Size([10, 84])
+Keras: (10,), Torch: torch.Size([10])
+>>> for k, t in zip(keras_model.weights, torch_states.keys()):
+...     print(f"Keras: {k.name}, Torch: {t}")
+...
+Keras: conv2d/kernel:0, Torch: 0.weight
+Keras: conv2d/bias:0, Torch: 0.bias
+Keras: conv2d_1/kernel:0, Torch: 3.weight
+Keras: conv2d_1/bias:0, Torch: 3.bias
+Keras: conv2d_2/kernel:0, Torch: 6.weight
+Keras: conv2d_2/bias:0, Torch: 6.bias
+Keras: dense/kernel:0, Torch: 9.weight
+Keras: dense/bias:0, Torch: 9.bias
+Keras: dense_1/kernel:0, Torch: 11.weight
+Keras: dense_1/bias:0, Torch: 11.bias
+>>> keras_model.set_weights
+<bound method Layer.set_weights of <keras.engine.sequential.Sequential object at 0x159d93eb0>>
+>>> torch_model.load_state_dict
+<bound method Module.load_state_dict of Sequential(
+  (0): Conv2d(1, 6, kernel_size=(5, 5), stride=(1, 1), padding=(2, 2))
+  (1): Tanh()
+  (2): AvgPool2d(kernel_size=2, stride=2, padding=0)
+  (3): Conv2d(6, 16, kernel_size=(5, 5), stride=(1, 1))
+  (4): Tanh()
+  (5): AvgPool2d(kernel_size=2, stride=2, padding=0)
+  (6): Conv2d(16, 120, kernel_size=(5, 5), stride=(1, 1))
+  (7): Tanh()
+  (8): Flatten(start_dim=1, end_dim=-1)
+  (9): Linear(in_features=120, out_features=84, bias=True)
+  (10): Tanh()
+  (11): Linear(in_features=84, out_features=10, bias=True)
+  (12): Softmax(dim=1)
+)>
+>>> help(torch_model.load_state_dict)
+
+>>> help(keras_model.set_weights)
+import torch
+import tensorflow as tf
+
+# Load the models
+torch_model = torch.load("lenet5.pt")
+keras_model = tf.keras.models.load_model("lenet5.h5")
+
+# Extract weights from Keras model
+keras_weights = keras_model.get_weights()
+
+# Transform shape from Keras to PyTorch
+for idx in [0, 2, 4]:
+    # conv layers: (out, in, height, width)
+    keras_weights[idx] = keras_weights[idx].transpose([3, 2, 0, 1])
+for idx in [6, 8]:
+    # dense layers: (out, in)
+    keras_weights[idx] = keras_weights[idx].transpose()
+
+# Set weights
+torch_states = torch_model.state_dict()
+for key, weight in zip(torch_states.keys(), keras_weights):
+    torch_states[key] = torch.tensor(weight)
+torch_model.load_state_dict(torch_states)
+
+# Save new model
+torch.save(torch_model, "lenet5-keras.pt")
+import torch
+import tensorflow as tf
+
+# Load the models
+torch_model = torch.load("lenet5.pt")
+keras_model = tf.keras.models.load_model("lenet5.h5")
+
+# Extract weights from PyTorch model
+torch_states = torch_model.state_dict()
+weights = list(torch_states.values())
+
+# Transform tensor to numpy array
+weights = [w.numpy() for w in weights]
+
+# Transform shape from PyTorch to Keras
+for idx in [0, 2, 4]:
+    # conv layers: (height, width, in, out)
+    weights[idx] = weights[idx].transpose([2, 3, 1, 0])
+for idx in [6, 8]:
+    # dense layers: (in, out)
+    weights[idx] = weights[idx].transpose()
+
+# Set weights
+keras_model.set_weights(weights)
+
+# Save new model
+keras_model.save("lenet5-torch.h5")
+import numpy as np
+import torch
+import tensorflow as tf
+
+# Load the models
+torch_orig_model = torch.load("lenet5.pt")
+keras_orig_model = tf.keras.models.load_model("lenet5.h5")
+torch_converted_model = torch.load("lenet5-keras.pt")
+keras_converted_model = tf.keras.models.load_model("lenet5-torch.h5")
+
+# Create a random input
+sample = np.random.random((28,28))
+
+# Convert sample to torch input shape
+torch_sample = torch.Tensor(sample.reshape(1,1,28,28))
+
+# Convert sample to keras input shape
+keras_sample = sample.reshape(1,28,28,1)
+
+# Check output
+keras_converted_output = keras_converted_model.predict(keras_sample, verbose=0)
+keras_orig_output = keras_orig_model.predict(keras_sample, verbose=0)
+torch_converted_output = torch_converted_model(torch_sample).detach().numpy()
+torch_orig_output = torch_orig_model(torch_sample).detach().numpy()
+
+np.set_printoptions(precision=4)
+print(keras_orig_output)
+print(torch_converted_output)
+print()
+print(torch_orig_output)
+print(keras_converted_output)
+[[9.8908e-06 2.4246e-07 3.1996e-04 8.2742e-01 1.6853e-10 1.7212e-01
+  3.6018e-10 1.5521e-06 1.3128e-04 2.2083e-06]]
+[[9.8908e-06 2.4245e-07 3.1996e-04 8.2742e-01 1.6853e-10 1.7212e-01
+  3.6018e-10 1.5521e-06 1.3128e-04 2.2083e-06]]
+
+[[4.1505e-10 1.9959e-17 1.7399e-08 4.0302e-11 9.5790e-14 3.7395e-12
+  1.0634e-10 1.7682e-16 1.0000e+00 8.8126e-10]]
+[[4.1506e-10 1.9959e-17 1.7399e-08 4.0302e-11 9.5791e-14 3.7395e-12
+  1.0634e-10 1.7682e-16 1.0000e+00 8.8127e-10]]
+'''

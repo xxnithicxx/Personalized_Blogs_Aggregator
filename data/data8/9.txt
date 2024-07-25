@@ -1,0 +1,239 @@
+Feature Selection for Time Series Forecasting with Python
+https://machinelearningmastery.com/feature-selection-time-series-forecasting-python/
+2017-03-28
+The use of machine learning methods on time series data requires feature engineering.
+A univariate time series dataset is only comprised of a sequence of observations. These must be transformed into input and output features in order to use supervised learning algorithms.
+The problem is that there is little limit to the type and number of features you can engineer for a time series problem. Classical time series analysis tools like the correlogram can help with evaluating lag variables, but do not directly help when selecting other types of features, such as those derived from the timestamps (year, month or day) and moving statistics, like a moving average.
+In this tutorial, you will discover how you can use the machine learning tools of feature importance and feature selection when working with time series data.
+After completing this tutorial, you will know:
+- How to create and interpret a correlogram of lagged observations.
+- How to calculate and interpret feature importance scores for time series features.
+- How to perform feature selection on time series input variables.
+Kick-start your project with my new book Time Series Forecasting With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Updated Apr/2019: Updated the link to dataset.
+- Updated Jun/2019: Fixed indenting.
+- Updated Aug/2019: Updated data loading to use new API.
+- Updated Sep/2020: Updated code to match changes to the API.
+# Tutorial Overview
+This tutorial is broken down into the following 5 steps:
+- Monthly Car Sales Dataset: That describes the dataset we will be working with.
+- Make Stationary: That describes how to make the dataset stationary for analysis and forecasting.
+- Autocorrelation Plot: That describes how to create a correlogram of the time series data.
+- Feature Importance of Lag Variables: That describes how to calculate and review feature importance scores for time series data.
+- Feature Selection of Lag Variables: That describes how to calculate and review feature selection results for time series data.
+Let’s start off by looking at a standard time series dataset.
+
+
+
+
+# Monthly Car Sales Dataset
+In this tutorial, we will use the Monthly Car Sales dataset.
+This dataset describes the number of car sales in Quebec, Canada between 1960 and 1968.
+The units are a count of the number of sales and there are 108 observations. The source data is credited to Abraham and Ledolter (1983).
+- Download the dataset
+Download the dataset and save it into your current working directory with the filename “car-sales.csv“. Note, you may need to delete the footer information from the file.
+The code below loads the dataset as a Pandas Series object.
+Running the example prints the first 5 rows of data.
+A line plot of the data is also provided.
+Monthly Car Sales Dataset Line Plot
+# Make Stationary
+We can see a clear seasonality and increasing trend in the data.
+The trend and seasonality are fixed components that can be added to any prediction we make. They are useful, but need to be removed in order to explore any other systematic signals that can help make predictions.
+A time series with seasonality and trend removed is called stationary.
+To remove the seasonality, we can take the seasonal difference, resulting in a so-called seasonally adjusted time series.
+The period of the seasonality appears to be one year (12 months). The code below calculates the seasonally adjusted time series and saves it to the file “seasonally-adjusted.csv“.
+Because the first 12 months of data have no prior data to be differenced against, they must be discarded.
+The stationary data is stored in “seasonally-adjusted.csv“. A line plot of the differenced data is created.
+Seasonally Differenced Monthly Car Sales Dataset Line Plot
+The plot suggests that the seasonality and trend information was removed by differencing.
+# Autocorrelation Plot
+Traditionally, time series features are selected based on their correlation with the output variable.
+This is called autocorrelation and involves plotting autocorrelation plots, also called a correlogram. These show the correlation of each lagged observation and whether or not the correlation is statistically significant.
+For example, the code below plots the correlogram for all lag variables in the Monthly Car Sales dataset.
+Running the example creates a correlogram, or Autocorrelation Function (ACF) plot, of the data.
+The plot shows lag values along the x-axis and correlation on the y-axis between -1 and 1 for negatively and positively correlated lags respectively.
+The dots above the blue area indicate statistical significance. The correlation of 1 for the lag value of 0 indicates 100% positive correlation of an observation with itself.
+The plot shows significant lag values at 1, 2, 12, and 17 months.
+Correlogram of the Monthly Car Sales Dataset
+This analysis provides a good baseline for comparison.
+# Time Series to Supervised Learning
+We can convert the univariate Monthly Car Sales dataset into a supervised learning problem by taking the lag observation (e.g. t-1) as inputs and using the current observation (t) as the output variable.
+We can do this in Pandas using the shift function to create new columns of shifted observations.
+The example below creates a new time series with 12 months of lag values to predict the current observation.
+The shift of 12 months means that the first 12 rows of data are unusable as they contain NaN values.
+Running the example prints the first 13 rows of data showing the unusable first 12 rows and the usable 13th row.
+The first 12 rows are removed from the new dataset and results are saved in the file “lags_12months_features.csv“.
+This process can be repeated with an arbitrary number of time steps, such as 6 months or 24 months, and I would recommend experimenting.
+# Feature Importance of Lag Variables
+Ensembles of decision trees, like bagged trees, random forest, and extra trees, can be used to calculate a feature importance score.
+This is common in machine learning to estimate the relative usefulness of input features when developing predictive models.
+We can use feature importance to help to estimate the relative importance of contrived input features for time series forecasting.
+This is important because we can contrive not only the lag observation features above, but also features based on the timestamp of observations, rolling statistics, and much more. Feature importance is one method to help sort out what might be more useful in when modeling.
+The example below loads the supervised learning view of the dataset created in the previous section, fits a random forest model (RandomForestRegressor), and summarizes the relative feature importance scores for each of the 12 lag observations.
+A large-ish number of trees is used to ensure the scores are somewhat stable. Additionally, the random number seed is initialized to ensure that the same result is achieved each time the code is run.
+Running the example first prints the importance scores of the lagged observations.
+The scores are then plotted as a bar graph.
+The plot shows the high relative importance of the observation at t-12 and, to a lesser degree, the importance of observations at t-2 and t-4.
+It is interesting to note a difference with the outcome from the correlogram above.
+Bar Graph of Feature Importance Scores on the Monthly Car Sales Dataset
+This process can be repeated with different methods that can calculate importance scores, such as gradient boosting, extra trees, and bagged decision trees.
+# Feature Selection of Lag Variables
+We can also use feature selection to automatically identify and select those input features that are most predictive.
+A popular method for feature selection is called Recursive Feature Selection (RFE).
+RFE works by creating predictive models, weighting features, and pruning those with the smallest weights, then repeating the process until a desired number of features are left.
+The example below uses RFE with a random forest predictive model and sets the desired number of input features to 4.
+Running the example prints the names of the 4 selected features.
+Unsurprisingly, the results match features that showed a high importance in the previous section.
+A bar graph is also created showing the feature selection rank (smaller is better) for each input feature.
+Bar Graph of Feature Selection Rank on the Monthly Car Sales Dataset
+This process can be repeated with different numbers of features to select more than 4 and different models other than random forest.
+# Summary
+In this tutorial, you discovered how to use the tools of applied machine learning to help select features from time series data when forecasting.
+Specifically, you learned:
+- How to interpret a correlogram for highly correlated lagged observations.
+- How to calculate and review feature importance scores in time series data.
+- How to use feature selection to identify the most relevant input variables in time series data.
+Do you have any questions about feature selection with time series data?
+Ask your questions in the comments and I will do my best to answer.
+# Want to Develop Time Series Forecasts with Python?
+Discover how in my new Ebook:
+Introduction to Time Series Forecasting With Python
+It covers self-study tutorials and end-to-end projects on topics like:
+Loading data, visualization, modeling, algorithm tuning, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+# line plot of time series
+from pandas import read_csv
+from matplotlib import pyplot
+# load dataset
+series = read_csv('car-sales.csv', header=0, index_col=0)
+# display first few rows
+print(series.head(5))
+# line plot of dataset
+series.plot()
+pyplot.show()
+Month
+1960-01-01 6550
+1960-02-01 8728
+1960-03-01 12026
+1960-04-01 14395
+1960-05-01 14587
+Name: Sales, dtype: int64
+# seasonally adjust the time series
+from pandas import read_csv
+from matplotlib import pyplot
+# load dataset
+series = read_csv('car-sales.csv', header=0, index_col=0)
+# seasonal difference
+differenced = series.diff(12)
+# trim off the first year of empty data
+differenced = differenced[12:]
+# save differenced dataset to file
+differenced.to_csv('seasonally_adjusted.csv', index=False)
+# plot differenced dataset
+differenced.plot()
+pyplot.show()
+from pandas import read_csv
+from statsmodels.graphics.tsaplots import plot_acf
+from matplotlib import pyplot
+series = read_csv('seasonally_adjusted.csv', header=0)
+plot_acf(series)
+pyplot.show()
+from pandas import read_csv
+from pandas import DataFrame
+# load dataset
+series = read_csv('seasonally_adjusted.csv', header=0)
+# reframe as supervised learning
+dataframe = DataFrame()
+for i in range(12,0,-1):
+	dataframe['t-'+str(i)] = series.shift(i).values[:,0]
+dataframe['t'] = series.values[:,0]
+print(dataframe.head(13))
+dataframe = dataframe[13:]
+# save to new file
+dataframe.to_csv('lags_12months_features.csv', index=False)
+             t-12   t-11   t-10    t-9     t-8     t-7     t-6     t-5  \
+1961-01-01    NaN    NaN    NaN    NaN     NaN     NaN     NaN     NaN
+1961-02-01    NaN    NaN    NaN    NaN     NaN     NaN     NaN     NaN
+1961-03-01    NaN    NaN    NaN    NaN     NaN     NaN     NaN     NaN
+1961-04-01    NaN    NaN    NaN    NaN     NaN     NaN     NaN     NaN
+1961-05-01    NaN    NaN    NaN    NaN     NaN     NaN     NaN     NaN
+1961-06-01    NaN    NaN    NaN    NaN     NaN     NaN     NaN   687.0
+1961-07-01    NaN    NaN    NaN    NaN     NaN     NaN   687.0   646.0
+1961-08-01    NaN    NaN    NaN    NaN     NaN   687.0   646.0  -189.0
+1961-09-01    NaN    NaN    NaN    NaN   687.0   646.0  -189.0  -611.0
+1961-10-01    NaN    NaN    NaN  687.0   646.0  -189.0  -611.0  1339.0
+1961-11-01    NaN    NaN  687.0  646.0  -189.0  -611.0  1339.0    30.0
+1961-12-01    NaN  687.0  646.0 -189.0  -611.0  1339.0    30.0  1645.0
+1962-01-01  687.0  646.0 -189.0 -611.0  1339.0    30.0  1645.0  -276.0
+
+               t-4     t-3     t-2     t-1       t
+1961-01-01     NaN     NaN     NaN     NaN   687.0
+1961-02-01     NaN     NaN     NaN   687.0   646.0
+1961-03-01     NaN     NaN   687.0   646.0  -189.0
+1961-04-01     NaN   687.0   646.0  -189.0  -611.0
+1961-05-01   687.0   646.0  -189.0  -611.0  1339.0
+1961-06-01   646.0  -189.0  -611.0  1339.0    30.0
+1961-07-01  -189.0  -611.0  1339.0    30.0  1645.0
+1961-08-01  -611.0  1339.0    30.0  1645.0  -276.0
+1961-09-01  1339.0    30.0  1645.0  -276.0   561.0
+1961-10-01    30.0  1645.0  -276.0   561.0   470.0
+1961-11-01  1645.0  -276.0   561.0   470.0  3395.0
+1961-12-01  -276.0   561.0   470.0  3395.0   360.0
+1962-01-01   561.0   470.0  3395.0   360.0  3440.0
+from pandas import read_csv
+from sklearn.ensemble import RandomForestRegressor
+from matplotlib import pyplot
+# load data
+dataframe = read_csv('lags_12months_features.csv', header=0)
+array = dataframe.values
+# split into input and output
+X = array[:,0:-1]
+y = array[:,-1]
+# fit random forest model
+model = RandomForestRegressor(n_estimators=500, random_state=1)
+model.fit(X, y)
+# show importance scores
+print(model.feature_importances_)
+# plot importance scores
+names = dataframe.columns.values[0:-1]
+ticks = [i for i in range(len(names))]
+pyplot.bar(ticks, model.feature_importances_)
+pyplot.xticks(ticks, names)
+pyplot.show()
+[ 0.21642244  0.06271259  0.05662302  0.05543768  0.07155573  0.08478599
+  0.07699371  0.05366735  0.1033234   0.04897883  0.1066669   0.06283236]
+from pandas import read_csv
+from sklearn.feature_selection import RFE
+from sklearn.ensemble import RandomForestRegressor
+from matplotlib import pyplot
+# load dataset
+dataframe = read_csv('lags_12months_features.csv', header=0)
+# separate into input and output variables
+array = dataframe.values
+X = array[:,0:-1]
+y = array[:,-1]
+# perform feature selection
+rfe = RFE(RandomForestRegressor(n_estimators=500, random_state=1), n_features_to_select=4)
+fit = rfe.fit(X, y)
+# report selected features
+print('Selected Features:')
+names = dataframe.columns.values[0:-1]
+for i in range(len(fit.support_)):
+	if fit.support_[i]:
+		print(names[i])
+# plot feature rank
+names = dataframe.columns.values[0:-1]
+ticks = [i for i in range(len(names))]
+pyplot.bar(ticks, fit.ranking_)
+pyplot.xticks(ticks, names)
+pyplot.show()
+Selected Features:
+t-12
+t-6
+t-4
+t-2
+'''

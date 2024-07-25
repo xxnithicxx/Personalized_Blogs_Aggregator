@@ -1,0 +1,317 @@
+How to Model Residual Errors to Correct Time Series Forecasts with Python
+https://machinelearningmastery.com/model-residual-errors-correct-time-series-forecasts-python/
+2017-01-10
+The residual errors from forecasts on a time series provide another source of information that we can model.
+Residual errors themselves form a time series that can have temporal structure. A simple autoregression model of this structure can be used to predict the forecast error, which in turn can be used to correct forecasts. This type of model is called a moving average model, the same name but very different from moving average smoothing.
+In this tutorial, you will discover how to model a residual error time series and use it to correct predictions with Python.
+After completing this tutorial, you will know:
+- About how to model residual error time series using an autoregressive model.
+- How to develop and evaluate a model of residual error time series.
+- How to use a model of residual error to correct predictions and improve forecast skill.
+Kick-start your project with my new book Time Series Forecasting With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Updated Jan/2017: Improved some of the code examples to be more complete.
+- Updated Apr/2019: Updated the link to dataset.
+- Updated Aug/2019: Updated data loading to use new API.
+- Updated Apr/2020: Changed AR to AutoReg due to API change.
+# Model of Residual Errors
+The difference between what was expected and what was predicted is called the residual error.
+It is calculated as:
+Just like the input observations themselves, the residual errors from a time series can have temporal structure like trends, bias, and seasonality.
+Any temporal structure in the time series of residual forecast errors is useful as a diagnostic as it suggests information that could be incorporated into the predictive model. An ideal model would leave no structure in the residual error, just random fluctuations that cannot be modeled.
+Structure in the residual error can also be modeled directly. There may be complex signals in the residual error that are difficult to directly incorporate into the model. Instead, you can create a model of the residual error time series and predict the expected error for your model.
+The predicted error can then be subtracted from the model prediction and in turn provide an additional lift in performance.
+A simple and effective model of residual error is an autoregression. This is where some number of lagged error values are used to predict the error at the next time step. These lag errors are combined in a linear regression model, much like an autoregression model of the direct time series observations.
+An autoregression of the residual error time series is called a Moving Average (MA) model. This is confusing because it has nothing to do with the moving average smoothing process. Think of it as the sibling to the autoregressive (AR) process, except on lagged residual error rather than lagged raw observations.
+In this tutorial, we will develop an autoregression model of the residual error time series.
+Before we dive in, let’s look at a univariate dataset for which we will develop a model.
+
+
+
+
+# Daily Female Births Dataset
+This dataset describes the number of daily female births in California in 1959.
+The units are a count and there are 365 observations. The source of the dataset is credited to Newton (1988).
+- Download the dataset.
+Download the dataset and place it in your current working directory with the filename “daily-total-female-births.csv“.
+Below is an example of loading the Daily Female Births dataset from CSV.
+Running the example prints the first 5 rows of the loaded file.
+The dataset is also shown in a line plot of observations over time.
+Daily Total Female Births Plot
+We can see that there is no obvious trend or seasonality. The dataset looks stationary, which is an expectation of using an autoregression model.
+# Persistence Forecast Model
+The simplest forecast that we can make is to forecast that what happened in the previous time step will be the same as what will happen in the next time step.
+This is called the “naive forecast” or the persistence forecast model. This model will provide the predictions from which we can calculate the residual error time series. Alternately, we could develop an autoregression model of the time series and use that as our model. We will not develop an autoregression model in this case for brevity and to focus on the model of residual error.
+We can implement the persistence model in Python.
+After the dataset is loaded, it is phrased as a supervised learning problem. A lagged version of the dataset is created where the prior time step (t-1) is used as the input variable and the next time step (t+1) is taken as the output variable.
+Next, the dataset is split into training and test sets. A total of 66% of the data is kept for training and the remaining 34% is held for the test set. No training is required for the persistence model; this is just a standard test harness approach.
+Once split, the train and test sets are separated into their input and output components.
+The persistence model is applied by predicting the output value (y) as a copy of the input value (x).
+The residual errors are then calculated as the difference between the expected outcome (test_y) and the prediction (predictions).
+The example puts this all together and gives us a set of residual forecast errors that we can explore this tutorial.
+The example then prints the RMSE and the first 5 rows of the forecast residual errors.
+We now have a residual error time series that we can model.
+# Autoregression of Residual Error
+We can model the residual error time series using an autoregression model.
+This is a linear regression model that creates a weighted linear sum of lagged residual error terms. For example:
+We can use the autoregression model (AR) provided by the statsmodels library.
+Building on the persistence model in the previous section, we can first train the model on the residual errors calculated on the training dataset. This requires that we make persistence predictions for each observation in the training dataset, then create the AR model, as follows.
+Running this piece prints the chosen lag of the 16 coefficients (intercept and one for each lag) of the trained linear regression model.
+Next, we can step through the test dataset and for each time step we must:
+- Calculate the persistence prediction (t+1 = t-1).
+- Predict the residual error using the autoregression model.
+The autoregression model requires the residual error of the 15 previous time steps. Therefore, we must keep these values handy.
+As we step through the test dataset timestep by timestep making predictions and estimating error, we can then calculate the actual residual error and update the residual error time series lag values (history) so that we can calculate the error at the next time step.
+This is a walk forward forecast, or a rolling forecast, model.
+We end up with a time series of the residual forecast error from the train dataset and a predicted residual error on the test dataset.
+We can plot these and get a quick idea of how skillful the model is at predicting residual error. The complete example is listed below.
+Running the example first prints the predicted and expected residual error for each time step in the test dataset.
+Next, the actual residual error for the time series is plotted (blue) compared to the predicted residual error (red).
+Prediction of Residual Error Time Series
+Now that we know how to model residual error, next we will look at how we can go about correcting forecasts and improving model skill.
+# Correct Predictions with a Model of Residual Errors
+A model of forecast residual error is interesting, but it can also be useful to make better predictions.
+With a good estimate of forecast error at a time step, we can make better predictions.
+For example, we can add the expected forecast error to a prediction to correct it and in turn improve the skill of the model.
+Let’s make this concrete with an example.
+Let’s say that the expected value for a time step is 10. The model predicts 8 and estimates the error to be 3. The improved forecast would be:
+This takes the actual forecast error from 2 units to 1 unit.
+We can update the example from the previous section to add the estimated forecast error to the persistence forecast as follows:
+The complete example is listed below.
+Running the example prints the predictions and the expected outcome for each time step in the test dataset.
+The RMSE of the corrected forecasts is calculated to be 7.499, which is much better than the score of 9.151 for the persistence model alone.
+Finally, the expected values for the test dataset are plotted (blue) compared to the corrected forecast (red).
+We can see that the persistence model has been aggressively corrected back to a time series that looks something like a moving average.
+Corrected Persistence Forecast for Daily Female Births
+# Summary
+In this tutorial, you discovered how to model residual error time series and use it to correct predictions with Python.
+Specifically, you learned:
+- About the Moving Average (MA) approach to developing an autoregressive model to residual error.
+- How to develop and evaluate a model of residual error to predict forecast error.
+- How to use the predictions of forecast error to correct predictions and improve model skill.
+Do you have any questions about Moving Average models, or about this tutorial?
+Ask your questions in the comments below and I will do my best to answer.
+# Want to Develop Time Series Forecasts with Python?
+Discover how in my new Ebook:
+Introduction to Time Series Forecasting With Python
+It covers self-study tutorials and end-to-end projects on topics like:
+Loading data, visualization, modeling, algorithm tuning, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+residual error = expected - predicted
+from pandas import read_csv
+from matplotlib import pyplot
+series = read_csv('daily-total-female-births.csv', header=0, index_col=0)
+print(series.head())
+series.plot()
+pyplot.show()
+Date
+1959-01-01 35
+1959-01-02 32
+1959-01-03 30
+1959-01-04 31
+1959-01-05 44
+Name: Births, dtype: int64
+# create lagged dataset
+values = DataFrame(series.values)
+dataframe = concat([values.shift(1), values], axis=1)
+dataframe.columns = ['t-1', 't+1']
+# split into train and test sets
+X = dataframe.values
+train_size = int(len(X) * 0.66)
+train, test = X[1:train_size], X[train_size:]
+train_X, train_y = train[:,0], train[:,1]
+test_X, test_y = test[:,0], test[:,1]
+# persistence model
+predictions = [x for x in test_X]
+# calculate residuals
+residuals = [test_y[i]-predictions[i] for i in range(len(predictions))]
+# calculate residual errors for a persistence forecast model
+from pandas import read_csv
+from pandas import DataFrame
+from pandas import concat
+from sklearn.metrics import mean_squared_error
+from math import sqrt
+# load data
+series = read_csv('daily-total-female-births.csv', header=0, index_col=0, parse_dates=True, squeeze=True)
+# create lagged dataset
+values = DataFrame(series.values)
+dataframe = concat([values.shift(1), values], axis=1)
+dataframe.columns = ['t', 't+1']
+# split into train and test sets
+X = dataframe.values
+train_size = int(len(X) * 0.66)
+train, test = X[1:train_size], X[train_size:]
+train_X, train_y = train[:,0], train[:,1]
+test_X, test_y = test[:,0], test[:,1]
+# persistence model
+predictions = [x for x in test_X]
+# skill of persistence model
+rmse = sqrt(mean_squared_error(test_y, predictions))
+print('Test RMSE: %.3f' % rmse)
+# calculate residuals
+residuals = [test_y[i]-predictions[i] for i in range(len(predictions))]
+residuals = DataFrame(residuals)
+print(residuals.head())
+Test RMSE: 9.151
+      0
+0   9.0
+1 -10.0
+2   3.0
+3  -6.0
+4  30.0
+error(t+1) = b0 + b1*error(t-1) + b2*error(t-2) ...+ bn*error(t-n)
+# autoregressive model of residual errors
+from pandas import read_csv
+from pandas import DataFrame
+from pandas import concat
+from statsmodels.tsa.ar_model import AutoReg
+series = read_csv('daily-total-female-births.csv', header=0, index_col=0, parse_dates=True, squeeze=True)
+# create lagged dataset
+values = DataFrame(series.values)
+dataframe = concat([values.shift(1), values], axis=1)
+dataframe.columns = ['t', 't+1']
+# split into train and test sets
+X = dataframe.values
+train_size = int(len(X) * 0.66)
+train, test = X[1:train_size], X[train_size:]
+train_X, train_y = train[:,0], train[:,1]
+test_X, test_y = test[:,0], test[:,1]
+# persistence model on training set
+train_pred = [x for x in train_X]
+# calculate residuals
+train_resid = [train_y[i]-train_pred[i] for i in range(len(train_pred))]
+# model the training set residuals
+model = AutoReg(train_resid, lags=15)
+model_fit = model.fit()
+print('Coef=%s' % (model_fit.params))
+Coef=[ 0.10120699 -0.84940615 -0.77783609 -0.73345006 -0.68902061 -0.59270551
+ -0.5376728  -0.42553356 -0.24861246 -0.19972102 -0.15954013 -0.11045476
+ -0.14045572 -0.13299964 -0.12515801 -0.03615774]
+# forecast residual forecast error
+from pandas import read_csv
+from pandas import DataFrame
+from pandas import concat
+from statsmodels.tsa.ar_model import AutoReg
+from matplotlib import pyplot
+series = read_csv('daily-total-female-births.csv', header=0, index_col=0, parse_dates=True, squeeze=True)
+# create lagged dataset
+values = DataFrame(series.values)
+dataframe = concat([values.shift(1), values], axis=1)
+dataframe.columns = ['t', 't+1']
+# split into train and test sets
+X = dataframe.values
+train_size = int(len(X) * 0.66)
+train, test = X[1:train_size], X[train_size:]
+train_X, train_y = train[:,0], train[:,1]
+test_X, test_y = test[:,0], test[:,1]
+# persistence model on training set
+train_pred = [x for x in train_X]
+# calculate residuals
+train_resid = [train_y[i]-train_pred[i] for i in range(len(train_pred))]
+# model the training set residuals
+window = 15
+model = AutoReg(train_resid, lags=window)
+model_fit = model.fit()
+coef = model_fit.params
+# walk forward over time steps in test
+history = train_resid[len(train_resid)-window:]
+history = [history[i] for i in range(len(history))]
+predictions = list()
+expected_error = list()
+for t in range(len(test_y)):
+	# persistence
+	yhat = test_X[t]
+	error = test_y[t] - yhat
+	expected_error.append(error)
+	# predict error
+	length = len(history)
+	lag = [history[i] for i in range(length-window,length)]
+	pred_error = coef[0]
+	for d in range(window):
+		pred_error += coef[d+1] * lag[window-d-1]
+	predictions.append(pred_error)
+	history.append(error)
+	print('predicted error=%f, expected error=%f' % (pred_error, error))
+# plot predicted error
+pyplot.plot(expected_error)
+pyplot.plot(predictions, color='red')
+pyplot.show()
+
+predicted error=-1.951332, expected error=-10.000000
+predicted error=6.675538, expected error=3.000000
+predicted error=3.419129, expected error=15.000000
+predicted error=-7.160046, expected error=-4.000000
+predicted error=-4.179003, expected error=7.000000
+predicted error=-10.425124, expected error=-5.000000
+improved forecast = forecast + estimated error
+improved forecast = forecast + estimated error
+improved forecast = 8 + 3
+improved forecast = 11
+# correct the prediction
+yhat = yhat + pred_error
+# correct forecasts with a model of forecast residual errors
+from pandas import read_csv
+from pandas import DataFrame
+from pandas import concat
+from statsmodels.tsa.ar_model import AutoReg
+from matplotlib import pyplot
+from sklearn.metrics import mean_squared_error
+from math import sqrt
+# load data
+series = read_csv('daily-total-female-births.csv', header=0, index_col=0, parse_dates=True, squeeze=True)
+# create lagged dataset
+values = DataFrame(series.values)
+dataframe = concat([values.shift(1), values], axis=1)
+dataframe.columns = ['t', 't+1']
+# split into train and test sets
+X = dataframe.values
+train_size = int(len(X) * 0.66)
+train, test = X[1:train_size], X[train_size:]
+train_X, train_y = train[:,0], train[:,1]
+test_X, test_y = test[:,0], test[:,1]
+# persistence model on training set
+train_pred = [x for x in train_X]
+# calculate residuals
+train_resid = [train_y[i]-train_pred[i] for i in range(len(train_pred))]
+# model the training set residuals
+window = 15
+model = AutoReg(train_resid, lags=15)
+model_fit = model.fit()
+coef = model_fit.params
+# walk forward over time steps in test
+history = train_resid[len(train_resid)-window:]
+history = [history[i] for i in range(len(history))]
+predictions = list()
+for t in range(len(test_y)):
+	# persistence
+	yhat = test_X[t]
+	error = test_y[t] - yhat
+	# predict error
+	length = len(history)
+	lag = [history[i] for i in range(length-window,length)]
+	pred_error = coef[0]
+	for d in range(window):
+		pred_error += coef[d+1] * lag[window-d-1]
+	# correct the prediction
+	yhat = yhat + pred_error
+	predictions.append(yhat)
+	history.append(error)
+	print('predicted=%f, expected=%f' % (yhat, test_y[t]))
+# error
+rmse = sqrt(mean_squared_error(test_y, predictions))
+print('Test RMSE: %.3f' % rmse)
+# plot predicted error
+pyplot.plot(test_y)
+pyplot.plot(predictions, color='red')
+pyplot.show()
+
+predicted=40.675538, expected=37.000000
+predicted=40.419129, expected=52.000000
+predicted=44.839954, expected=48.000000
+predicted=43.820997, expected=55.000000
+predicted=44.574876, expected=50.000000
+Test RMSE: 7.499
+'''

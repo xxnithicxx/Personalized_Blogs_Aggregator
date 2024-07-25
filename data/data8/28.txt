@@ -1,0 +1,408 @@
+Autoencoder Feature Extraction for Classification
+https://machinelearningmastery.com/autoencoder-for-classification/
+2020-12-06
+Autoencoder is a type of neural network that can be used to learn a compressed representation of raw data.
+An autoencoder is composed of an encoder and a decoder sub-models. The encoder compresses the input and the decoder attempts to recreate the input from the compressed version provided by the encoder. After training, the encoder model is saved and the decoder is discarded.
+The encoder can then be used as a data preparation technique to perform feature extraction on raw data that can be used to train a different machine learning model.
+In this tutorial, you will discover how to develop and evaluate an autoencoder for classification predictive modeling.
+After completing this tutorial, you will know:
+- An autoencoder is a neural network model that can be used to learn a compressed representation of raw data.
+- How to train an autoencoder model on a training dataset and save just the encoder part of the model.
+- How to use the encoder as a data preparation step when training a machine learning model.
+Let’s get started.
+How to Develop an Autoencoder for ClassificationPhoto by Bernd Thaller, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- Autoencoders for Feature Extraction
+- Autoencoder for Classification
+- Encoder as Data Preparation for Predictive Model
+# Autoencoders for Feature Extraction
+An autoencoder is a neural network model that seeks to learn a compressed representation of an input.
+An autoencoder is a neural network that is trained to attempt to copy its input to its output.
+— Page 502, Deep Learning, 2016.
+They are an unsupervised learning method, although technically, they are trained using supervised learning methods, referred to as self-supervised.
+Autoencoders are typically trained as part of a broader model that attempts to recreate the input.
+For example:
+- X = model.predict(X)
+The design of the autoencoder model purposefully makes this challenging by restricting the architecture to a bottleneck at the midpoint of the model, from which the reconstruction of the input data is performed.
+There are many types of autoencoders, and their use varies, but perhaps the more common use is as a learned or automatic feature extraction model.
+In this case, once the model is fit, the reconstruction aspect of the model can be discarded and the model up to the point of the bottleneck can be used. The output of the model at the bottleneck is a fixed-length vector that provides a compressed representation of the input data.
+Usually they are restricted in ways that allow them to copy only approximately, and to copy only input that resembles the training data. Because the model is forced to prioritize which aspects of the input should be copied, it often learns useful properties of the data.
+— Page 502, Deep Learning, 2016.
+Input data from the domain can then be provided to the model and the output of the model at the bottleneck can be used as a feature vector in a supervised learning model, for visualization, or more generally for dimensionality reduction.
+Next, let’s explore how we might develop an autoencoder for feature extraction on a classification predictive modeling problem.
+# Autoencoder for Classification
+In this section, we will develop an autoencoder to learn a compressed representation of the input features for a classification predictive modeling problem.
+First, let’s define a classification predictive modeling problem.
+We will use the make_classification() scikit-learn function to define a synthetic binary (2-class) classification task with 100 input features (columns) and 1,000 examples (rows). Importantly, we will define the problem in such a way that most of the input variables are redundant (90 of the 100 or 90 percent), allowing the autoencoder later to learn a useful compressed representation.
+The example below defines the dataset and summarizes its shape.
+Running the example defines the dataset and prints the shape of the arrays, confirming the number of rows and columns.
+Next, we will develop a Multilayer Perceptron (MLP) autoencoder model.
+The model will take all of the input columns, then output the same values. It will learn to recreate the input pattern exactly.
+The autoencoder consists of two parts: the encoder and the decoder. The encoder learns how to interpret the input and compress it to an internal representation defined by the bottleneck layer. The decoder takes the output of the encoder (the bottleneck layer) and attempts to recreate the input.
+Once the autoencoder is trained, the decoder is discarded and we only keep the encoder and use it to compress examples of input to vectors output by the bottleneck layer.
+In this first autoencoder, we won’t compress the input at all and will use a bottleneck layer the same size as the input. This should be an easy problem that the model will learn nearly perfectly and is intended to confirm our model is implemented correctly.
+We will define the model using the functional API; if this is new to you, I recommend this tutorial:
+- How to Use the Keras Functional API for Deep Learning
+Prior to defining and fitting the model, we will split the data into train and test sets and scale the input data by normalizing the values to the range 0-1, a good practice with MLPs.
+We will define the encoder to have two hidden layers, the first with two times the number of inputs (e.g. 200) and the second with the same number of inputs (100), followed by the bottleneck layer with the same number of inputs as the dataset (100).
+To ensure the model learns well, we will use batch normalization and leaky ReLU activation.
+The decoder will be defined with a similar structure, although in reverse.
+It will have two hidden layers, the first with the number of inputs in the dataset (e.g. 100) and the second with double the number of inputs (e.g. 200). The output layer will have the same number of nodes as there are columns in the input data and will use a linear activation function to output numeric values.
+The model will be fit using the efficient Adam version of stochastic gradient descent and minimizes the mean squared error, given that reconstruction is a type of multi-output regression problem.
+We can plot the layers in the autoencoder model to get a feeling for how the data flows through the model.
+The image below shows a plot of the autoencoder.
+Plot of Autoencoder Model for Classification With No Compression
+Next, we can train the model to reproduce the input and keep track of the performance of the model on the hold-out test set.
+After training, we can plot the learning curves for the train and test sets to confirm the model learned the reconstruction problem well.
+Finally, we can save the encoder model for use later, if desired.
+As part of saving the encoder, we will also plot the encoder model to get a feeling for the shape of the output of the bottleneck layer, e.g. a 100 element vector.
+An example of this plot is provided below.
+Plot of Encoder Model for Classification With No Compression
+Tying this all together, the complete example of an autoencoder for reconstructing the input data for a classification dataset without any compression in the bottleneck layer is listed below.
+Running the example fits the model and reports loss on the train and test sets along the way.
+Note: if you have problems creating the plots of the model, you can comment out the import and call the plot_model() function.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we see that loss gets low, but does not go to zero (as we might have expected) with no compression in the bottleneck layer. Perhaps further tuning the model architecture or learning hyperparameters is required.
+A plot of the learning curves is created showing that the model achieves a good fit in reconstructing the input, which holds steady throughout training, not overfitting.
+Learning Curves of Training the Autoencoder Model Without Compression
+So far, so good. We know how to develop an autoencoder without compression.
+Next, let’s change the configuration of the model so that the bottleneck layer has half the number of nodes (e.g. 50).
+Tying this together, the complete example is listed below.
+Running the example fits the model and reports loss on the train and test sets along the way.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we see that loss gets similarly low as the above example without compression, suggesting that perhaps the model performs just as well with a bottleneck half the size.
+A plot of the learning curves is created, again showing that the model achieves a good fit in reconstructing the input, which holds steady throughout training, not overfitting.
+Learning Curves of Training the Autoencoder Model With Compression
+The trained encoder is saved to the file “encoder.h5” that we can load and use later.
+Next, let’s explore how we might use the trained encoder model.
+# Encoder as Data Preparation for Predictive Model
+In this section, we will use the trained encoder from the autoencoder to compress input data and train a different predictive model.
+First, let’s establish a baseline in performance on this problem. This is important as if the performance of a model is not improved by the compressed encoding, then the compressed encoding does not add value to the project and should not be used.
+We can train a logistic regression model on the training dataset directly and evaluate the performance of the model on the holdout test set.
+The complete example is listed below.
+Running the example fits a logistic regression model on the training dataset and evaluates it on the test set.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the model achieves a classification accuracy of about 89.3 percent.
+We would hope and expect that a logistic regression model fit on an encoded version of the input to achieve better accuracy for the encoding to be considered useful.
+We can update the example to first encode the data using the encoder model trained in the previous section.
+First, we can load the trained encoder model from the file.
+We can then use the encoder to transform the raw input data (e.g. 100 columns) into bottleneck vectors (e.g. 50 element vectors).
+This process can be applied to the train and test datasets.
+We can then use this encoded data to train and evaluate the logistic regression model, as before.
+Tying this together, the complete example is listed below.
+Running the example first encodes the dataset using the encoder, then fits a logistic regression model on the training dataset and evaluates it on the test set.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+In this case, we can see that the model achieves a classification accuracy of about 93.9 percent.
+This is a better classification accuracy than the same model evaluated on the raw dataset, suggesting that the encoding is helpful for our chosen model and test harness.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- A Gentle Introduction to LSTM Autoencoders
+- How to Use the Keras Functional API for Deep Learning
+- TensorFlow 2 Tutorial: Get Started in Deep Learning With tf.keras
+- Deep Learning, 2016.
+- sklearn.datasets.make_classification API.
+- sklearn.model_selection.train_test_split API.
+- Autoencoder, Wikipedia.
+# Summary
+In this tutorial, you discovered how to develop and evaluate an autoencoder for classification predictive modeling.
+Specifically, you learned:
+- An autoencoder is a neural network model that can be used to learn a compressed representation of raw data.
+- How to train an autoencoder model on a training dataset and save just the encoder part of the model.
+- How to use the encoder as a data preparation step when training a machine learning model.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+'''
+# synthetic classification dataset
+from sklearn.datasets import make_classification
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=100, n_informative=10, n_redundant=90, random_state=1)
+# summarize the dataset
+print(X.shape, y.shape)
+(1000, 100) (1000,)
+
+# split into train test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# scale data
+t = MinMaxScaler()
+t.fit(X_train)
+X_train = t.transform(X_train)
+X_test = t.transform(X_test)
+
+# define encoder
+visible = Input(shape=(n_inputs,))
+# encoder level 1
+e = Dense(n_inputs*2)(visible)
+e = BatchNormalization()(e)
+e = LeakyReLU()(e)
+# encoder level 2
+e = Dense(n_inputs)(e)
+e = BatchNormalization()(e)
+e = LeakyReLU()(e)
+# bottleneck
+n_bottleneck = n_inputs
+bottleneck = Dense(n_bottleneck)(e)
+
+# define decoder, level 1
+d = Dense(n_inputs)(bottleneck)
+d = BatchNormalization()(d)
+d = LeakyReLU()(d)
+# decoder level 2
+d = Dense(n_inputs*2)(d)
+d = BatchNormalization()(d)
+d = LeakyReLU()(d)
+# output layer
+output = Dense(n_inputs, activation='linear')(d)
+# define autoencoder model
+model = Model(inputs=visible, outputs=output)
+
+# compile autoencoder model
+model.compile(optimizer='adam', loss='mse')
+
+# plot the autoencoder
+plot_model(model, 'autoencoder_no_compress.png', show_shapes=True)
+
+# fit the autoencoder model to reconstruct input
+history = model.fit(X_train, X_train, epochs=200, batch_size=16, verbose=2, validation_data=(X_test,X_test))
+
+# plot loss
+pyplot.plot(history.history['loss'], label='train')
+pyplot.plot(history.history['val_loss'], label='test')
+pyplot.legend()
+pyplot.show()
+
+# define an encoder model (without the decoder)
+encoder = Model(inputs=visible, outputs=bottleneck)
+plot_model(encoder, 'encoder_no_compress.png', show_shapes=True)
+# save the encoder to file
+encoder.save('encoder.h5')
+# train autoencoder for classification with no compression in the bottleneck layer
+from sklearn.datasets import make_classification
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import LeakyReLU
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.utils import plot_model
+from matplotlib import pyplot
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=100, n_informative=10, n_redundant=90, random_state=1)
+# number of input columns
+n_inputs = X.shape[1]
+# split into train test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# scale data
+t = MinMaxScaler()
+t.fit(X_train)
+X_train = t.transform(X_train)
+X_test = t.transform(X_test)
+# define encoder
+visible = Input(shape=(n_inputs,))
+# encoder level 1
+e = Dense(n_inputs*2)(visible)
+e = BatchNormalization()(e)
+e = LeakyReLU()(e)
+# encoder level 2
+e = Dense(n_inputs)(e)
+e = BatchNormalization()(e)
+e = LeakyReLU()(e)
+# bottleneck
+n_bottleneck = n_inputs
+bottleneck = Dense(n_bottleneck)(e)
+# define decoder, level 1
+d = Dense(n_inputs)(bottleneck)
+d = BatchNormalization()(d)
+d = LeakyReLU()(d)
+# decoder level 2
+d = Dense(n_inputs*2)(d)
+d = BatchNormalization()(d)
+d = LeakyReLU()(d)
+# output layer
+output = Dense(n_inputs, activation='linear')(d)
+# define autoencoder model
+model = Model(inputs=visible, outputs=output)
+# compile autoencoder model
+model.compile(optimizer='adam', loss='mse')
+# plot the autoencoder
+plot_model(model, 'autoencoder_no_compress.png', show_shapes=True)
+# fit the autoencoder model to reconstruct input
+history = model.fit(X_train, X_train, epochs=200, batch_size=16, verbose=2, validation_data=(X_test,X_test))
+# plot loss
+pyplot.plot(history.history['loss'], label='train')
+pyplot.plot(history.history['val_loss'], label='test')
+pyplot.legend()
+pyplot.show()
+# define an encoder model (without the decoder)
+encoder = Model(inputs=visible, outputs=bottleneck)
+plot_model(encoder, 'encoder_no_compress.png', show_shapes=True)
+# save the encoder to file
+encoder.save('encoder.h5')
+
+42/42 - 0s - loss: 0.0032 - val_loss: 0.0016
+Epoch 196/200
+42/42 - 0s - loss: 0.0031 - val_loss: 0.0024
+Epoch 197/200
+42/42 - 0s - loss: 0.0032 - val_loss: 0.0015
+Epoch 198/200
+42/42 - 0s - loss: 0.0032 - val_loss: 0.0014
+Epoch 199/200
+42/42 - 0s - loss: 0.0031 - val_loss: 0.0020
+Epoch 200/200
+42/42 - 0s - loss: 0.0029 - val_loss: 0.0017
+
+# bottleneck
+n_bottleneck = round(float(n_inputs) / 2.0)
+bottleneck = Dense(n_bottleneck)(e)
+# train autoencoder for classification with with compression in the bottleneck layer
+from sklearn.datasets import make_classification
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input
+from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import LeakyReLU
+from tensorflow.keras.layers import BatchNormalization
+from tensorflow.keras.utils import plot_model
+from matplotlib import pyplot
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=100, n_informative=10, n_redundant=90, random_state=1)
+# number of input columns
+n_inputs = X.shape[1]
+# split into train test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# scale data
+t = MinMaxScaler()
+t.fit(X_train)
+X_train = t.transform(X_train)
+X_test = t.transform(X_test)
+# define encoder
+visible = Input(shape=(n_inputs,))
+# encoder level 1
+e = Dense(n_inputs*2)(visible)
+e = BatchNormalization()(e)
+e = LeakyReLU()(e)
+# encoder level 2
+e = Dense(n_inputs)(e)
+e = BatchNormalization()(e)
+e = LeakyReLU()(e)
+# bottleneck
+n_bottleneck = round(float(n_inputs) / 2.0)
+bottleneck = Dense(n_bottleneck)(e)
+# define decoder, level 1
+d = Dense(n_inputs)(bottleneck)
+d = BatchNormalization()(d)
+d = LeakyReLU()(d)
+# decoder level 2
+d = Dense(n_inputs*2)(d)
+d = BatchNormalization()(d)
+d = LeakyReLU()(d)
+# output layer
+output = Dense(n_inputs, activation='linear')(d)
+# define autoencoder model
+model = Model(inputs=visible, outputs=output)
+# compile autoencoder model
+model.compile(optimizer='adam', loss='mse')
+# plot the autoencoder
+plot_model(model, 'autoencoder_compress.png', show_shapes=True)
+# fit the autoencoder model to reconstruct input
+history = model.fit(X_train, X_train, epochs=200, batch_size=16, verbose=2, validation_data=(X_test,X_test))
+# plot loss
+pyplot.plot(history.history['loss'], label='train')
+pyplot.plot(history.history['val_loss'], label='test')
+pyplot.legend()
+pyplot.show()
+# define an encoder model (without the decoder)
+encoder = Model(inputs=visible, outputs=bottleneck)
+plot_model(encoder, 'encoder_compress.png', show_shapes=True)
+# save the encoder to file
+encoder.save('encoder.h5')
+
+42/42 - 0s - loss: 0.0029 - val_loss: 0.0010
+Epoch 196/200
+42/42 - 0s - loss: 0.0029 - val_loss: 0.0013
+Epoch 197/200
+42/42 - 0s - loss: 0.0030 - val_loss: 9.4472e-04
+Epoch 198/200
+42/42 - 0s - loss: 0.0028 - val_loss: 0.0015
+Epoch 199/200
+42/42 - 0s - loss: 0.0033 - val_loss: 0.0021
+Epoch 200/200
+42/42 - 0s - loss: 0.0027 - val_loss: 8.7731e-04
+# baseline in performance with logistic regression model
+from sklearn.datasets import make_classification
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=100, n_informative=10, n_redundant=90, random_state=1)
+# split into train test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# scale data
+t = MinMaxScaler()
+t.fit(X_train)
+X_train = t.transform(X_train)
+X_test = t.transform(X_test)
+# define model
+model = LogisticRegression()
+# fit model on training set
+model.fit(X_train, y_train)
+# make prediction on test set
+yhat = model.predict(X_test)
+# calculate accuracy
+acc = accuracy_score(y_test, yhat)
+print(acc)
+0.8939393939393939
+
+# load the model from file
+encoder = load_model('encoder.h5')
+
+# encode the train data
+X_train_encode = encoder.predict(X_train)
+# encode the test data
+X_test_encode = encoder.predict(X_test)
+
+# define the model
+model = LogisticRegression()
+# fit the model on the training set
+model.fit(X_train_encode, y_train)
+# make predictions on the test set
+yhat = model.predict(X_test_encode)
+# evaluate logistic regression on encoded input
+from sklearn.datasets import make_classification
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from tensorflow.keras.models import load_model
+# define dataset
+X, y = make_classification(n_samples=1000, n_features=100, n_informative=10, n_redundant=90, random_state=1)
+# split into train test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=1)
+# scale data
+t = MinMaxScaler()
+t.fit(X_train)
+X_train = t.transform(X_train)
+X_test = t.transform(X_test)
+# load the model from file
+encoder = load_model('encoder.h5')
+# encode the train data
+X_train_encode = encoder.predict(X_train)
+# encode the test data
+X_test_encode = encoder.predict(X_test)
+# define the model
+model = LogisticRegression()
+# fit the model on the training set
+model.fit(X_train_encode, y_train)
+# make predictions on the test set
+yhat = model.predict(X_test_encode)
+# calculate classification accuracy
+acc = accuracy_score(y_test, yhat)
+print(acc)
+0.9393939393939394
+'''

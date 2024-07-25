@@ -1,0 +1,305 @@
+How to Make Manual Predictions for ARIMA Models with Python
+https://machinelearningmastery.com/make-manual-predictions-arima-models-python/
+2017-02-07
+The autoregression integrated moving average model or ARIMA model can seem intimidating to beginners.
+A good way to pull back the curtain in the method is to to use a trained model to make predictions manually. This demonstrates that ARIMA is a linear regression model at its core.
+Making manual predictions with a fit ARIMA models may also be a requirement in your project, meaning that you can save the coefficients from the fit model and use them as configuration in your own code to make predictions without the need for heavy Python libraries in a production environment.
+In this tutorial, you will discover how to make manual predictions with a trained ARIMA model in Python.
+Specifically, you will learn:
+- How to make manual predictions with an autoregressive model.
+- How to make manual predictions with a moving average model.
+- How to make predictions with an autoregression integrated moving average model.
+Kick-start your project with my new book Time Series Forecasting With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s dive in.
+- Updated Apr/2019: Updated the link to dataset.
+- Updated Aug/2019: Updated data loading to use new API.
+- Updated Dec/2020: Updated ARIMA API to the latest version of statsmodels.
+How to Make Manual Predictions for ARIMA Models with PythonPhoto by Bernard Spragg. NZ, some rights reserved.
+# Minimum Daily Temperatures Dataset
+This dataset describes the minimum daily temperatures over 10 years (1981-1990) in the city Melbourne, Australia.
+The units are in degrees Celsius and there are 3,650 observations. The source of the data is credited as the Australian Bureau of Meteorology.
+- Download the dataset.
+Download the dataset and place it into your current working directory with the filename “daily-minimum-temperatures.csv“.
+The example below demonstrates how to load the dataset as a Pandas Series and graph the loaded dataset.
+Running the example creates a line plot of the time series.
+Minimum Daily Temperatures Dataset Plot
+
+
+
+
+# ARIMA Test Setup
+We will use a consistent test harness to fit ARIMA models and evaluate their predictions.
+First, the loaded dataset is split into a train and test dataset. The majority of the dataset is used to fit the model and the last 7 observations (one week) are held back as the test dataset to evaluate the fit model.
+A walk-forward validation, or rolling forecast, method is used as follows:
+- Each time step in the test dataset is iterated.
+- Within each iteration, a new ARIMA model is trained on all available historical data.
+- The model is used to make a prediction for the next day.
+- The prediction is stored and the “real” observation is retrieved from the test set and added to the history for use in the next iteration.
+- The performance of the model is summarized at the end by calculating the root mean squared error (RMSE) of all predictions made compared to expected values in the test dataset.
+Simple AR, MA, ARMA and ARMA models are developed. They are unoptimized and are used for demonstration purposes. You will surely be able to achieve better performance with a little tuning.
+The ARIMA implementation from the statsmodels Python library is used and AR and MA coefficients are extracted from the ARIMAResults object returned from fitting the model.
+The ARIMA model supports forecasts via the predict() and the forecast() functions.
+Nevertheless, we will make manual predictions in this tutorial using the learned coefficients.
+This is useful as it demonstrates that all that is required from a trained ARIMA model is the coefficients.
+The coefficients in the statsmodels implementation of the ARIMA model do not use intercept terms. This means we can calculate the output values by taking the dot product of the learned coefficients and lag values (in the case of an AR model) and lag residuals (in the case of an MA model). For example:
+The coefficients of a learned ARIMA model can be accessed from aARIMAResults object as follows:
+- AR Coefficients: model_fit.arparams
+- MA Coefficients: model_fit.maparams
+We can use these retrieved coefficients to make predictions using the following manual predict() function.
+For reference, you may find the following resources useful:
+- ARIMA API Documentation
+- 
+
+
+
+model = ARIMA(history, order=(k,0,0))
+
+
+
+
+1
+
+model = ARIMA(history, order=(k,0,0))
+
+
+
+
+In this example, we will use a simple AR(1) for demonstration purposes.
+Making a prediction requires that we retrieve the AR coefficients from the fit model and use them with the lag of observed values and call the custom predict() function defined above.
+The complete example is listed below.
+Note that the ARIMA implementation will automatically model a trend in the time series. This adds a constant to the regression equation that we do not need for demonstration purposes. We turn this convenience off by setting the ‘trend’ argument in the fit() function to the value ‘nc‘ for ‘no constant‘.
+The fit() function also outputs a lot of verbose messages that we can turn off by setting the ‘disp‘ argument to ‘False‘.
+Running the example prints the prediction and expected value each iteration for 7 days. The final RMSE is printed showing an average error of about 1.9 degrees Celsius for this simple model.
+Experiment with AR models with different orders, such as 2 or more.
+# Moving Average Model
+The moving average model, or MA, is a linear regression model of the lag residual errors.
+An MA model with a lag of k can be specified in the ARIMA model as follows:
+In this example, we will use a simple MA(1) for demonstration purposes.
+Much like above, making a prediction requires that we retrieve the MA coefficients from the fit model and use them with the lag of residual error values and call the custom predict() function defined above.
+The residual errors during training are stored in the ARIMA model under the ‘resid‘ parameter of the ARIMAResults object.
+The complete example is listed below.
+Running the example prints the predictions and expected values each iteration for 7 days and ends by summarizing the RMSE of all predictions.
+The skill of the model is not great and you can use this as an opportunity to explore MA models with other orders and use them to make manual predictions.
+You can see how it would be straightforward to keep track of the residual errors manually outside of the ARIMAResults object as new observations are made available. For example:
+Next, let’s put the AR and MA models together and see how we can perform manual predictions.
+# Autoregression Moving Average Model
+We have now seen how we can make manual predictions for a fit AR and MA model.
+These approaches can be put directly together to make manual predictions for a fuller ARMA model.
+In this example, we will fit an ARMA(1,1) model that can be configured in an ARIMA model as ARIMA(1,0,1) with no differencing.
+The complete example is listed below.
+You can see that the prediction (yhat) is the sum of the dot product of the AR coefficients and lag observations and the MA coefficients and lag residual errors.
+Again, running the example prints the predictions and expected values each iteration and the summary RMSE for all predictions made.
+We can now add differencing and show how to make predictions for a complete ARIMA model.
+# Autoregression Integrated Moving Average Model
+The I in ARIMA stands for integrated and refers to the differencing performed on the time series observations before predictions are made in the linear regression model.
+When making manual predictions, we must perform this differencing of the dataset prior to calling the predict() function. Below is a function that implements differencing of the entire dataset.
+A simplification would be to keep track of the observation at the oldest required lag value and use that to calculate the differenced series prior to prediction as needed.
+This difference function can be called once for each difference required of the ARIMA model.
+In this example, we will use a difference level of 1, and combine it with the ARMA example in the previous section to give us an ARIMA(1,1,1) model.
+The complete example is listed below.
+You can see that the lag observations are differenced prior to their use in the call to the predict() function with the AR coefficients. The residual errors will also be calculated with regard to these differenced input values.
+Running the example prints the prediction and expected value each iteration and summarizes the performance of all predictions made.
+
+# Summary
+In this tutorial, you discovered how to make manual predictions for an ARIMA model with Python.
+Specifically, you learned:
+- How to make manual predictions for an AR model.
+- How to make manual predictions for an MA model.
+- How to make manual predictions for an ARMA and ARIMA model.
+Do you have any questions about making manual predictions?
+Ask your questions in the comments below and I will do my best to answer.
+# Want to Develop Time Series Forecasts with Python?
+Discover how in my new Ebook:
+Introduction to Time Series Forecasting With Python
+It covers self-study tutorials and end-to-end projects on topics like:
+Loading data, visualization, modeling, algorithm tuning, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+from pandas import read_csv
+from matplotlib import pyplot
+series = read_csv('daily-minimum-temperatures.csv', header=0, index_col=0)
+series.plot()
+pyplot.show()
+y = dot_product(ar_coefficients, lags) + dot_product(ma_coefficients, residuals)
+def predict(coef, history):
+	yhat = 0.0
+	for i in range(1, len(coef)+1):
+		yhat += coef[i-1] * history[-i]
+	return yhat
+model = ARIMA(history, order=(k,0,0))
+from pandas import read_csv
+from matplotlib import pyplot
+from statsmodels.tsa.arima.model import ARIMA
+from sklearn.metrics import mean_squared_error
+from math import sqrt
+
+def predict(coef, history):
+	yhat = 0.0
+	for i in range(1, len(coef)+1):
+		yhat += coef[i-1] * history[-i]
+	return yhat
+
+series = read_csv('daily-minimum-temperatures.csv', header=0, index_col=0)
+X = series.values
+size = len(X) - 7
+train, test = X[0:size], X[size:]
+history = [x for x in train]
+predictions = list()
+for t in range(len(test)):
+	model = ARIMA(history, order=(1,0,0))
+	model_fit = model.fit()
+	ar_coef = model_fit.arparams
+	yhat = predict(ar_coef, history)
+	predictions.append(yhat)
+	obs = test[t]
+	history.append(obs)
+	print('>predicted=%.3f, expected=%.3f' % (yhat, obs))
+rmse = sqrt(mean_squared_error(test, predictions))
+print('Test RMSE: %.3f' % rmse)
+>predicted=9.738, expected=12.900
+>predicted=12.563, expected=14.600
+>predicted=14.219, expected=14.000
+>predicted=13.635, expected=13.600
+>predicted=13.245, expected=13.500
+>predicted=13.148, expected=15.700
+>predicted=15.292, expected=13.000
+Test RMSE: 1.928
+model = ARIMA(history, order=(0,0,k))
+model_fit.resid
+from pandas import read_csv
+from matplotlib import pyplot
+from statsmodels.tsa.arima.model import ARIMA
+from sklearn.metrics import mean_squared_error
+from math import sqrt
+
+def predict(coef, history):
+	yhat = 0.0
+	for i in range(1, len(coef)+1):
+		yhat += coef[i-1] * history[-i]
+	return yhat
+
+series = read_csv('daily-minimum-temperatures.csv', header=0, index_col=0)
+X = series.values
+size = len(X) - 7
+train, test = X[0:size], X[size:]
+history = [x for x in train]
+predictions = list()
+for t in range(len(test)):
+	model = ARIMA(history, order=(0,0,1))
+	model_fit = model.fit()
+	ma_coef = model_fit.maparams
+	resid = model_fit.resid
+	yhat = predict(ma_coef, resid)
+	predictions.append(yhat)
+	obs = test[t]
+	history.append(obs)
+	print('>predicted=%.3f, expected=%.3f' % (yhat, obs))
+rmse = sqrt(mean_squared_error(test, predictions))
+print('Test RMSE: %.3f' % rmse)
+>predicted=4.610, expected=12.900
+>predicted=7.085, expected=14.600
+>predicted=6.423, expected=14.000
+>predicted=6.476, expected=13.600
+>predicted=6.089, expected=13.500
+>predicted=6.335, expected=15.700
+>predicted=8.006, expected=13.000
+Test RMSE: 7.568
+residuals = list()
+...
+error = expected - predicted
+residuals.append(error)
+from pandas import read_csv
+from matplotlib import pyplot
+from statsmodels.tsa.arima.model import ARIMA
+from sklearn.metrics import mean_squared_error
+from math import sqrt
+
+def predict(coef, history):
+	yhat = 0.0
+	for i in range(1, len(coef)+1):
+		yhat += coef[i-1] * history[-i]
+	return yhat
+
+series = read_csv('daily-minimum-temperatures.csv', header=0, index_col=0)
+X = series.values
+size = len(X) - 7
+train, test = X[0:size], X[size:]
+history = [x for x in train]
+predictions = list()
+for t in range(len(test)):
+	model = ARIMA(history, order=(1,0,1))
+	model_fit = model.fit()
+	ar_coef, ma_coef = model_fit.arparams, model_fit.maparams
+	resid = model_fit.resid
+	yhat = predict(ar_coef, history) + predict(ma_coef, resid)
+	predictions.append(yhat)
+	obs = test[t]
+	history.append(obs)
+	print('>predicted=%.3f, expected=%.3f' % (yhat, obs))
+rmse = sqrt(mean_squared_error(test, predictions))
+print('Test RMSE: %.3f' % rmse)
+yhat = predict(ar_coef, history) + predict(ma_coef, resid)
+>predicted=11.920, expected=12.900
+>predicted=12.309, expected=14.600
+>predicted=13.293, expected=14.000
+>predicted=13.549, expected=13.600
+>predicted=13.504, expected=13.500
+>predicted=13.434, expected=15.700
+>predicted=14.401, expected=13.000
+Test RMSE: 1.405
+def difference(dataset):
+	diff = list()
+	for i in range(1, len(dataset)):
+		value = dataset[i] - dataset[i - 1]
+		diff.append(value)
+	return numpy.array(diff)
+from pandas import read_csv
+from matplotlib import pyplot
+from statsmodels.tsa.arima.model import ARIMA
+from sklearn.metrics import mean_squared_error
+from math import sqrt
+import numpy
+
+def predict(coef, history):
+	yhat = 0.0
+	for i in range(1, len(coef)+1):
+		yhat += coef[i-1] * history[-i]
+	return yhat
+
+def difference(dataset):
+	diff = list()
+	for i in range(1, len(dataset)):
+		value = dataset[i] - dataset[i - 1]
+		diff.append(value)
+	return numpy.array(diff)
+
+series = read_csv('daily-minimum-temperatures.csv', header=0, index_col=0)
+X = series.values
+size = len(X) - 7
+train, test = X[0:size], X[size:]
+history = [x for x in train]
+predictions = list()
+for t in range(len(test)):
+	model = ARIMA(history, order=(1,1,1))
+	model_fit = model.fit()
+	ar_coef, ma_coef = model_fit.arparams, model_fit.maparams
+	resid = model_fit.resid
+	diff = difference(history)
+	yhat = history[-1] + predict(ar_coef, diff) + predict(ma_coef, resid)
+	predictions.append(yhat)
+	obs = test[t]
+	history.append(obs)
+	print('>predicted=%.3f, expected=%.3f' % (yhat, obs))
+rmse = sqrt(mean_squared_error(test, predictions))
+print('Test RMSE: %.3f' % rmse)
+>predicted=11.837, expected=12.900
+>predicted=13.265, expected=14.600
+>predicted=14.159, expected=14.000
+>predicted=13.868, expected=13.600
+>predicted=13.662, expected=13.500
+>predicted=13.603, expected=15.700
+>predicted=14.788, expected=13.000
+Test RMSE: 1.232
+'''

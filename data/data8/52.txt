@@ -1,0 +1,330 @@
+How to Grid Search ARIMA Model Hyperparameters with Python
+https://machinelearningmastery.com/grid-search-arima-hyperparameters-with-python/
+2017-01-17
+The ARIMA model for time series analysis and forecasting can be tricky to configure.
+There are 3 parameters that require estimation by iterative trial and error from reviewing diagnostic plots and using 40-year-old heuristic rules.
+We can automate the process of evaluating a large number of hyperparameters for the ARIMA model by using a grid search procedure.
+In this tutorial, you will discover how to tune the ARIMA model using a grid search of hyperparameters in Python.
+After completing this tutorial, you will know:
+- A general procedure that you can use to tune the ARIMA hyperparameters for a rolling one-step forecast.
+- How to apply ARIMA hyperparameter optimization on a standard univariate time series dataset.
+- Ideas for extending the procedure for more elaborate and robust models.
+Kick-start your project with my new book Time Series Forecasting With Python, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Updated Apr/2019: Updated the links to datasets.
+- Updated Aug/2019: Updated data loading to use new API.
+- Updated Dec/2020: Updated modeling for changes to the API.
+How to Grid Search ARIMA Model Hyperparameters with PythonPhoto by Alpha, some rights reserved.
+# Grid Searching Method
+Diagnostic plots of the time series can be used along with heuristic rules to determine the hyperparameters of the ARIMA model.
+These are good in most, but perhaps not all, situations.
+We can automate the process of training and evaluating ARIMA models on different combinations of model hyperparameters. In machine learning this is called a grid search or model tuning.
+In this tutorial, we will develop a method to grid search ARIMA hyperparameters for a one-step rolling forecast.
+The approach is broken down into two parts:
+- Evaluate an ARIMA model.
+- Evaluate sets of ARIMA parameters.
+The code in this tutorial makes use of the scikit-learn, Pandas, and the statsmodels Python libraries.
+
+
+
+
+We can evaluate an ARIMA model by preparing it on a training dataset and evaluating predictions on a test dataset.
+This approach involves the following steps:
+- Split the dataset into training and test sets.
+- Walk the time steps in the test dataset.
+
+Train an ARIMA model.
+Make a one-step prediction.
+Store prediction; get and store actual observation.
+
+
+- Train an ARIMA model.
+- Make a one-step prediction.
+- Store prediction; get and store actual observation.
+- Calculate error score for predictions compared to expected values.
+We can implement this in Python as a new standalone function called evaluate_arima_model() that takes a time series dataset as input as well as a tuple with the p, d, and q parameters for the model to be evaluated.
+The dataset is split in two: 66% for the initial training dataset and the remaining 34% for the test dataset.
+Each time step of the test set is iterated. Just one iteration provides a model that you could use to make predictions on new data. The iterative approach allows a new ARIMA model to be trained each time step.
+A prediction is made each iteration and stored in a list. This is so that at the end of the test set, all predictions can be compared to the list of expected values and an error score calculated. In this case, a mean squared error score is calculated and returned.
+The complete function is listed below.
+Now that we know how to evaluate one set of ARIMA hyperparameters, let’s see how we can call this function repeatedly for a grid of parameters to evaluate.
+Evaluating a suite of parameters is relatively straightforward.
+The user must specify a grid of p, d, and q ARIMA parameters to iterate. A model is created for each parameter and its performance evaluated by calling the evaluate_arima_model() function described in the previous section.
+The function must keep track of the lowest error score observed and the configuration that caused it. This can be summarized at the end of the function with a print to standard out.
+We can implement this function called evaluate_models() as a series of four loops.
+There are two additional considerations. The first is to ensure the input data are floating point values (as opposed to integers or strings), as this can cause the ARIMA procedure to fail.
+Second, the statsmodels ARIMA procedure internally uses numerical optimization procedures to find a set of coefficients for the model. These procedures can fail, which in turn can throw an exception. We must catch these exceptions and skip those configurations that cause a problem. This happens more often then you would think.
+Additionally, it is recommended that warnings be ignored for this code to avoid a lot of noise from running the procedure. This can be done as follows:
+Finally, even with all of these protections, the underlying C and Fortran libraries may still report warnings to standard out, such as:
+These have been removed from the results reported in this tutorial for brevity.
+The complete procedure for evaluating a grid of ARIMA hyperparameters is listed below.
+Now that we have a procedure to grid search ARIMA hyperparameters, let’s test the procedure on two univariate time series problems.
+We will start with the Shampoo Sales dataset.
+# Shampoo Sales Case Study
+The Shampoo Sales dataset describes the monthly number of sales of shampoo over a 3-year period.
+The units are a sales count and there are 36 observations. The original dataset is credited to Makridakis, Wheelwright, and Hyndman (1998).
+- Download the dataset.
+Download the dataset and place it into your current working directory with the filename “shampoo-sales.csv“.
+The timestamps in the time series do not contain an absolute year component. We can use a custom date-parsing function when loading the data and baseline the year from 1900, as follows:
+Once loaded, we can specify a site of p, d, and q values to search and pass them to the evaluate_models() function.
+We will try a suite of lag values (p) and just a few difference iterations (d) and residual error lag values (q).
+Putting this all together with the generic procedures defined in the previous section, we can grid search ARIMA hyperparameters in the Shampoo Sales dataset.
+The complete code example is listed below.
+Running the example prints the ARIMA parameters and MSE for each successful evaluation completed.
+The best parameters of ARIMA(4, 2, 1) are reported at the end of the run with a mean squared error of 4,694.873.
+
+# Daily Female Births Case Study
+The Daily Female Births dataset describes the number of daily female births in California in 1959.
+The units are a count and there are 365 observations. The source of the dataset is credited to Newton (1988).
+- Download the dataset.
+Download the dataset and place it in your current working directory with the filename “daily-total-female-births.csv“.
+This dataset can be easily loaded directly as a Pandas Series.
+To keep things simple, we will explore the same grid of ARIMA hyperparameters as in the previous section.
+Putting this all together, we can grid search ARIMA parameters on the Daily Female Births dataset. The complete code listing is provided below.
+Running the example prints the ARIMA parameters and mean squared error for each configuration successfully evaluated.
+The best mean parameters are reported as ARIMA(6, 1, 0) with a mean squared error of 53.187.
+
+# Extensions
+The grid search method used in this tutorial is simple and can easily be extended.
+This section lists some ideas to extend the approach you may wish to explore.
+- Seed Grid. The classical diagnostic tools of ACF and PACF plots can still be used with the results used to seed the grid of ARIMA parameters to search.
+- Alternate Measures. The search seeks to optimize the out-of-sample mean squared error. This could be changed to another out-of-sample statistic, an in-sample statistic, such as AIC or BIC, or some combination of the two. You can choose a metric that is most meaningful on your project.
+- Residual Diagnostics. Statistics can automatically be calculated on the residual forecast errors to provide an additional indication of the quality of the fit. Examples include statistical tests for whether the distribution of residuals is Gaussian and whether there is an autocorrelation in the residuals.
+- Update Model. The ARIMA model is created from scratch for each one-step forecast. With careful inspection of the API, it may be possible to update the internal data of the model with new observations rather than recreating it from scratch.
+- Preconditions. The ARIMA model can make assumptions about the time series dataset, such as normality and stationarity. These could be checked and a warning raised for a given of a dataset prior to a given model being trained.
+# Summary
+In this tutorial, you discovered how to grid search the hyperparameters for the ARIMA model in Python.
+Specifically, you learned:
+- A procedure that you can use to grid search ARIMA hyperparameters for a one-step rolling forecast.
+- How to apply ARIMA hyperparameters tuning on standard univariate time series datasets.
+- Ideas on how to further improve grid searching of ARIMA hyperparameters.
+Now it’s your turn.
+Try this procedure on your favorite time series dataset. What results did you get?
+Report your results in the comments below.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Want to Develop Time Series Forecasts with Python?
+Discover how in my new Ebook:
+Introduction to Time Series Forecasting With Python
+It covers self-study tutorials and end-to-end projects on topics like:
+Loading data, visualization, modeling, algorithm tuning, and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+# evaluate an ARIMA model for a given order (p,d,q)
+def evaluate_arima_model(X, arima_order):
+	# prepare training dataset
+	train_size = int(len(X) * 0.66)
+	train, test = X[0:train_size], X[train_size:]
+	history = [x for x in train]
+	# make predictions
+	predictions = list()
+	for t in range(len(test)):
+		model = ARIMA(history, order=arima_order)
+		model_fit = model.fit()
+		yhat = model_fit.forecast()[0]
+		predictions.append(yhat)
+		history.append(test[t])
+	# calculate out of sample error
+	error = mean_squared_error(test, predictions)
+	return error
+import warnings
+warnings.filterwarnings("ignore")
+** On entry to DLASCL, parameter number 4 had an illegal value
+# evaluate combinations of p, d and q values for an ARIMA model
+def evaluate_models(dataset, p_values, d_values, q_values):
+	dataset = dataset.astype('float32')
+	best_score, best_cfg = float("inf"), None
+	for p in p_values:
+		for d in d_values:
+			for q in q_values:
+				order = (p,d,q)
+				try:
+					mse = evaluate_arima_model(dataset, order)
+					if mse < best_score:
+						best_score, best_cfg = mse, order
+					print('ARIMA%s MSE=%.3f' % (order,mse))
+				except:
+					continue
+	print('Best ARIMA%s MSE=%.3f' % (best_cfg, best_score))
+# load dataset
+def parser(x):
+	return datetime.strptime('190'+x, '%Y-%m')
+series = read_csv('shampoo-sales.csv', header=0, parse_dates=[0], index_col=0, squeeze=True, date_parser=parser)
+# evaluate parameters
+p_values = [0, 1, 2, 4, 6, 8, 10]
+d_values = range(0, 3)
+q_values = range(0, 3)
+warnings.filterwarnings("ignore")
+evaluate_models(series.values, p_values, d_values, q_values)
+# grid search ARIMA parameters for time series
+import warnings
+from math import sqrt
+from pandas import read_csv
+from pandas import datetime
+from statsmodels.tsa.arima.model import ARIMA
+from sklearn.metrics import mean_squared_error
+
+# evaluate an ARIMA model for a given order (p,d,q)
+def evaluate_arima_model(X, arima_order):
+	# prepare training dataset
+	train_size = int(len(X) * 0.66)
+	train, test = X[0:train_size], X[train_size:]
+	history = [x for x in train]
+	# make predictions
+	predictions = list()
+	for t in range(len(test)):
+		model = ARIMA(history, order=arima_order)
+		model_fit = model.fit()
+		yhat = model_fit.forecast()[0]
+		predictions.append(yhat)
+		history.append(test[t])
+	# calculate out of sample error
+	rmse = sqrt(mean_squared_error(test, predictions))
+	return rmse
+
+# evaluate combinations of p, d and q values for an ARIMA model
+def evaluate_models(dataset, p_values, d_values, q_values):
+	dataset = dataset.astype('float32')
+	best_score, best_cfg = float("inf"), None
+	for p in p_values:
+		for d in d_values:
+			for q in q_values:
+				order = (p,d,q)
+				try:
+					rmse = evaluate_arima_model(dataset, order)
+					if rmse < best_score:
+						best_score, best_cfg = rmse, order
+					print('ARIMA%s RMSE=%.3f' % (order,rmse))
+				except:
+					continue
+	print('Best ARIMA%s RMSE=%.3f' % (best_cfg, best_score))
+
+# load dataset
+def parser(x):
+	return datetime.strptime('190'+x, '%Y-%m')
+series = read_csv('shampoo-sales.csv', header=0, index_col=0, parse_dates=True, squeeze=True, date_parser=parser)
+# evaluate parameters
+p_values = [0, 1, 2, 4, 6, 8, 10]
+d_values = range(0, 3)
+q_values = range(0, 3)
+warnings.filterwarnings("ignore")
+evaluate_models(series.values, p_values, d_values, q_values)
+ARIMA(0, 0, 0) MSE=52425.268
+ARIMA(0, 0, 1) MSE=38145.167
+ARIMA(0, 0, 2) MSE=23989.567
+ARIMA(0, 1, 0) MSE=18003.173
+ARIMA(0, 1, 1) MSE=9558.410
+ARIMA(0, 2, 0) MSE=67339.808
+ARIMA(0, 2, 1) MSE=18323.163
+ARIMA(1, 0, 0) MSE=23112.958
+ARIMA(1, 1, 0) MSE=7121.373
+ARIMA(1, 1, 1) MSE=7003.683
+ARIMA(1, 2, 0) MSE=18607.980
+ARIMA(2, 1, 0) MSE=5689.932
+ARIMA(2, 1, 1) MSE=7759.707
+ARIMA(2, 2, 0) MSE=9860.948
+ARIMA(4, 1, 0) MSE=6649.594
+ARIMA(4, 1, 1) MSE=6796.279
+ARIMA(4, 2, 0) MSE=7596.332
+ARIMA(4, 2, 1) MSE=4694.873
+ARIMA(6, 1, 0) MSE=6810.080
+ARIMA(6, 2, 0) MSE=6261.107
+ARIMA(8, 0, 0) MSE=7256.028
+ARIMA(8, 1, 0) MSE=6579.403
+Best ARIMA(4, 2, 1) MSE=4694.873
+# load dataset
+series = read_csv('daily-total-female-births.csv', header=0, index_col=0)
+# evaluate parameters
+p_values = [0, 1, 2, 4, 6, 8, 10]
+d_values = range(0, 3)
+q_values = range(0, 3)
+warnings.filterwarnings("ignore")
+evaluate_models(series.values, p_values, d_values, q_values)
+# grid search ARIMA parameters for time series
+import warnings
+from math import sqrt
+from pandas import read_csv
+from statsmodels.tsa.arima.model import ARIMA
+from sklearn.metrics import mean_squared_error
+
+# evaluate an ARIMA model for a given order (p,d,q)
+def evaluate_arima_model(X, arima_order):
+	# prepare training dataset
+	train_size = int(len(X) * 0.66)
+	train, test = X[0:train_size], X[train_size:]
+	history = [x for x in train]
+	# make predictions
+	predictions = list()
+	for t in range(len(test)):
+		model = ARIMA(history, order=arima_order)
+		model_fit = model.fit()
+		yhat = model_fit.forecast()[0]
+		predictions.append(yhat)
+		history.append(test[t])
+	# calculate out of sample error
+	rmse = sqrt(mean_squared_error(test, predictions))
+	return rmse
+
+# evaluate combinations of p, d and q values for an ARIMA model
+def evaluate_models(dataset, p_values, d_values, q_values):
+	dataset = dataset.astype('float32')
+	best_score, best_cfg = float("inf"), None
+	for p in p_values:
+		for d in d_values:
+			for q in q_values:
+				order = (p,d,q)
+				try:
+					rmse = evaluate_arima_model(dataset, order)
+					if rmse < best_score:
+						best_score, best_cfg = rmse, order
+					print('ARIMA%s RMSE=%.3f' % (order,rmse))
+				except:
+					continue
+	print('Best ARIMA%s RMSE=%.3f' % (best_cfg, best_score))
+
+# load dataset
+series = read_csv('daily-total-female-births.csv', header=0, index_col=0, parse_dates=True, squeeze=True)
+# evaluate parameters
+p_values = [0, 1, 2, 4, 6, 8, 10]
+d_values = range(0, 3)
+q_values = range(0, 3)
+warnings.filterwarnings("ignore")
+evaluate_models(series.values, p_values, d_values, q_values)
+ARIMA(0, 0, 0) MSE=67.063
+ARIMA(0, 0, 1) MSE=62.165
+ARIMA(0, 0, 2) MSE=60.386
+ARIMA(0, 1, 0) MSE=84.038
+ARIMA(0, 1, 1) MSE=56.653
+ARIMA(0, 1, 2) MSE=55.272
+ARIMA(0, 2, 0) MSE=246.414
+ARIMA(0, 2, 1) MSE=84.659
+ARIMA(1, 0, 0) MSE=60.876
+ARIMA(1, 1, 0) MSE=65.928
+ARIMA(1, 1, 1) MSE=55.129
+ARIMA(1, 1, 2) MSE=55.197
+ARIMA(1, 2, 0) MSE=143.755
+ARIMA(2, 0, 0) MSE=59.251
+ARIMA(2, 1, 0) MSE=59.487
+ARIMA(2, 1, 1) MSE=55.013
+ARIMA(2, 2, 0) MSE=107.600
+ARIMA(4, 0, 0) MSE=59.189
+ARIMA(4, 1, 0) MSE=57.428
+ARIMA(4, 1, 1) MSE=55.862
+ARIMA(4, 2, 0) MSE=80.207
+ARIMA(6, 0, 0) MSE=58.773
+ARIMA(6, 1, 0) MSE=53.187
+ARIMA(6, 1, 1) MSE=57.055
+ARIMA(6, 2, 0) MSE=69.753
+ARIMA(8, 0, 0) MSE=56.984
+ARIMA(8, 1, 0) MSE=57.290
+ARIMA(8, 2, 0) MSE=66.034
+ARIMA(8, 2, 1) MSE=57.884
+ARIMA(10, 0, 0) MSE=57.470
+ARIMA(10, 1, 0) MSE=57.359
+ARIMA(10, 2, 0) MSE=65.503
+ARIMA(10, 2, 1) MSE=57.878
+ARIMA(10, 2, 2) MSE=58.309
+Best ARIMA(6, 1, 0) MSE=53.187
+'''

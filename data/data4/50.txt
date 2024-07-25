@@ -1,0 +1,503 @@
+How to Use Test-Time Augmentation to Make Better Predictions
+https://machinelearningmastery.com/how-to-use-test-time-augmentation-to-improve-model-performance-for-image-classification/
+2019-04-14
+Data augmentation is a technique often used to improve performance and reduce generalization error when training neural network models for computer vision problems.
+The image data augmentation technique can also be applied when making predictions with a fit model in order to allow the model to make predictions for multiple different versions of each image in the test dataset. The predictions on the augmented images can be averaged, which can result in better predictive performance.
+In this tutorial, you will discover test-time augmentation for improving the performance of models for image classification tasks.
+After completing this tutorial, you will know:
+- Test-time augmentation is the application of data augmentation techniques normally used during training when making predictions.
+- How to implement test-time augmentation from scratch in Keras.
+- How to use test-time augmentation to improve the performance of a convolutional neural network model on a standard image classification task.
+Kick-start your project with my new book Deep Learning for Computer Vision, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+How to Use Test-Time Augmentation to Improve Model Performance for Image ClassificationPhoto by daveynin, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into five parts; they are:
+- Test-Time Augmentation
+- Test-Time Augmentation in Keras
+- Dataset and Baseline Model
+- Example of Test-Time Augmentation
+- How to Tune Test-Time Augmentation Configuration
+# Test-Time Augmentation
+Data augmentation is an approach typically used during the training of the model that expands the training set with modified copies of samples from the training dataset.
+Data augmentation is often performed with image data, where copies of images in the training dataset are created with some image manipulation techniques performed, such as zooms, flips, shifts, and more.
+The artificially expanded training dataset can result in a more skillful model, as often the performance of deep learning models continues to scale in concert with the size of the training dataset. In addition, the modified or augmented versions of the images in the training dataset assist the model in extracting and learning features in a way that is invariant to their position, lighting, and more.
+Test-time augmentation, or TTA for short, is an application of data augmentation to the test dataset.
+Specifically, it involves creating multiple augmented copies of each image in the test set, having the model make a prediction for each, then returning an ensemble of those predictions.
+Augmentations are chosen to give the model the best opportunity for correctly classifying a given image, and the number of copies of an image for which a model must make a prediction is often small, such as less than 10 or 20.
+Often, a single simple test-time augmentation is performed, such as a shift, crop, or image flip.
+In their 2015 paper that achieved then state-of-the-art results on the ILSVRC dataset titled “Very Deep Convolutional Networks for Large-Scale Image Recognition,” the authors use horizontal flip test-time augmentation:
+We also augment the test set by horizontal flipping of the images; the soft-max class posteriors of the original and flipped images are averaged to obtain the final scores for the image.
+Similarly, in their 2015 paper on the inception architecture titled “Rethinking the Inception Architecture for Computer Vision,” the authors at Google use cropping test-time augmentation, which they refer to as multi-crop evaluation.
+# Test-Time Augmentation in Keras
+Test-time augmentation is not provided natively in the Keras deep learning library but can be implemented easily.
+The ImageDataGenerator class can be used to configure the choice of test-time augmentation. For example, the data generator below is configured for horizontal flip image data augmentation.
+The augmentation can then be applied to each sample in the test dataset separately.
+First, the dimensions of the single image can be expanded from [rows][cols][channels] to [samples][rows][cols][channels], where the number of samples is one, for the single image. This transforms the array for the image into an array of samples with one image.
+Next, an iterator can be created for the sample, and the batch size can be used to specify the number of augmented images to generate, such as 10.
+The iterator can then be passed to the predict_generator() function of the model in order to make a prediction. Specifically, a batch of 10 augmented images will be generated and the model will make a prediction for each.
+Finally, an ensemble prediction can be made. A prediction was made for each image, and each prediction contains a probability of the image belonging to each class, in the case of image multiclass classification.
+An ensemble prediction can be made using soft voting where the probabilities of each class are summed across the predictions and a class prediction is made by calculating the argmax() of the summed predictions, returning the index or class number of the largest summed probability.
+We can tie these elements together into a function that will take a configured data generator, fit model, and single image, and will return a class prediction (integer) using test-time augmentation.
+Now that we know how to make predictions in Keras using test-time augmentation, let’s work through an example to demonstrate the approach.
+# Dataset and Baseline Model
+We can demonstrate test-time augmentation using a standard computer vision dataset and a convolutional neural network.
+Before we can do that, we must select a dataset and a baseline model.
+We will use the CIFAR-10 dataset, comprised of 60,000 32×32 pixel color photographs of objects from 10 classes, such as frogs, birds, cats, ships, etc. CIFAR-10 is a well-understood dataset and widely used for benchmarking computer vision algorithms in the field of machine learning. The problem is “solved.” Top performance on the problem is achieved by deep learning convolutional neural networks with a classification accuracy above 96% or 97% on the test dataset.
+We will also use a convolutional neural network, or CNN, model that is capable of achieving good (better than random) results, but not state-of-the-art results, on the problem. This will be sufficient to demonstrate the lift in performance that test-time augmentation can provide.
+The CIFAR-10 dataset can be loaded easily via the Keras API by calling the cifar10.load_data() function, that returns a tuple with the training and test datasets split into input (images) and output (class labels) components.
+It is good practice to normalize the pixel values from the range 0-255 down to the range 0-1 prior to modeling. This ensures that the inputs are small and close to zero, and will, in turn, mean that the weights of the model will be kept small, leading to faster and better learning.
+The class labels are integers and must be converted to a one hot encoding prior to modeling.
+This can be achieved using the to_categorical() Keras utility function.
+We are now ready to define a model for this multi-class classification problem.
+The model has a convolutional layer with 32 filter maps with a 3×3 kernel using the rectifier linear activation, “same” padding so the output is the same size as the input and the He weight initialization. This is followed by a batch normalization layer and a max pooling layer.
+This pattern is repeated with a convolutional, batch norm, and max pooling layer, although the number of filters is increased to 64. The output is then flattened before being interpreted by a dense layer and finally provided to the output layer to make a prediction.
+The Adam variation of stochastic gradient descent is used to find the model weights.
+The categorical cross entropy loss function is used, required for multi-class classification, and classification accuracy is monitored during training.
+The model is fit for three training epochs and a large batch size of 128 images is used.
+Once fit, the model is evaluated on the test dataset.
+The complete example is listed below and will easily run on the CPU in a few minutes.
+Running the example shows that the model is capable of learning the problem well and quickly.
+A test set accuracy of about 66% is achieved, which is okay, but not terrific. The chosen model configuration has already started to overfit and could benefit from the use of regularization and further tuning. Nevertheless, this provides a good starting point for demonstrating test-time augmentation.
+Neural networks are stochastic algorithms and the same model fit on the same data multiple times may find a different set of weights and, in turn, have different performance each time.
+In order to even out the estimate of model performance, we can change the example to re-run the fit and evaluation of the model multiple times and report the mean and standard deviation of the distribution of scores on the test dataset.
+First, we can define a function named load_dataset() that will load the CIFAR-10 dataset and prepare it for modeling.
+Next, we can define a function named define_model() that will define a model for the CIFAR-10 dataset, ready to be fit and then evaluated.
+Next, an evaluate_model() function is defined that will fit the defined model on the training dataset and then evaluate it on the test dataset, returning the estimated classification accuracy for the run.
+Next, we can define a function with new behavior to repeatedly define, fit, and evaluate a new model and return the distribution of accuracy scores.
+The repeated_evaluation() function below implements this, taking the dataset and using a default of 10 repeated evaluations.
+Finally, we can call the load_dataset() function to prepare the dataset, then repeated_evaluation() to get a distribution of accuracy scores that can be summarized by reporting the mean and standard deviation.
+Tying all of this together, the complete code example of repeatedly evaluating a CNN model on the MNIST dataset is listed below.
+Running the example may take a while on modern CPU hardware and is much faster on GPU hardware.
+The accuracy of the model is reported for each repeated evaluation and the final mean model performance is reported.
+In this case, we can see that the mean accuracy of the chosen model configuration is about 68%, which is close to the estimate from a single model run.
+Now that we have developed a baseline model for a standard dataset, let’s look at updating the example to use test-time augmentation.
+# Example of Test-Time Augmentation
+We can now update our repeated evaluation of the CNN model on CIFAR-10 to use test-time augmentation.
+The tta_prediction() function developed in the section above on how to implement test-time augmentation in Keras can be used directly.
+We can develop a function that will drive the test-time augmentation by defining the ImageDataGenerator configuration and call tta_prediction() for each image in the test dataset.
+It is important to consider the types of image augmentations that may benefit a model fit on the CIFAR-10 dataset. Augmentations that cause minor modifications to the photographs might be useful. This might include augmentations such as zooms, shifts, and horizontal flips.
+In this example, we will only use horizontal flips.
+We will configure the image generator to create seven photos, from which the mean prediction for each example in the test set will be made.
+The tta_evaluate_model() function below configures the ImageDataGenerator then enumerates the test dataset, making a class label prediction for each image in the test dataset. The accuracy is then calculated by comparing the predicted class labels to the class labels in the test dataset. This requires that we reverse the one hot encoding performed in load_dataset() by using argmax().
+The evaluate_model() function can then be updated to call tta_evaluate_model() in order to get model accuracy scores.
+Tying all of this together, the complete example of the repeated evaluation of a CNN for CIFAR-10 with test-time augmentation is listed below.
+Running the example may take some time given the repeated evaluation and the slower manual test-time augmentation used to evaluate each model.
+In this case, we can see a modest lift in performance from about 68.6% on the test set without test-time augmentation to about 69.8% accuracy on the test set with test-time augmentation.
+
+# How to Tune Test-Time Augmentation Configuration
+Choosing the augmentation configurations that give the biggest lift in model performance can be challenging.
+Not only are there many augmentation methods to choose from and configuration options for each, but the time to fit and evaluate a model on a single set of configuration options can take a long time, even if fit on a fast GPU.
+Instead, I recommend fitting the model once and saving it to file. For example:
+Then load the model from a separate file and evaluate different test-time augmentation schemes on a small validation dataset or small subset of the test set.
+For example:
+Once you find a set of augmentation options that give the biggest lift, you can then evaluate the model on the whole test set or trial a repeated evaluation experiment as above.
+Test-time augmentation configuration not only includes the options for the ImageDataGenerator, but also the number of images generated from which the average prediction will be made for each example in the test set.
+I used this approach to choose the test-time augmentation in the previous section, discovering that seven examples worked better than three or five, and that random zooming and random shifts appeared to decrease model accuracy.
+Remember, if you also use image data augmentation for the training dataset and that augmentation uses a type of pixel scaling that involves calculating statistics on the dataset (e.g. you call datagen.fit()), then those same statistics and pixel scaling techniques must also be used during test-time augmentation.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Image Preprocessing Keras API.
+- Keras Sequential Model API.
+- numpy.argmax API
+- Image Segmentation With Test Time Augmentation With Keras
+- keras_tta, Simple test-time augmentation (TTA) for keras python library.
+- tta_wrapper, Test Time image Augmentation (TTA) wrapper for Keras model.
+# Summary
+In this tutorial, you discovered test-time augmentation for improving the performance of models for image classification tasks.
+Specifically, you learned:
+- Test-time augmentation is the application of data augmentation techniques normally used during training when making predictions.
+- How to implement test-time augmentation from scratch in Keras.
+- How to use test-time augmentation to improve the performance of a convolutional neural network model on a standard image classification task.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+
+'''
+# configure image data augmentation
+datagen = ImageDataGenerator(horizontal_flip=True)
+# convert image into dataset
+samples = expand_dims(image, 0)
+# prepare iterator
+it = datagen.flow(samples, batch_size=10)
+# make predictions for each augmented image
+yhats = model.predict_generator(it, steps=10, verbose=0)
+# sum across predictions
+summed = numpy.sum(yhats, axis=0)
+# argmax across classes
+return argmax(summed)
+# make a prediction using test-time augmentation
+def tta_prediction(datagen, model, image, n_examples):
+	# convert image into dataset
+	samples = expand_dims(image, 0)
+	# prepare iterator
+	it = datagen.flow(samples, batch_size=n_examples)
+	# make predictions for each augmented image
+	yhats = model.predict_generator(it, steps=n_examples, verbose=0)
+	# sum across predictions
+	summed = numpy.sum(yhats, axis=0)
+	# argmax across classes
+	return argmax(summed)
+# load dataset
+(trainX, trainY), (testX, testY) = load_data()
+# normalize pixel values
+trainX = trainX.astype('float32') / 255
+testX = testX.astype('float32') / 255
+# one hot encode target values
+trainY = to_categorical(trainY)
+testY = to_categorical(testY)
+# define model
+model = Sequential()
+model.add(Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='he_uniform', input_shape=(32, 32, 3)))
+model.add(BatchNormalization())
+model.add(MaxPooling2D((2, 2)))
+model.add(Conv2D(64, (3, 3), activation='relu', padding='same', kernel_initializer='he_uniform'))
+model.add(BatchNormalization())
+model.add(MaxPooling2D((2, 2)))
+model.add(Flatten())
+model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
+model.add(BatchNormalization())
+model.add(Dense(10, activation='softmax'))
+# compile model
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+# fit model
+model.fit(trainX, trainY, epochs=3, batch_size=128)
+# evaluate model
+_, acc = model.evaluate(testX, testY, verbose=0)
+print(acc)
+# baseline cnn model for the cifar10 problem
+from keras.datasets.cifar10 import load_data
+from keras.utils import to_categorical
+from keras.models import Sequential
+from keras.layers import Conv2D
+from keras.layers import MaxPooling2D
+from keras.layers import Dense
+from keras.layers import Flatten
+from keras.layers import BatchNormalization
+# load dataset
+(trainX, trainY), (testX, testY) = load_data()
+# normalize pixel values
+trainX = trainX.astype('float32') / 255
+testX = testX.astype('float32') / 255
+# one hot encode target values
+trainY = to_categorical(trainY)
+testY = to_categorical(testY)
+# define model
+model = Sequential()
+model.add(Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='he_uniform', input_shape=(32, 32, 3)))
+model.add(BatchNormalization())
+model.add(MaxPooling2D((2, 2)))
+model.add(Conv2D(64, (3, 3), activation='relu', padding='same', kernel_initializer='he_uniform'))
+model.add(BatchNormalization())
+model.add(MaxPooling2D((2, 2)))
+model.add(Flatten())
+model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
+model.add(BatchNormalization())
+model.add(Dense(10, activation='softmax'))
+# compile model
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+# fit model
+history = model.fit(trainX, trainY, epochs=3, batch_size=128)
+# evaluate model
+_, acc = model.evaluate(testX, testY, verbose=0)
+print(acc)
+Epoch 1/3
+50000/50000 [==============================] - 64s 1ms/step - loss: 1.2135 - acc: 0.5766
+Epoch 2/3
+50000/50000 [==============================] - 63s 1ms/step - loss: 0.8498 - acc: 0.7035
+Epoch 3/3
+50000/50000 [==============================] - 63s 1ms/step - loss: 0.6799 - acc: 0.7632
+0.6679
+# load and return the cifar10 dataset ready for modeling
+def load_dataset():
+	# load dataset
+	(trainX, trainY), (testX, testY) = load_data()
+	# normalize pixel values
+	trainX = trainX.astype('float32') / 255
+	testX = testX.astype('float32') / 255
+	# one hot encode target values
+	trainY = to_categorical(trainY)
+	testY = to_categorical(testY)
+	return trainX, trainY, testX, testY
+# define the cnn model for the cifar10 dataset
+def define_model():
+	# define model
+	model = Sequential()
+	model.add(Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='he_uniform', input_shape=(32, 32, 3)))
+	model.add(BatchNormalization())
+	model.add(MaxPooling2D((2, 2)))
+	model.add(Conv2D(64, (3, 3), activation='relu', padding='same', kernel_initializer='he_uniform'))
+	model.add(BatchNormalization())
+	model.add(MaxPooling2D((2, 2)))
+	model.add(Flatten())
+	model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
+	model.add(BatchNormalization())
+	model.add(Dense(10, activation='softmax'))
+	# compile model
+	model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+	return model
+# fit and evaluate a defined model
+def evaluate_model(model, trainX, trainY, testX, testY):
+	# fit model
+	model.fit(trainX, trainY, epochs=3, batch_size=128, verbose=0)
+	# evaluate model
+	_, acc = model.evaluate(testX, testY, verbose=0)
+	return acc
+# repeatedly evaluate model, return distribution of scores
+def repeated_evaluation(trainX, trainY, testX, testY, repeats=10):
+	scores = list()
+	for _ in range(repeats):
+		# define model
+		model = define_model()
+		# fit and evaluate model
+		accuracy = evaluate_model(model, trainX, trainY, testX, testY)
+		# store score
+		scores.append(accuracy)
+		print('> %.3f' % accuracy)
+	return scores
+# load dataset
+trainX, trainY, testX, testY = load_dataset()
+# evaluate model
+scores = repeated_evaluation(trainX, trainY, testX, testY)
+# summarize result
+print('Accuracy: %.3f (%.3f)' % (mean(scores), std(scores)))
+# baseline cnn model for the cifar10 problem, repeated evaluation
+from numpy import mean
+from numpy import std
+from keras.datasets.cifar10 import load_data
+from keras.utils import to_categorical
+from keras.models import Sequential
+from keras.layers import Conv2D
+from keras.layers import MaxPooling2D
+from keras.layers import Dense
+from keras.layers import Flatten
+from keras.layers import BatchNormalization
+
+# load and return the cifar10 dataset ready for modeling
+def load_dataset():
+	# load dataset
+	(trainX, trainY), (testX, testY) = load_data()
+	# normalize pixel values
+	trainX = trainX.astype('float32') / 255
+	testX = testX.astype('float32') / 255
+	# one hot encode target values
+	trainY = to_categorical(trainY)
+	testY = to_categorical(testY)
+	return trainX, trainY, testX, testY
+
+# define the cnn model for the cifar10 dataset
+def define_model():
+	# define model
+	model = Sequential()
+	model.add(Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='he_uniform', input_shape=(32, 32, 3)))
+	model.add(BatchNormalization())
+	model.add(MaxPooling2D((2, 2)))
+	model.add(Conv2D(64, (3, 3), activation='relu', padding='same', kernel_initializer='he_uniform'))
+	model.add(BatchNormalization())
+	model.add(MaxPooling2D((2, 2)))
+	model.add(Flatten())
+	model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
+	model.add(BatchNormalization())
+	model.add(Dense(10, activation='softmax'))
+	# compile model
+	model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+	return model
+
+# fit and evaluate a defined model
+def evaluate_model(model, trainX, trainY, testX, testY):
+	# fit model
+	model.fit(trainX, trainY, epochs=3, batch_size=128, verbose=0)
+	# evaluate model
+	_, acc = model.evaluate(testX, testY, verbose=0)
+	return acc
+
+# repeatedly evaluate model, return distribution of scores
+def repeated_evaluation(trainX, trainY, testX, testY, repeats=10):
+	scores = list()
+	for _ in range(repeats):
+		# define model
+		model = define_model()
+		# fit and evaluate model
+		accuracy = evaluate_model(model, trainX, trainY, testX, testY)
+		# store score
+		scores.append(accuracy)
+		print('> %.3f' % accuracy)
+	return scores
+
+# load dataset
+trainX, trainY, testX, testY = load_dataset()
+# evaluate model
+scores = repeated_evaluation(trainX, trainY, testX, testY)
+# summarize result
+print('Accuracy: %.3f (%.3f)' % (mean(scores), std(scores)))
+> 0.690
+> 0.662
+> 0.698
+> 0.681
+> 0.686
+> 0.680
+> 0.697
+> 0.696
+> 0.689
+> 0.679
+Accuracy: 0.686 (0.010)
+# make a prediction using test-time augmentation
+def tta_prediction(datagen, model, image, n_examples):
+	# convert image into dataset
+	samples = expand_dims(image, 0)
+	# prepare iterator
+	it = datagen.flow(samples, batch_size=n_examples)
+	# make predictions for each augmented image
+	yhats = model.predict_generator(it, steps=n_examples, verbose=0)
+	# sum across predictions
+	summed = numpy.sum(yhats, axis=0)
+	# argmax across classes
+	return argmax(summed)
+# configure image data augmentation
+datagen = ImageDataGenerator(horizontal_flip=True)
+# evaluate a model on a dataset using test-time augmentation
+def tta_evaluate_model(model, testX, testY):
+	# configure image data augmentation
+	datagen = ImageDataGenerator(horizontal_flip=True)
+	# define the number of augmented images to generate per test set image
+	n_examples_per_image = 7
+	yhats = list()
+	for i in range(len(testX)):
+		# make augmented prediction
+		yhat = tta_prediction(datagen, model, testX[i], n_examples_per_image)
+		# store for evaluation
+		yhats.append(yhat)
+	# calculate accuracy
+	testY_labels = argmax(testY, axis=1)
+	acc = accuracy_score(testY_labels, yhats)
+	return acc
+# fit and evaluate a defined model
+def evaluate_model(model, trainX, trainY, testX, testY):
+	# fit model
+	model.fit(trainX, trainY, epochs=3, batch_size=128, verbose=0)
+	# evaluate model using tta
+	acc = tta_evaluate_model(model, testX, testY)
+	return acc
+# cnn model for the cifar10 problem with test-time augmentation
+import numpy
+from numpy import argmax
+from numpy import mean
+from numpy import std
+from numpy import expand_dims
+from sklearn.metrics import accuracy_score
+from keras.datasets.cifar10 import load_data
+from keras.utils import to_categorical
+from keras.preprocessing.image import ImageDataGenerator
+from keras.models import Sequential
+from keras.layers import Conv2D
+from keras.layers import MaxPooling2D
+from keras.layers import Dense
+from keras.layers import Flatten
+from keras.layers import BatchNormalization
+
+# load and return the cifar10 dataset ready for modeling
+def load_dataset():
+	# load dataset
+	(trainX, trainY), (testX, testY) = load_data()
+	# normalize pixel values
+	trainX = trainX.astype('float32') / 255
+	testX = testX.astype('float32') / 255
+	# one hot encode target values
+	trainY = to_categorical(trainY)
+	testY = to_categorical(testY)
+	return trainX, trainY, testX, testY
+
+# define the cnn model for the cifar10 dataset
+def define_model():
+	# define model
+	model = Sequential()
+	model.add(Conv2D(32, (3, 3), activation='relu', padding='same', kernel_initializer='he_uniform', input_shape=(32, 32, 3)))
+	model.add(BatchNormalization())
+	model.add(MaxPooling2D((2, 2)))
+	model.add(Conv2D(64, (3, 3), activation='relu', padding='same', kernel_initializer='he_uniform'))
+	model.add(BatchNormalization())
+	model.add(MaxPooling2D((2, 2)))
+	model.add(Flatten())
+	model.add(Dense(128, activation='relu', kernel_initializer='he_uniform'))
+	model.add(BatchNormalization())
+	model.add(Dense(10, activation='softmax'))
+	# compile model
+	model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+	return model
+
+# make a prediction using test-time augmentation
+def tta_prediction(datagen, model, image, n_examples):
+	# convert image into dataset
+	samples = expand_dims(image, 0)
+	# prepare iterator
+	it = datagen.flow(samples, batch_size=n_examples)
+	# make predictions for each augmented image
+	yhats = model.predict_generator(it, steps=n_examples, verbose=0)
+	# sum across predictions
+	summed = numpy.sum(yhats, axis=0)
+	# argmax across classes
+	return argmax(summed)
+
+# evaluate a model on a dataset using test-time augmentation
+def tta_evaluate_model(model, testX, testY):
+	# configure image data augmentation
+	datagen = ImageDataGenerator(horizontal_flip=True)
+	# define the number of augmented images to generate per test set image
+	n_examples_per_image = 7
+	yhats = list()
+	for i in range(len(testX)):
+		# make augmented prediction
+		yhat = tta_prediction(datagen, model, testX[i], n_examples_per_image)
+		# store for evaluation
+		yhats.append(yhat)
+	# calculate accuracy
+	testY_labels = argmax(testY, axis=1)
+	acc = accuracy_score(testY_labels, yhats)
+	return acc
+
+# fit and evaluate a defined model
+def evaluate_model(model, trainX, trainY, testX, testY):
+	# fit model
+	model.fit(trainX, trainY, epochs=3, batch_size=128, verbose=0)
+	# evaluate model using tta
+	acc = tta_evaluate_model(model, testX, testY)
+	return acc
+
+# repeatedly evaluate model, return distribution of scores
+def repeated_evaluation(trainX, trainY, testX, testY, repeats=10):
+	scores = list()
+	for _ in range(repeats):
+		# define model
+		model = define_model()
+		# fit and evaluate model
+		accuracy = evaluate_model(model, trainX, trainY, testX, testY)
+		# store score
+		scores.append(accuracy)
+		print('> %.3f' % accuracy)
+	return scores
+
+# load dataset
+trainX, trainY, testX, testY = load_dataset()
+# evaluate model
+scores = repeated_evaluation(trainX, trainY, testX, testY)
+# summarize result
+print('Accuracy: %.3f (%.3f)' % (mean(scores), std(scores)))
+> 0.719
+> 0.716
+> 0.709
+> 0.694
+> 0.690
+> 0.694
+> 0.680
+> 0.676
+> 0.702
+> 0.704
+Accuracy: 0.698 (0.013)
+# save model
+model.save('model.h5')
+
+# load model
+model = load_model('model.h5')
+# evaluate model
+datagen = ImageDataGenerator(...)
+...
+'''

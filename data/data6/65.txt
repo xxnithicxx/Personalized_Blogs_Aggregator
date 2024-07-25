@@ -1,0 +1,430 @@
+How to Perform Face Detection with Deep Learning
+https://machinelearningmastery.com/how-to-perform-face-detection-with-classical-and-deep-learning-methods-in-python-with-keras/
+2019-06-02
+Face detection is a computer vision problem that involves finding faces in photos.
+It is a trivial problem for humans to solve and has been solved reasonably well by classical feature-based techniques, such as the cascade classifier. More recently deep learning methods have achieved state-of-the-art results on standard benchmark face detection datasets. One example is the Multi-task Cascade Convolutional Neural Network, or MTCNN for short.
+In this tutorial, you will discover how to perform face detection in Python using classical and deep learning models.
+After completing this tutorial, you will know:
+- Face detection is a non-trivial computer vision problem for identifying and localizing faces in images.
+- Face detection can be performed using the classical feature-based cascade classifier using the OpenCV library.
+- State-of-the-art face detection can be achieved using a Multi-task Cascade CNN via the MTCNN library.
+Kick-start your project with my new book Deep Learning for Computer Vision, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Update Nov/2019: Updated for TensorFlow v2.0 and MTCNN v0.1.0.
+How to Perform Face Detection With Classical and Deep Learning MethodsPhoto by Miguel Discart, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into four parts; they are:
+- Face Detection
+- Test Photographs
+- Face Detection With OpenCV
+- Face Detection With Deep Learning
+# Face Detection
+Face detection is a problem in computer vision of locating and localizing one or more faces in a photograph.
+Locating a face in a photograph refers to finding the coordinate of the face in the image, whereas localization refers to demarcating the extent of the face, often via a bounding box around the face.
+A general statement of the problem can be defined as follows: Given a still or video image, detect and localize an unknown number (if any) of faces
+— Face Detection: A Survey, 2001.
+Detecting faces in a photograph is easily solved by humans, although has historically been challenging for computers given the dynamic nature of faces. For example, faces must be detected regardless of orientation or angle they are facing, light levels, clothing, accessories, hair color, facial hair, makeup, age, and so on.
+The human face is a dynamic object and has a high degree of variability in its appearance, which makes face detection a difficult problem in computer vision.
+— Face Detection: A Survey, 2001.
+Given a photograph, a face detection system will output zero or more bounding boxes that contain faces. Detected faces can then be provided as input to a subsequent system, such as a face recognition system.
+Face detection is a necessary first-step in face recognition systems, with the purpose of localizing and extracting the face region from the background.
+— Face Detection: A Survey, 2001.
+There are perhaps two main approaches to face recognition: feature-based methods that use hand-crafted filters to search for and detect faces, and image-based methods that learn holistically how to extract faces from the entire image.
+# Test Photographs
+We need test images for face detection in this tutorial.
+To keep things simple, we will use two test images: one with two faces, and one with many faces. We’re not trying to push the limits of face detection, just demonstrate how to perform face detection with normal front-on photographs of people.
+The first image is a photo of two college students taken by CollegeDegrees360 and made available under a permissive license.
+Download the image and place it in your current working directory with the filename ‘test1.jpg‘.
+College Students (test1.jpg)Photo by CollegeDegrees360, some rights reserved.
+- College Students (test1.jpg)
+The second image is a photograph of a number of people on a swim team taken by Bob n Renee and released under a permissive license.
+Download the image and place it in your current working directory with the filename ‘test2.jpg‘.
+Swim Team (test2.jpg)Photo by Bob n Renee, some rights reserved.
+- Swim Team (test2.jpg)
+# Face Detection With OpenCV
+Feature-based face detection algorithms are fast and effective and have been used successfully for decades.
+Perhaps the most successful example is a technique called cascade classifiers first described by Paul Viola and Michael Jones and their 2001 paper titled “Rapid Object Detection using a Boosted Cascade of Simple Features.”
+In the paper, effective features are learned using the AdaBoost algorithm, although importantly, multiple models are organized into a hierarchy or “cascade.”
+In the paper, the AdaBoost model is used to learn a range of very simple or weak features in each face, that together provide a robust classifier.
+… feature selection is achieved through a simple modification of the AdaBoost procedure: the weak learner is constrained so that each weak classifier returned can depend on only a single feature . As a result each stage of the boosting process, which selects a new weak classifier, can be viewed as a feature selection process.
+— Rapid Object Detection using a Boosted Cascade of Simple Features, 2001.
+The models are then organized into a hierarchy of increasing complexity, called a “cascade“.
+Simpler classifiers operate on candidate face regions directly, acting like a coarse filter, whereas complex classifiers operate only on those candidate regions that show the most promise as faces.
+… a method for combining successively more complex classifiers in a cascade structure which dramatically increases the speed of the detector by focusing attention on promising regions of the image.
+— Rapid Object Detection using a Boosted Cascade of Simple Features, 2001.
+The result is a very fast and effective face detection algorithm that has been the basis for face detection in consumer products, such as cameras.
+Their detector, called detector cascade, consists of a sequence of simple-to-complex face classifiers and has attracted extensive research efforts. Moreover, detector cascade has been deployed in many commercial products such as smartphones and digital cameras.
+— Multi-view Face Detection Using Deep Convolutional Neural Networks, 2015.
+It is a modestly complex classifier that has also been tweaked and refined over the last nearly 20 years.
+A modern implementation of the Classifier Cascade face detection algorithm is provided in the OpenCV library. This is a C++ computer vision library that provides a python interface. The benefit of this implementation is that it provides pre-trained face detection models, and provides an interface to train a model on your own dataset.
+OpenCV can be installed by the package manager system on your platform, or via pip; for example:
+Once the installation process is complete, it is important to confirm that the library was installed correctly.
+This can be achieved by importing the library and checking the version number; for example:
+Running the example will import the library and print the version. In this case, we are using version 4 of the library.
+OpenCV provides the CascadeClassifier class that can be used to create a cascade classifier for face detection. The constructor can take a filename as an argument that specifies the XML file for a pre-trained model.
+OpenCV provides a number of pre-trained models as part of the installation. These are available on your system and are also available on the OpenCV GitHub project.
+Download a pre-trained model for frontal face detection from the OpenCV GitHub project and place it in your current working directory with the filename ‘haarcascade_frontalface_default.xml‘.
+- Download Open Frontal Face Detection Model (haarcascade_frontalface_default.xml)
+Once downloaded, we can load the model as follows:
+Once loaded, the model can be used to perform face detection on a photograph by calling the detectMultiScale() function.
+This function will return a list of bounding boxes for all faces detected in the photograph.
+We can demonstrate this with an example with the college students photograph (test.jpg).
+The photo can be loaded using OpenCV via the imread() function.
+The complete example of performing face detection on the college students photograph with a pre-trained cascade classifier in OpenCV is listed below.
+Running the example first loads the photograph, then loads and configures the cascade classifier; faces are detected and each bounding box is printed.
+Each box lists the x and y coordinates for the bottom-left-hand-corner of the bounding box, as well as the width and the height. The results suggest that two bounding boxes were detected.
+We can update the example to plot the photograph and draw each bounding box.
+This can be achieved by drawing a rectangle for each box directly over the pixels of the loaded image using the rectangle() function that takes two points.
+We can then plot the photograph and keep the window open until we press a key to close it.
+The complete example is listed below.
+Running the example, we can see that the photograph was plotted correctly and that each face was correctly detected.
+College Students Photograph With Faces Detected using OpenCV Cascade Classifier
+We can try the same code on the second photograph of the swim team, specifically ‘test2.jpg‘.
+Running the example, we can see that many of the faces were detected correctly, but the result is not perfect.
+Note: Your results may vary given the stochastic nature of the algorithm or evaluation procedure, or differences in numerical precision. Consider running the example a few times and compare the average outcome.
+We can see that a face on the first or bottom row of people was detected twice, that a face on the middle row of people was not detected, and that the background on the third or top row was detected as a face.
+Swim Team Photograph With Faces Detected using OpenCV Cascade Classifier
+The detectMultiScale() function provides some arguments to help tune the usage of the classifier. Two parameters of note are scaleFactor and minNeighbors; for example:
+The scaleFactor controls how the input image is scaled prior to detection, e.g. is it scaled up or down, which can help to better find the faces in the image. The default value is 1.1 (10% increase), although this can be lowered to values such as 1.05 (5% increase) or raised to values such as 1.4 (40% increase).
+The minNeighbors determines how robust each detection must be in order to be reported, e.g. the number of candidate rectangles that found the face. The default is 3, but this can be lowered to 1 to detect a lot more faces and will likely increase the false positives, or increase to 6 or more to require a lot more confidence before a face is detected.
+The scaleFactor and minNeighbors often require tuning for a given image or dataset in order to best detect the faces. It may be helpful to perform a sensitivity analysis across a grid of values and see what works well or best in general on one or multiple photographs.
+A fast strategy may be to lower (or increase for small photos) the scaleFactor until all faces are detected, then increase the minNeighbors until all false positives disappear, or close to it.
+With some tuning, I found that a scaleFactor of 1.05 successfully detected all of the faces, but the background detected as a face did not disappear until a minNeighbors of 8, after which three faces on the middle row were no longer detected.
+The results are not perfect, and perhaps better results can be achieved with further tuning, and perhaps post-processing of the bounding boxes.
+Swim Team Photograph With Faces Detected Using OpenCV Cascade Classifier After Some Tuning
+# Face Detection With Deep Learning
+A number of deep learning methods have been developed and demonstrated for face detection.
+Perhaps one of the more popular approaches is called the “Multi-Task Cascaded Convolutional Neural Network,” or MTCNN for short, described by Kaipeng Zhang, et al. in the 2016 paper titled “Joint Face Detection and Alignment Using Multitask Cascaded Convolutional Networks.”
+The MTCNN is popular because it achieved then state-of-the-art results on a range of benchmark datasets, and because it is capable of also recognizing other facial features such as eyes and mouth, called landmark detection.
+The network uses a cascade structure with three networks; first the image is rescaled to a range of different sizes (called an image pyramid), then the first model (Proposal Network or P-Net) proposes candidate facial regions, the second model (Refine Network or R-Net) filters the bounding boxes, and the third model (Output Network or O-Net) proposes facial landmarks.
+The proposed CNNs consist of three stages. In the first stage, it produces candidate windows quickly through a shallow CNN. Then, it refines the windows to reject a large number of non-faces windows through a more complex CNN. Finally, it uses a more powerful CNN to refine the result and output facial landmarks positions.
+— Joint Face Detection and Alignment Using Multitask Cascaded Convolutional Networks, 2016.
+The image below taken from the paper provides a helpful summary of the three stages from top-to-bottom and the output of each stage left-to-right.
+Pipeline for the Multi-Task Cascaded Convolutional Neural NetworkTaken from: Joint Face Detection and Alignment Using Multitask Cascaded Convolutional Networks.
+The model is called a multi-task network because each of the three models in the cascade (P-Net, R-Net and O-Net) are trained on three tasks, e.g. make three types of predictions; they are: face classification, bounding box regression, and facial landmark localization.
+The three models are not connected directly; instead, outputs of the previous stage are fed as input to the next stage. This allows additional processing to be performed between stages; for example, non-maximum suppression (NMS) is used to filter the candidate bounding boxes proposed by the first-stage P-Net prior to providing them to the second stage R-Net model.
+The MTCNN architecture is reasonably complex to implement. Thankfully, there are open source implementations of the architecture that can be trained on new datasets, as well as pre-trained models that can be used directly for face detection. Of note is the official release with the code and models used in the paper, with the implementation provided in the Caffe deep learning framework.
+Perhaps the best-of-breed third-party Python-based MTCNN project is called “MTCNN” by Iván de Paz Centeno, or ipazc, made available under a permissive MIT open source license. As a third-party open-source project, it is subject to change, therefore I have a fork of the project at the time of writing available here.
+The MTCNN project, which we will refer to as ipazc/MTCNN to differentiate it from the name of the network, provides an implementation of the MTCNN architecture using TensorFlow and OpenCV. There are two main benefits to this project; first, it provides a top-performing pre-trained model and the second is that it can be installed as a library ready for use in your own code.
+The library can be installed via pip; for example:
+After successful installation, you should see a message like:
+You can then confirm that the library was installed correctly via pip; for example:
+You should see output like that listed below. In this case, you can see that we are using version 0.0.8 of the library.
+You can also confirm that the library was installed correctly via Python, as follows:
+Running the example will load the library, confirming it was installed correctly; and print the version.
+Now that we are confident that the library was installed correctly, we can use it for face detection.
+An instance of the network can be created by calling the MTCNN() constructor.
+By default, the library will use the pre-trained model, although you can specify your own model via the ‘weights_file‘ argument and specify a path or URL, for example:
+The minimum box size for detecting a face can be specified via the ‘min_face_size‘ argument, which defaults to 20 pixels. The constructor also provides a ‘scale_factor‘ argument to specify the scale factor for the input image, which defaults to 0.709.
+Once the model is configured and loaded, it can be used directly to detect faces in photographs by calling the detect_faces() function.
+This returns a list of dict object, each providing a number of keys for the details of each face detected, including:
+- ‘box‘: Providing the x, y of the bottom left of the bounding box, as well as the width and height of the box.
+- ‘confidence‘: The probability confidence of the prediction.
+- ‘keypoints‘: Providing a dict with dots for the ‘left_eye‘, ‘right_eye‘, ‘nose‘, ‘mouth_left‘, and ‘mouth_right‘.
+For example, we can perform face detection on the college students photograph as follows:
+Running the example loads the photograph, loads the model, performs face detection, and prints a list of each face detected.
+We can draw the boxes on the image by first plotting the image with matplotlib, then creating a Rectangle object using the x, y and width and height of a given bounding box; for example:
+Below is a function named draw_image_with_boxes() that shows the photograph and then draws a box for each bounding box detected.
+The complete example making use of this function is listed below.
+Running the example plots the photograph then draws a bounding box for each of the detected faces.
+We can see that both faces were detected correctly.
+College Students Photograph With Bounding Boxes Drawn for Each Detected Face Using MTCNN
+We can draw a circle via the Circle class for the eyes, nose, and mouth; for example
+The complete example with this addition to the draw_image_with_boxes() function is listed below.
+The example plots the photograph again with bounding boxes and facial key points.
+We can see that eyes, nose, and mouth are detected well on each face, although the mouth on the right face could be better detected, with the points looking a little lower than the corners of the mouth.
+College Students Photograph With Bounding Boxes and Facial Keypoints Drawn for Each Detected Face Using MTCNN
+We can now try face detection on the swim team photograph, e.g. the image test2.jpg.
+Running the example, we can see that all thirteen faces were correctly detected and that it looks roughly like all of the facial keypoints are also correct.
+Swim Team Photograph With Bounding Boxes and Facial Keypoints Drawn for Each Detected Face Using MTCNN
+We may want to extract the detected faces and pass them as input to another system.
+This can be achieved by extracting the pixel data directly out of the photograph; for example:
+We can demonstrate this by extracting each face and plotting them as separate subplots. You could just as easily save them to file. The draw_faces() below extracts and plots each detected face in a photograph.
+The complete example demonstrating this function for the swim team photo is listed below.
+Running the example creates a plot that shows each separate face detected in the photograph of the swim team.
+Plot of Each Separate Face Detected in a Photograph of a Swim Team
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Face Detection: A Survey, 2001.
+- Rapid Object Detection using a Boosted Cascade of Simple Features, 2001.
+- Multi-view Face Detection Using Deep Convolutional Neural Networks, 2015.
+- Joint Face Detection and Alignment Using Multitask Cascaded Convolutional Networks, 2016.
+- Chapter 11 Face Detection, Handbook of Face Recognition, Second Edition, 2011.
+- OpenCV Homepage
+- OpenCV GitHub Project
+- Face Detection using Haar Cascades, OpenCV.
+- Cascade Classifier Training, OpenCV.
+- Cascade Classifier, OpenCV.
+- Official MTCNN Project
+- Python MTCNN Project
+- matplotlib.patches.Rectangle API
+- matplotlib.patches.Circle API
+- Face detection, Wikipedia.
+- Cascading classifiers, Wikipedia.
+In this tutorial, you discovered how to perform face detection in Python using classical and deep learning models.
+Specifically, you learned:
+- Face detection is a computer vision problem for identifying and localizing faces in images.
+- Face detection can be performed using the classical feature-based cascade classifier using the OpenCV library.
+- State-of-the-art face detection can be achieved using a Multi-task Cascade CNN via the MTCNN library.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+
+'''
+sudo pip install opencv-python
+# check opencv version
+import cv2
+# print version number
+print(cv2.__version__)
+4.1.1
+# load the pre-trained model
+classifier = CascadeClassifier('haarcascade_frontalface_default.xml')
+# perform face detection
+bboxes = classifier.detectMultiScale(pixels)
+# print bounding box for each detected face
+for box in bboxes:
+	print(box)
+# load the photograph
+pixels = imread('test1.jpg')
+# example of face detection with opencv cascade classifier
+from cv2 import imread
+from cv2 import CascadeClassifier
+# load the photograph
+pixels = imread('test1.jpg')
+# load the pre-trained model
+classifier = CascadeClassifier('haarcascade_frontalface_default.xml')
+# perform face detection
+bboxes = classifier.detectMultiScale(pixels)
+# print bounding box for each detected face
+for box in bboxes:
+	print(box)
+[174  75 107 107]
+[360 102 101 101]
+# extract
+x, y, width, height = box
+x2, y2 = x + width, y + height
+# draw a rectangle over the pixels
+rectangle(pixels, (x, y), (x2, y2), (0,0,255), 1)
+# show the image
+imshow('face detection', pixels)
+# keep the window open until we press a key
+waitKey(0)
+# close the window
+destroyAllWindows()
+# plot photo with detected faces using opencv cascade classifier
+from cv2 import imread
+from cv2 import imshow
+from cv2 import waitKey
+from cv2 import destroyAllWindows
+from cv2 import CascadeClassifier
+from cv2 import rectangle
+# load the photograph
+pixels = imread('test1.jpg')
+# load the pre-trained model
+classifier = CascadeClassifier('haarcascade_frontalface_default.xml')
+# perform face detection
+bboxes = classifier.detectMultiScale(pixels)
+# print bounding box for each detected face
+for box in bboxes:
+	# extract
+	x, y, width, height = box
+	x2, y2 = x + width, y + height
+	# draw a rectangle over the pixels
+	rectangle(pixels, (x, y), (x2, y2), (0,0,255), 1)
+# show the image
+imshow('face detection', pixels)
+# keep the window open until we press a key
+waitKey(0)
+# close the window
+destroyAllWindows()
+# load the photograph
+pixels = imread('test2.jpg')
+# perform face detection
+bboxes = classifier.detectMultiScale(pixels, 1.1, 3)
+# perform face detection
+bboxes = classifier.detectMultiScale(pixels, 1.05, 8)
+sudo pip install mtcnn
+Successfully installed mtcnn-0.1.0
+sudo pip show mtcnn
+Name: mtcnn
+Version: 0.1.0
+Summary: Multi-task Cascaded Convolutional Neural Networks for Face Detection, based on TensorFlow
+Home-page: http://github.com/ipazc/mtcnn
+Author: Iván de Paz Centeno
+Author-email: ipazc@unileon.es
+License: MIT
+Location: ...
+Requires: opencv-python, keras
+Required-by:
+# confirm mtcnn was installed correctly
+import mtcnn
+# print version
+print(mtcnn.__version__)
+0.1.0
+model = MTCNN(weights_file='filename.npy')
+# face detection with mtcnn on a photograph
+from matplotlib import pyplot
+from mtcnn.mtcnn import MTCNN
+# load image from file
+filename = 'test1.jpg'
+pixels = pyplot.imread(filename)
+# create the detector, using default weights
+detector = MTCNN()
+# detect faces in the image
+faces = detector.detect_faces(pixels)
+for face in faces:
+	print(face)
+{'box': [186, 71, 87, 115], 'confidence': 0.9994562268257141, 'keypoints': {'left_eye': (207, 110), 'right_eye': (252, 119), 'nose': (220, 143), 'mouth_left': (200, 148), 'mouth_right': (244, 159)}}
+{'box': [368, 75, 108, 138], 'confidence': 0.998593270778656, 'keypoints': {'left_eye': (392, 133), 'right_eye': (441, 140), 'nose': (407, 170), 'mouth_left': (388, 180), 'mouth_right': (438, 185)}}
+# get coordinates
+x, y, width, height = result['box']
+# create the shape
+rect = Rectangle((x, y), width, height, fill=False, color='red')
+# draw an image with detected objects
+def draw_image_with_boxes(filename, result_list):
+	# load the image
+	data = pyplot.imread(filename)
+	# plot the image
+	pyplot.imshow(data)
+	# get the context for drawing boxes
+	ax = pyplot.gca()
+	# plot each box
+	for result in result_list:
+		# get coordinates
+		x, y, width, height = result['box']
+		# create the shape
+		rect = Rectangle((x, y), width, height, fill=False, color='red')
+		# draw the box
+		ax.add_patch(rect)
+	# show the plot
+	pyplot.show()
+# face detection with mtcnn on a photograph
+from matplotlib import pyplot
+from matplotlib.patches import Rectangle
+from mtcnn.mtcnn import MTCNN
+
+# draw an image with detected objects
+def draw_image_with_boxes(filename, result_list):
+	# load the image
+	data = pyplot.imread(filename)
+	# plot the image
+	pyplot.imshow(data)
+	# get the context for drawing boxes
+	ax = pyplot.gca()
+	# plot each box
+	for result in result_list:
+		# get coordinates
+		x, y, width, height = result['box']
+		# create the shape
+		rect = Rectangle((x, y), width, height, fill=False, color='red')
+		# draw the box
+		ax.add_patch(rect)
+	# show the plot
+	pyplot.show()
+
+filename = 'test1.jpg'
+# load image from file
+pixels = pyplot.imread(filename)
+# create the detector, using default weights
+detector = MTCNN()
+# detect faces in the image
+faces = detector.detect_faces(pixels)
+# display faces on the original image
+draw_image_with_boxes(filename, faces)
+# draw the dots
+for key, value in result['keypoints'].items():
+	# create and draw dot
+	dot = Circle(value, radius=2, color='red')
+	ax.add_patch(dot)
+# face detection with mtcnn on a photograph
+from matplotlib import pyplot
+from matplotlib.patches import Rectangle
+from matplotlib.patches import Circle
+from mtcnn.mtcnn import MTCNN
+
+# draw an image with detected objects
+def draw_image_with_boxes(filename, result_list):
+	# load the image
+	data = pyplot.imread(filename)
+	# plot the image
+	pyplot.imshow(data)
+	# get the context for drawing boxes
+	ax = pyplot.gca()
+	# plot each box
+	for result in result_list:
+		# get coordinates
+		x, y, width, height = result['box']
+		# create the shape
+		rect = Rectangle((x, y), width, height, fill=False, color='red')
+		# draw the box
+		ax.add_patch(rect)
+		# draw the dots
+		for key, value in result['keypoints'].items():
+			# create and draw dot
+			dot = Circle(value, radius=2, color='red')
+			ax.add_patch(dot)
+	# show the plot
+	pyplot.show()
+
+filename = 'test1.jpg'
+# load image from file
+pixels = pyplot.imread(filename)
+# create the detector, using default weights
+detector = MTCNN()
+# detect faces in the image
+faces = detector.detect_faces(pixels)
+# display faces on the original image
+draw_image_with_boxes(filename, faces)
+# get coordinates
+x1, y1, width, height = result['box']
+x2, y2 = x1 + width, y1 + height
+# extract face
+face = data[y1:y2, x1:x2]
+# draw each face separately
+def draw_faces(filename, result_list):
+	# load the image
+	data = pyplot.imread(filename)
+	# plot each face as a subplot
+	for i in range(len(result_list)):
+		# get coordinates
+		x1, y1, width, height = result_list[i]['box']
+		x2, y2 = x1 + width, y1 + height
+		# define subplot
+		pyplot.subplot(1, len(result_list), i+1)
+		pyplot.axis('off')
+		# plot face
+		pyplot.imshow(data[y1:y2, x1:x2])
+	# show the plot
+	pyplot.show()
+# extract and plot each detected face in a photograph
+from matplotlib import pyplot
+from matplotlib.patches import Rectangle
+from matplotlib.patches import Circle
+from mtcnn.mtcnn import MTCNN
+
+# draw each face separately
+def draw_faces(filename, result_list):
+	# load the image
+	data = pyplot.imread(filename)
+	# plot each face as a subplot
+	for i in range(len(result_list)):
+		# get coordinates
+		x1, y1, width, height = result_list[i]['box']
+		x2, y2 = x1 + width, y1 + height
+		# define subplot
+		pyplot.subplot(1, len(result_list), i+1)
+		pyplot.axis('off')
+		# plot face
+		pyplot.imshow(data[y1:y2, x1:x2])
+	# show the plot
+	pyplot.show()
+
+filename = 'test2.jpg'
+# load image from file
+pixels = pyplot.imread(filename)
+# create the detector, using default weights
+detector = MTCNN()
+# detect faces in the image
+faces = detector.detect_faces(pixels)
+# display faces on the original image
+draw_faces(filename, faces)
+'''

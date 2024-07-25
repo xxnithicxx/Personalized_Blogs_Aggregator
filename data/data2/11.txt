@@ -1,0 +1,170 @@
+A Gentle Introduction to Sparse Matrices for Machine Learning
+https://machinelearningmastery.com/sparse-matrices-for-machine-learning/
+2018-03-13
+Matrices that contain mostly zero values are called sparse, distinct from matrices where most of the values are non-zero, called dense.
+Large sparse matrices are common in general and especially in applied machine learning, such as in data that contains counts, data encodings that map categories to counts, and even in whole subfields of machine learning such as natural language processing.
+It is computationally expensive to represent and work with sparse matrices as though they are dense, and much improvement in performance can be achieved by using representations and operations that specifically handle the matrix sparsity.
+In this tutorial, you will discover sparse matrices, the issues they present, and how to work with them directly in Python.
+After completing this tutorial, you will know:
+- That sparse matrices contain mostly zero values and are distinct from dense matrices.
+- The myriad of areas where you are likely to encounter sparse matrices in data, data preparation, and sub-fields of machine learning.
+- That there are many efficient ways to store and work with sparse matrices and SciPy provides implementations that you can use directly.
+Kick-start your project with my new book Linear Algebra for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+A Gentle Introduction to Sparse Matrices for Machine LearningPhoto by CAJC: in the Rockies, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into 5 parts; they are:
+- Sparse Matrix
+- Problems with Sparsity
+- Sparse Matrices in Machine Learning
+- Working with Sparse Matrices
+- Sparse Matrices in Python
+
+
+
+
+# Sparse Matrix
+A sparse matrix is a matrix that is comprised of mostly zero values.
+Sparse matrices are distinct from matrices with mostly non-zero values, which are referred to as dense matrices.
+A matrix is sparse if many of its coefficients are zero. The interest in sparsity arises because its exploitation can lead to enormous computational savings and because many large matrix problems that occur in practice are sparse.
+— Page 1, Direct Methods for Sparse Matrices, Second Edition, 2017.
+The sparsity of a matrix can be quantified with a score, which is the number of zero values in the matrix divided by the total number of elements in the matrix.
+Below is an example of a small 3 x 6 sparse matrix.
+The example has 13 zero values of the 18 elements in the matrix, giving this matrix a sparsity score of 0.722 or about 72%.
+# Problems with Sparsity
+Sparse matrices can cause problems with regards to space and time complexity.
+Very large matrices require a lot of memory, and some very large matrices that we wish to work with are sparse.
+In practice, most large matrices are sparse — almost all entries are zeros.
+— Page 465, Introduction to Linear Algebra, Fifth Edition, 2016.
+An example of a very large matrix that is too large to be stored in memory is a link matrix that shows the links from one website to another.
+An example of a smaller sparse matrix might be a word or term occurrence matrix for words in one book against all known words in English.
+In both cases, the matrix contained is sparse with many more zero values than data values. The problem with representing these sparse matrices as dense matrices is that memory is required and must be allocated for each 32-bit or even 64-bit zero value in the matrix.
+This is clearly a waste of memory resources as those zero values do not contain any information.
+Assuming a very large sparse matrix can be fit into memory, we will want to perform operations on this matrix.
+Simply, if the matrix contains mostly zero-values, i.e. no data, then performing operations across this matrix may take a long time where the bulk of the computation performed will involve adding or multiplying zero values together.
+It is wasteful to use general methods of linear algebra on such problems, because most of the O(N^3) arithmetic operations devoted to solving the set of equations or inverting the matrix involve zero operands.
+— Page 75, Numerical Recipes: The Art of Scientific Computing, Third Edition, 2007.
+This is a problem of increased time complexity of matrix operations that increases with the size of the matrix.
+This problem is compounded when we consider that even trivial machine learning methods may require many operations on each row, column, or even across the entire matrix, resulting in vastly longer execution times.
+# Sparse Matrices in Machine Learning
+Sparse matrices turn up a lot in applied machine learning.
+In this section, we will look at some common examples to motivate you to be aware of the issues of sparsity.
+Sparse matrices come up in some specific types of data, most notably observations that record the occurrence or count of an activity.
+Three examples include:
+- Whether or not a user has watched a movie in a movie catalog.
+- Whether or not a user has purchased a product in a product catalog.
+- Count of the number of listens of a song in a song catalog.
+Sparse matrices come up in encoding schemes used in the preparation of data.
+Three common examples include:
+- One-hot encoding, used to represent categorical data as sparse binary vectors.
+- Count encoding, used to represent the frequency of words in a vocabulary for a document
+- TF-IDF encoding, used to represent normalized word frequency scores in a vocabulary.
+Some areas of study within machine learning must develop specialized methods to address sparsity directly as the input data is almost always sparse.
+Three examples include:
+- Natural language processing for working with documents of text.
+- Recommender systems for working with product usage within a catalog.
+- Computer vision when working with images that contain lots of black pixels.
+If there are 100,000 words in the language model, then the feature vector has length 100,000, but for a short email message almost all the features will have count zero.
+— Page 866, Artificial Intelligence: A Modern Approach, Third Edition, 2009.
+# Working with Sparse Matrices
+The solution to representing and working with sparse matrices is to use an alternate data structure to represent the sparse data.
+The zero values can be ignored and only the data or non-zero values in the sparse matrix need to be stored or acted upon.
+There are multiple data structures that can be used to efficiently construct a sparse matrix; three common examples are listed below.
+- Dictionary of Keys. A dictionary is used where a row and column index is mapped to a value.
+- List of Lists. Each row of the matrix is stored as a list, with each sublist containing the column index and the value.
+- Coordinate List. A list of tuples is stored with each tuple containing the row index, column index, and the value.
+There are also data structures that are more suitable for performing efficient operations; two commonly used examples are listed below.
+- Compressed Sparse Row. The sparse matrix is represented using three one-dimensional arrays for the non-zero values, the extents of the rows, and the column indexes.
+- Compressed Sparse Column. The same as the Compressed Sparse Row method except the column indices are compressed and read first before the row indices.
+The Compressed Sparse Row, also called CSR for short, is often used to represent sparse matrices in machine learning given the efficient access and matrix multiplication that it supports.
+# Sparse Matrices in Python
+SciPy provides tools for creating sparse matrices using multiple data structures, as well as tools for converting a dense matrix to a sparse matrix.
+Many linear algebra NumPy and SciPy functions that operate on NumPy arrays can transparently operate on SciPy sparse arrays. Further, machine learning libraries that use NumPy data structures can also operate transparently on SciPy sparse arrays, such as scikit-learn for general machine learning and Keras for deep learning.
+A dense matrix stored in a NumPy array can be converted into a sparse matrix using the CSR representation by calling the csr_matrix() function.
+In the example below, we define a 3 x 6 sparse matrix as a dense array, convert it to a CSR sparse representation, and then convert it back to a dense array by calling the todense() function.
+Running the example first prints the defined dense array, followed by the CSR representation, and then the reconstructed dense matrix.
+NumPy does not provide a function to calculate the sparsity of a matrix.
+Nevertheless, we can calculate it easily by first finding the density of the matrix and subtracting it from one. The number of non-zero elements in a NumPy array can be given by the count_nonzero() function and the total number of elements in the array can be given by the size property of the array. Array sparsity can therefore be calculated as
+The example below demonstrates how to calculate the sparsity of an array.
+Running the example first prints the defined sparse matrix followed by the sparsity of the matrix.
+
+# Extensions
+This section lists some ideas for extending the tutorial that you may wish to explore.
+- Develop your own examples for converting a dense array to sparse and calculating sparsity.
+- Develop an example for the each sparse matrix representation method supported by SciPy.
+- Select one sparsity representation method and implement it yourself from scratch.
+If you explore any of these extensions, I’d love to know.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Introduction to Linear Algebra, Fifth Edition, 2016.
+- Section 2.7 Sparse Linear Systems, Numerical Recipes: The Art of Scientific Computing, Third Edition, 2007.
+- Artificial Intelligence: A Modern Approach, Third Edition, 2009.
+- Direct Methods for Sparse Matrices, Second Edition, 2017.
+- Sparse matrices (scipy.sparse) API
+- scipy.sparse.csr_matrix() API
+- numpy.count_nonzero() API
+- numpy.ndarray.size API
+- Sparse matrix on Wikipedia
+# Summary
+In this tutorial, you discovered sparse matrices, the issues they present, and how to work with them directly in Python.
+Specifically, you learned:
+- That sparse matrices contain mostly zero values and are distinct from dense matrices.
+- The myriad of areas where you are likely to encounter sparse matrices in data, data preparation, and sub-fields of machine learning.
+- That there are many efficient ways to store and work with sparse matrices and SciPy provides implementations that you can use directly.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Linear Algebra for Machine Learning!
+...by writing lines of code in python
+Discover how in my new Ebook:
+Linear Algebra for Machine Learning
+It provides self-study tutorials on topics like:
+Vector Norms, Matrix Multiplication, Tensors, Eigendecomposition, SVD, PCA and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+sparsity = count zero elements / total elements
+     1, 0, 0, 1, 0, 0
+A = (0, 0, 2, 0, 0, 1)
+     0, 0, 0, 2, 0, 0
+# dense to sparse
+from numpy import array
+from scipy.sparse import csr_matrix
+# create dense matrix
+A = array([[1, 0, 0, 1, 0, 0], [0, 0, 2, 0, 0, 1], [0, 0, 0, 2, 0, 0]])
+print(A)
+# convert to sparse matrix (CSR method)
+S = csr_matrix(A)
+print(S)
+# reconstruct dense matrix
+B = S.todense()
+print(B)
+[[1 0 0 1 0 0]
+ [0 0 2 0 0 1]
+ [0 0 0 2 0 0]]
+
+  (0, 0)	1
+  (0, 3)	1
+  (1, 2)	2
+  (1, 5)	1
+  (2, 3)	2
+
+[[1 0 0 1 0 0]
+ [0 0 2 0 0 1]
+ [0 0 0 2 0 0]]
+sparsity = 1.0 - count_nonzero(A) / A.size
+# calculate sparsity
+from numpy import array
+from numpy import count_nonzero
+# create dense matrix
+A = array([[1, 0, 0, 1, 0, 0], [0, 0, 2, 0, 0, 1], [0, 0, 0, 2, 0, 0]])
+print(A)
+# calculate sparsity
+sparsity = 1.0 - count_nonzero(A) / A.size
+print(sparsity)
+[[1 0 0 1 0 0]
+ [0 0 2 0 0 1]
+ [0 0 0 2 0 0]]
+
+0.7222222222222222
+'''

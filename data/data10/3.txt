@@ -1,0 +1,314 @@
+Line Search Optimization With Python
+https://machinelearningmastery.com/line-search-optimization-with-python/
+2021-05-25
+The line search is an optimization algorithm that can be used for objective functions with one or more variables.
+It provides a way to use a univariate optimization algorithm, like a bisection search on a multivariate objective function, by using the search to locate the optimal step size in each dimension from a known point to the optima.
+In this tutorial, you will discover how to perform a line search optimization in Python.
+After completing this tutorial, you will know:
+- Linear search is an optimization algorithm for univariate and multivariate optimization problems.
+- The SciPy library provides an API for performing a line search that requires that you know how to calculate the first derivative of your objective function.
+- How to perform a line search on an objective function and use the result.
+
+Kick-start your project with my new book Optimization for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+
+Line Search Optimization With PythonPhoto by Nathalie, some rights reserved.
+# Tutorial Overview
+This tutorial is divided into three parts; they are:
+- What Is a Line Search
+- Line Search in Python
+- How to Perform a Line Search
+
+Define the Objective Function
+Perform the Line Search
+Handling Line Search Failure Cases
+
+
+- Define the Objective Function
+- Perform the Line Search
+- Handling Line Search Failure Cases
+# What Is a Line Search
+Line search is an optimization algorithm for univariate or multivariate optimization.
+The algorithm requires an initial position in the search space and a direction along which to search. It will then choose the next position in the search space from the initial position that results in a better or best objective function evaluation.
+The direction is a magnitude indicating both the sign (positive or negative) along the line and the maximum extent to which to search. Therefore, the direction is better thought of as the candidate search region and must be large enough to encompass the optima, or a point better than the starting point.
+The line search will automatically choose the scale factor called alpha for the step size (the direction) from the current position that minimizes the objective function. This involves using another univariate optimization algorithm to find the optimal point in the chosen direction in order to select the appropriate alpha.
+One approach is to use line search, which selects the step factor that minimizes the one-dimensional function […] We can apply the univariate optimization method of our choice.
+— Page 54, Algorithms for Optimization, 2019.
+Alpha is a scale factor for the direction, as such only values in the range between 0.0 and 1.0 are considered in the search. A single step of the line search solves a minimization problem that minimizes the objective function for the current position plus the scaled direction:
+- minimize objective(position + alpha * direction)
+As such, the line search operates in one dimension at a time and returns the distance to move in a chosen direction.
+Each iteration of a line search method computes a search direction pk and then decides how far to move along that direction.
+— Page 30, Numerical Optimization, 2006.
+The line search can be called repeatedly to navigate a search space to a solution and can fail if the chosen direction does not contain a point with a lower objective function value, e.g. if the algorithm is directed to search uphill.
+The solution is approximate or inexact and may not be the global solution depending on the shape of the search space. The conditions under which this algorithm is appropriate are referred to as the Wolf conditions.
+Now that we are familiar with the line search, let’s explore how we might perform a line search in Python.
+# Line Search in Python
+We can perform a line search manually in Python using the line_search() function.
+It supports univariate optimization, as well as multivariate optimization problems.
+This function takes the name of the objective function and the name of the gradient for the objective function, as well as the current position in the search space and the direction to move.
+As such, you must know the first derivative for your objective function. You must also have some idea of where to start the search and the extent to which to perform the search. Recall, you can perform the search multiple times with different directions (sign and magnitude).
+The function returns a tuple of six elements, including the scale factor for the direction called alpha and the number of function evaluations that were performed, among other values.
+The first element in the result tuple contains the alpha. If the search fails to converge, the alpha will have the value None.
+The alpha, starting point, and direction can be used to construct the endpoint of a single line search.
+For optimization problems with more than one input variable, e.g. multivariate optimization, the line_search() function will return a single alpha value for all dimensions.
+This means the function assumes that the optima is equidistant from the starting point in all dimensions, which is a significant limitation.
+Now that we are familiar with how to perform a line search in Python, let’s explore a worked example.
+# How to Perform a Line Search
+We can demonstrate how to use the line search with a simple univariate objective function and its derivative.
+This section is divided into multiple parts, including defining the test function, performing the line search, and handling failing cases where the optima is not located.
+First, we can define the objective function.
+In this case, we will use a one-dimensional objective function, specifically x^2 shifted by a small amount away from zero. This is a convex function and was chosen because it is easy to understand and to calculate the first derivative.
+- objective(x) = (-5 + x)^2
+Note that the line search is not limited to one-dimensional functions or convex functions.
+The implementation of this function is listed below.
+The first derivative for this function can be calculated analytically, as follows:
+- gradient(x) = 2 * (-5 + x)
+The gradient for each input value just indicates the slope towards the optima at each point. The implementation of this function is listed below.
+We can define an input range for x from -10 to 20 and calculate the objective value for each input.
+We can then plot the input values versus the objective values to get an idea of the shape of the function.
+Tying this together, the complete example is listed below.
+Running the example evaluates input values (x) in the range from -10 to 20 and creates a plot showing the familiar parabola U-shape.
+The optima for the function appears to be at x=5.0 with an objective value of 0.0.
+Line Plot of Convex Objective Function
+Next, we can perform a line search on the function.
+First, we must define the starting point for the search and the direction to search.
+In this case, we will use a starting point of x=-5, which is about 10 units from the optima. We will take a large step to the right, e.g. the positive direction, in this case 100 units, which will greatly overshoot the optima.
+Recall the direction is like the step size and the search will scale the step size to find the optima.
+The search will then seek out the optima and return the alpha or distance to modify the direction.
+We can retrieve the alpha from the result, as well as the number of function evaluations that were performed.
+We can use the alpha, along with our starting point and the step size to calculate the location of the optima and calculate the objective function at that point (which we would expect would equal 0.0).
+Then, for fun, we can plot the function again and show the starting point as a green square and the endpoint as a red square.
+Tying this together, the complete example of performing a line search on the convex objective function is listed below.
+Running the example first reports the starting point and the direction.
+The search is performed and an alpha is located that modifies the direction to locate the optima, in this case, 0.1, which was found after three function evaluations.
+The point for the optima is located at 5.0, which evaluates to 0.0, as expected.
+Finally, a plot of the function is created showing both the starting point (green) and the objective (red).
+Line Plot of Objective Function With Search Starting Point and Optima
+The search is not guaranteed to find the optima of the function.
+This can happen if a direction is specified that is not large enough to encompass the optima.
+For example, if we use a direction of three, then the search will fail to find the optima. We can demonstrate this with a complete example, listed below.
+Running the example, the search reaches a limit of an alpha of 1.0 which gives an end point of -2 evaluating to 49. A long way from the optima at f(5) = 0.0.
+Additionally, we can choose the wrong direction that only results in worse evaluations than the starting point.
+In this case, the wrong direction would be negative away from the optima, e.g. all uphill from the starting point.
+The expectation is that the search would not converge as it is unable to locate any points better than the starting point.
+The complete example of the search that fails to converge is listed below.
+Running the example results in a LineSearchWarning indicating that the search could not converge, as expected.
+The alpha value returned from the search is None.
+
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- Algorithms for Optimization, 2019.
+- Numerical Optimization, 2006.
+- Optimization and root finding (scipy.optimize)
+- Optimization (scipy.optimize)
+- scipy.optimize.line_search API.
+- Line search, Wikipedia.
+- Wolfe conditions, Wikipedia.
+# Summary
+In this tutorial, you discovered how to perform a line search optimization in Python.
+Specifically, you learned:
+- Linear search is an optimization algorithm for univariate and multivariate optimization problems.
+- The SciPy library provides an API for performing a line search that requires that you know how to calculate the first derivative of your objective function.
+- How to perform a line search on an objective function and use the result.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Modern Optimization Algorithms!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Optimization for Machine Learning
+It provides self-study tutorials with full working code on:
+Gradient Descent, Genetic Algorithms, Hill Climbing, Curve Fitting, RMSProp, Adam,
+and much more...
+See What's Inside
+
+'''
+
+result = line_search(objective, gradient, point, direction)
+
+# retrieve the alpha value found as part of the line search
+alpha = result[0]
+
+# construct the end point of a line search
+end = point + alpha * direction
+# objective function
+def objective(x):
+	return (-5.0 + x)**2.0
+# gradient for the objective function
+def gradient(x):
+	return 2.0 * (-5.0 + x)
+
+# define range
+r_min, r_max = -10.0, 20.0
+# prepare inputs
+inputs = arange(r_min, r_max, 0.1)
+# compute targets
+targets = [objective(x) for x in inputs]
+
+# plot inputs vs objective
+pyplot.plot(inputs, targets, '-', label='objective')
+pyplot.legend()
+pyplot.show()
+# plot a convex objective function
+from numpy import arange
+from matplotlib import pyplot
+
+# objective function
+def objective(x):
+	return (-5.0 + x)**2.0
+
+# gradient for the objective function
+def gradient(x):
+	return 2.0 * (-5.0 + x)
+
+# define range
+r_min, r_max = -10.0, 20.0
+# prepare inputs
+inputs = arange(r_min, r_max, 0.1)
+# compute targets
+targets = [objective(x) for x in inputs]
+# plot inputs vs objective
+pyplot.plot(inputs, targets, '-', label='objective')
+pyplot.legend()
+pyplot.show()
+
+# define the starting point
+point = -5.0
+# define the direction to move
+direction = 100.0
+# print the initial conditions
+print('start=%.1f, direction=%.1f' % (point, direction))
+# perform the line search
+result = line_search(objective, gradient, point, direction)
+
+# summarize the result
+alpha = result[0]
+print('Alpha: %.3f' % alpha)
+print('Function evaluations: %d' % result[1])
+
+# define objective function minima 
+end = point + alpha * direction
+# evaluate objective function minima
+print('f(end) = %.3f' % objective(end))
+
+# define range
+r_min, r_max = -10.0, 20.0
+# prepare inputs
+inputs = arange(r_min, r_max, 0.1)
+# compute targets
+targets = [objective(x) for x in inputs]
+# plot inputs vs objective
+pyplot.plot(inputs, targets, '--', label='objective')
+# plot start and end of the search
+pyplot.plot([point], [objective(point)], 's', color='g')
+pyplot.plot([end], [objective(end)], 's', color='r')
+pyplot.legend()
+pyplot.show()
+# perform a line search on a convex objective function
+from numpy import arange
+from scipy.optimize import line_search
+from matplotlib import pyplot
+
+# objective function
+def objective(x):
+	return (-5.0 + x)**2.0
+
+# gradient for the objective function
+def gradient(x):
+	return 2.0 * (-5.0 + x)
+
+# define the starting point
+point = -5.0
+# define the direction to move
+direction = 100.0
+# print the initial conditions
+print('start=%.1f, direction=%.1f' % (point, direction))
+# perform the line search
+result = line_search(objective, gradient, point, direction)
+# summarize the result
+alpha = result[0]
+print('Alpha: %.3f' % alpha)
+print('Function evaluations: %d' % result[1])
+# define objective function minima
+end = point + alpha * direction
+# evaluate objective function minima
+print('f(end) = f(%.3f) = %.3f' % (end, objective(end)))
+# define range
+r_min, r_max = -10.0, 20.0
+# prepare inputs
+inputs = arange(r_min, r_max, 0.1)
+# compute targets
+targets = [objective(x) for x in inputs]
+# plot inputs vs objective
+pyplot.plot(inputs, targets, '--', label='objective')
+# plot start and end of the search
+pyplot.plot([point], [objective(point)], 's', color='g')
+pyplot.plot([end], [objective(end)], 's', color='r')
+pyplot.legend()
+pyplot.show()
+start=-5.0, direction=100.0
+Alpha: 0.100
+Function evaluations: 3
+f(end) = f(5.000) = 0.000
+# perform a line search on a convex objective function with a direction that is too small
+from numpy import arange
+from scipy.optimize import line_search
+from matplotlib import pyplot
+
+# objective function
+def objective(x):
+	return (-5.0 + x)**2.0
+
+# gradient for the objective function
+def gradient(x):
+	return 2.0 * (-5.0 + x)
+
+# define the starting point
+point = -5.0
+# define the direction to move
+direction = 3.0
+# print the initial conditions
+print('start=%.1f, direction=%.1f' % (point, direction))
+# perform the line search
+result = line_search(objective, gradient, point, direction)
+# summarize the result
+alpha = result[0]
+print('Alpha: %.3f' % alpha)
+# define objective function minima
+end = point + alpha * direction
+# evaluate objective function minima
+print('f(end) = f(%.3f) = %.3f' % (end, objective(end)))
+start=-5.0, direction=3.0
+Alpha: 1.000
+f(end) = f(-2.000) = 49.000
+
+# define the starting point
+point = -5.0
+# define the direction to move
+direction = -3.0
+# perform a line search on a convex objective function that does not converge
+from numpy import arange
+from scipy.optimize import line_search
+from matplotlib import pyplot
+
+# objective function
+def objective(x):
+	return (-5.0 + x)**2.0
+
+# gradient for the objective function
+def gradient(x):
+	return 2.0 * (-5.0 + x)
+
+# define the starting point
+point = -5.0
+# define the direction to move
+direction = -3.0
+# print the initial conditions
+print('start=%.1f, direction=%.1f' % (point, direction))
+# perform the line search
+result = line_search(objective, gradient, point, direction)
+# summarize the result
+print('Alpha: %s' % result[0])
+start=-5.0, direction=-3.0
+LineSearchWarning: The line search algorithm did not converge
+warn('The line search algorithm did not converge', LineSearchWarning)
+Alpha: None
+'''

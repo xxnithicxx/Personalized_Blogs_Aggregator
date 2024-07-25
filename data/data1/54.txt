@@ -1,0 +1,104 @@
+A Gentle Introduction to Weight Constraints in Deep Learning
+https://machinelearningmastery.com/introduction-to-weight-constraints-to-reduce-generalization-error-in-deep-learning/
+2018-11-22
+Weight regularization methods like weight decay introduce a penalty to the loss function when training a neural network to encourage the network to use small weights.
+Smaller weights in a neural network can result in a model that is more stable and less likely to overfit the training dataset, in turn having better performance when making a prediction on new data.
+Unlike weight regularization, a weight constraint is a trigger that checks the size or magnitude of the weights and scales them so that they are all below a pre-defined threshold. The constraint forces weights to be small and can be used instead of weight decay and in conjunction with more aggressive network configurations, such as very large learning rates.
+In this post, you will discover the use of weight constraint regularization as an alternative to weight penalties to reduce overfitting in deep neural networks.
+After reading this post, you will know:
+- Weight penalties encourage but do not require neural networks to have small weights.
+- Weight constraints, such as the L2 norm and maximum norm, can be used to force neural networks to have small weights during training.
+- Weight constraints can improve generalization when used in conjunction with other regularization methods like dropout.
+Kick-start your project with my new book Better Deep Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+A Gentle Introduction to Weight Constraints to Reduce Generalization Error in Deep LearningPhoto by Dawn Ellner, some rights reserved.
+# Overview
+- Alternative to Penalties for Large Weights
+- Force Small Weights
+- How to Use a Weight Constraint
+- Example Uses of Weight Constraints
+- Tips for Using Weight Constraints
+# Alternative to Penalties for Large Weights
+Large weights in a neural network are a sign of overfitting.
+A network with large weights has very likely learned the statistical noise in the training data. This results in a model that is unstable, and very sensitive to changes to the input variables. In turn, the overfit network has poor performance when making predictions on new unseen data.
+A popular and effective technique to address the problem is to update the loss function that is optimized during training to take the size of the weights into account.
+This is called a penalty, as the larger the weights of the network become, the more the network is penalized, resulting in larger loss and, in turn, larger updates. The effect is that the penalty encourages weights to be small, or no larger than is required during the training process, in turn reducing overfitting.
+A problem in using a penalty is that although it does encourage the network toward smaller weights, it does not force smaller weights.
+A neural network trained with weight regularization penalty may still allow large weights, in some cases very large weights.
+# Force Small Weights
+An alternate solution to using a penalty for the size of network weights is to use a weight constraint.
+A weight constraint is an update to the network that checks the size of the weights, and if the size exceeds a predefined limit, the weights are rescaled so that their size is below the limit or between a range.
+You can think of a weight constraint as an if-then rule checking the size of the weights while the network is being trained and only coming into effect and making weights small when required. Note, for efficiency, it does not have to be implemented as an if-then rule and often is not.
+Unlike adding a penalty to the loss function, a weight constraint ensures the weights of the network are small, instead of mearly encouraging them to be small.
+It can be useful on those problems or with networks that resist other regularization methods, such as weight penalties.
+Weight constraints prove especially useful when you have configured your network to use alternative regularization methods to weight regularization and yet still desire the network to have small weights in order to reduce overfitting. One often-cited example is the use of a weight constraint regularization with dropout regularization.
+Although dropout alone gives significant improvements, using dropout along with [weight constraint] regularization, […] provides a significant boost over just using dropout.
+— Dropout: A Simple Way to Prevent Neural Networks from Overfitting, 2014.
+# How to Use a Weight Constraint
+A constraint is enforced on each node within a layer.
+All nodes within the layer use the same constraint, and often multiple hidden layers within the same network will use the same constraint.
+Recall that when we talk about the vector norm in general, that this is the magnitude of the vector of weights in a node, and by default is calculated as the L2 norm, e.g. the square root of the sum of the squared values in the vector.
+Some examples of constraints that could be used include:
+- Force the vector norm to be 1.0 (e.g. the unit norm).
+- Limit the maximum size of the vector norm (e.g. the maximum norm).
+- Limit the minimum and maximum size of the vector norm (e.g. the min_max norm).
+The maximum norm, also called max-norm or maxnorm, is a popular constraint because it is less aggressive than other norms such as the unit norm, simply setting an upper bound.
+Max-norm regularization has been previously used […] It typically improves the performance of stochastic gradient descent training of deep neural nets …
+— Dropout: A Simple Way to Prevent Neural Networks from Overfitting, 2014.
+When using a limit or a range, a hyperparameter must be specified. Given that weights are small, the hyperparameter too is often a small integer value, such as a value between 1 and 4.
+… we can use max-norm regularization. This constrains the norm of the vector of incoming weights at each hidden unit to be bound by a constant c. Typical values of c range from 3 to 4.
+— Dropout: A Simple Way to Prevent Neural Networks from Overfitting, 2014.
+If the norm exceeds the specified range or limit, the weights are rescaled or normalized such that their magnitude is below the specified parameter or within the specified range.
+If a weight-update violates this constraint, we renormalize the weights of the hidden unit by division. Using a constraint rather than a penalty prevents weights from growing very large no matter how large the proposed weight-update is.
+— Improving neural networks by preventing co-adaptation of feature detectors, 2012.
+The constraint can be applied after each update to the weights, e.g. at the end of each mini-batch.
+# Example Uses of Weight Constraints
+This section provides a few cherry-picked examples from recent research papers where a weight constraint was used.
+Geoffrey Hinton, et al. in their 2012 paper titled “Improving neural networks by preventing co-adaptation of feature detectors” used a maxnorm constraint on CNN models applied to the MNIST handwritten digit classification task and ImageNet photo classification task.
+All layers had L2 weight constraints on the incoming weights of each hidden unit.
+Nitish Srivastava, et al. in their 2014 paper titled “Dropout: A Simple Way to Prevent Neural Networks from Overfitting” used a maxnorm constraint with an MLP on the MNIST handwritten digit classification task and with CNNs on the streetview house numbers dataset with the parameter configured via a holdout validation set.
+Max-norm regularization was used for weights in both convolutional and fully connected layers.
+Jan Chorowski, et al. in their 2015 paper titled “Attention-Based Models for Speech Recognition” use LSTM and attention models for speech recognition with a max norm constraint set to 1.
+We first trained our models with a column norm constraint with the maximum norm 1 …
+# Tips for Using Weight Constraints
+This section provides some tips for using weight constraints with your neural network.
+Weight constraints are a generic approach.
+They can be used with most, perhaps all, types of neural network models, not least the most common network types of Multilayer Perceptrons, Convolutional Neural Networks, and Long Short-Term Memory Recurrent Neural Networks.
+In the case of LSTMs, it may be desirable to use different constraints or constraint configurations for the input and recurrent connections.
+It is a good general practice to rescale input variables to have the same scale.
+When input variables have different scales, the scale of the weights of the network will, in turn, vary accordingly. This introduces a problem when using weight constraints because large weights will cause the constraint to trigger more frequently.
+This problem can be done by either normalization or standardization of input variables.
+The use of a weight constraint allows you to be more aggressive during the training of the network.
+Specifically, a larger learning rate can be used, allowing the network to, in turn, make larger updates to the weights each update.
+This is cited as an important benefit to using weight constraints. Such as the use of a constraint in conjunction with dropout:
+Using a constraint rather than a penalty prevents weights from growing very large no matter how large the proposed weight-update is. This makes it possible to start with a very large learning rate which decays during learning, thus allowing a far more thorough search of the weight-space than methods that start with small weights and use a small learning rate.
+— Improving neural networks by preventing co-adaptation of feature detectors, 2012.
+Explore the use of other weight constraints, such as a minimum and maximum range, non-negative weights, and more.
+You may also choose to use constraints on some weights and not others, such as not using constraints on bias weights in an MLP or not using constraints on recurrent connections in an LSTM.
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- 7.2 Norm Penalties as Constrained Optimization, Deep Learning, 2016.
+- Dropout: A Simple Way to Prevent Neural Networks from Overfitting, 2014.
+- Rank, Trace-Norm and Max-Norm, 2005.
+- Improving neural networks by preventing co-adaptation of feature detectors, 2012.
+- Norm (mathematics), Wikipedia.
+- Regularization, Neural Networks Part 2: Setting up the Data and the Loss, CS231n Convolutional Neural Networks for Visual Recognition.
+# Summary
+In this post, you discovered the use of weight constraint regularization as an alternative to weight penalties to reduce overfitting in deep neural networks.
+Specifically, you learned:
+- Weight penalties encourage but do not require neural networks to have small weights.
+- Weight constraints such as the L2 norm and maximum norm can be used to force neural networks to have small weights during training.
+- Weight constraints can improve generalization when used in conjunction with other regularization methods, like dropout.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop Better Deep Learning Models Today!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Better Deep Learning
+It provides self-study tutorials on topics like: weight decay, batch normalization, dropout, model stacking and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+
+'''

@@ -1,0 +1,164 @@
+How Does Attention Work in Encoder-Decoder Recurrent Neural Networks
+https://machinelearningmastery.com/how-does-attention-work-in-encoder-decoder-recurrent-neural-networks/
+2017-10-12
+Attention is a mechanism that was developed to improve the performance of the Encoder-Decoder RNN on machine translation.
+In this tutorial, you will discover the attention mechanism for the Encoder-Decoder model.
+After completing this tutorial, you will know:
+- About the Encoder-Decoder model and attention mechanism for machine translation.
+- How to implement the attention mechanism step-by-step.
+- Applications and extensions to the attention mechanism.
+Kick-start your project with my new book Deep Learning for Natural Language Processing, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+- Update Dec/2017: Fixed a small typo in Step 4, thanks Cynthia Freeman.
+# Tutorial Overview
+This tutorial is divided into 4 parts; they are:
+- Encoder-Decoder Model
+- Attention Model
+- Worked Example of Attention
+- Extensions to Attention
+# Encoder-Decoder Model
+The Encoder-Decoder model for recurrent neural networks was introduced in two papers.
+Both developed the technique to address the sequence-to-sequence nature of machine translation where input sequences differ in length from output sequences.
+Ilya Sutskever, et al. do so in the paper “Sequence to Sequence Learning with Neural Networks” using LSTMs.
+Kyunghyun Cho, et al. do so in the paper “Learning Phrase Representations using RNN Encoder–Decoder for Statistical Machine Translation“. This work, and some of the same authors (Bahdanau, Cho and Bengio) developed their specific model later to develop an attention model. Therefore we will take a quick look at the Encoder-Decoder model as described in this paper.
+From a high-level, the model is comprised of two sub-models: an encoder and a decoder.
+- Encoder: The encoder is responsible for stepping through the input time steps and encoding the entire sequence into a fixed length vector called a context vector.
+- Decoder: The decoder is responsible for stepping through the output time steps while reading from the context vector.
+Encoder-Decoder Recurrent Neural Network Model.Taken from “Learning Phrase Representations using RNN Encoder–Decoder for Statistical Machine Translation”
+we propose a novel neural network architecture that learns to encode a variable-length sequence into a fixed-length vector representation and to decode a given fixed-length vector representation back into a variable-length sequence.
+— Learning Phrase Representations using RNN Encoder–Decoder for Statistical Machine Translation, 2014.
+Key to the model is that the entire model, including encoder and decoder, is trained end-to-end, as opposed to training the elements separately.
+The model is described generically such that different specific RNN models could be used as the encoder and decoder.
+Instead of using the popular Long Short-Term Memory (LSTM) RNN, the authors develop and use their own simple type of RNN, later called the Gated Recurrent Unit, or GRU.
+Further, unlike the Sutskever, et al. model, the output of the decoder from the previous time step is fed as an input to decoding the next output time step. You can see this in the image above where the output y2 uses the context vector (C), the hidden state passed from decoding y1 as well as the output y1.
+… both y(t) and h(i) are also conditioned on y(t−1) and on the summary c of the input sequence.
+— Learning Phrase Representations using RNN Encoder–Decoder for Statistical Machine Translation, 2014
+# Attention Model
+Attention was presented by Dzmitry Bahdanau, et al. in their paper “Neural Machine Translation by Jointly Learning to Align and Translate” that reads as a natural extension of their previous work on the Encoder-Decoder model.
+Attention is proposed as a solution to the limitation of the Encoder-Decoder model encoding the input sequence to one fixed length vector from which to decode each output time step. This issue is believed to be more of a problem when decoding long sequences.
+A potential issue with this encoder–decoder approach is that a neural network needs to be able to compress all the necessary information of a source sentence into a fixed-length vector. This may make it difficult for the neural network to cope with long sentences, especially those that are longer than the sentences in the training corpus.
+— Neural Machine Translation by Jointly Learning to Align and Translate, 2015.
+Attention is proposed as a method to both align and translate.
+Alignment is the problem in machine translation that identifies which parts of the input sequence are relevant to each word in the output, whereas translation is the process of using the relevant information to select the appropriate output.
+… we introduce an extension to the encoder–decoder model which learns to align and translate jointly. Each time the proposed model generates a word in a translation, it (soft-)searches for a set of positions in a source sentence where the most relevant information is concentrated. The model then predicts a target word based on the context vectors associated with these source positions and all the previous generated target words.
+— Neural Machine Translation by Jointly Learning to Align and Translate, 2015.
+Instead of encoding the input sequence into a single fixed context vector, the attention model develops a context vector that is filtered specifically for each output time step.
+Example of AttentionTaken from “Neural Machine Translation by Jointly Learning to Align and Translate”, 2015.
+As with the Encoder-Decoder paper, the technique is applied to a machine translation problem and uses GRU units rather than LSTM memory cells. In this case, a bidirectional input is used where the input sequences are provided both forward and backward, which are then concatenated before being passed on to the decoder.
+Rather than re-iterate the equations for calculating attention, we will look at a worked example.
+
+
+
+
+# Worked Example of Attention
+In this section, we will make attention concrete with a small worked example. Specifically, we will step through the calculations with un-vectorized terms.
+This will give you a sufficiently detailed understanding that you could add attention to your own encoder-decoder implementation.
+This worked example is divided into the following 6 sections:
+- Problem
+- Encoding
+- Alignment
+- Weighting
+- Context Vector
+- Decode
+The problem is a simple sequence-to-sequence prediction problem.
+There are three input time steps:
+The model is required to predict 1 time step:
+In this example, we will ignore the type of RNN being used in the encoder and decoder and ignore the use of a bidirectional input layer. These elements are not salient to understanding the calculation of attention in the decoder.
+In the encoder-decoder model, the input would be encoded as a single fixed-length vector. This is the output of the encoder model for the last time step.
+The attention model requires access to the output from the encoder for each input time step. The paper refers to these as “annotations” for each time step. In this case:
+
+The decoder outputs one value at a time, which is passed on to perhaps more layers before finally outputting a prediction (y) for the current output time step.
+The alignment model scores (e) how well each encoded input (h) matches the current output of the decoder (s).
+The calculation of the score requires the output from the decoder from the previous output time step, e.g. s(t-1). When scoring the very first output for the decoder, this will be 0.
+Scoring is performed using a function a(). We can score each annotation (h) for the first output time step as follows:
+We use two subscripts for these scores, e.g. e11 where the first “1” represents the output time step, and the second “1” represents the input time step.
+We can imagine that if we had a sequence-to-sequence problem with two output time steps, that later we could score the annotations for the second time step as follows (assuming we had already calculated our s1):
+The function a() is called the alignment model in the paper and is implemented as a feedforward neural network.
+This is a traditional one layer network where each input (s(t-1) and h1, h2, and h3) is weighted, a hyperbolic tangent (tanh) transfer function is used and the output is also weighted.
+Next, the alignment scores are normalized using a softmax function.
+The normalization of the scores allows them to be treated like probabilities, indicating the likelihood of each encoded input time step (annotation) being relevant to the current output time step.
+These normalized scores are called annotation weights.
+For example, we can calculate the softmax annotation weights (a) given the calculated alignment scores (e) as follows:
+If we had two output time steps, the annotation weights for the second output time step would be calculated as follows:
+
+Next, each annotation (h) is multiplied by the annotation weights (a) to produce a new attended context vector from which the current output time step can be decoded.
+We only have one output time step for simplicity, so we can calculate the single element context vector as follows (with brackets for readability):
+The context vector is a weighted sum of the annotations and normalized alignment scores.
+If we had two output time steps, the context vector would be comprised of two elements [c1, c2], calculated as follows:
+
+Decoding is then performed as per the Encoder-Decoder model, although in this case using the attended context vector for the current time step.
+The output of the decoder (s) is referred to as a hidden state in the paper.
+This may be fed into additional layers before ultimately exiting the model as a prediction (y1) for the time step.
+# Extensions to Attention
+This section looks at some additional applications of the Bahdanau, et al. attention mechanism.
+In the 2015 paper “Show, Attend and Tell: Neural Image Caption Generation with Visual Attention“, Kelvin Xu, et al. applied attention to image data using convolutional neural nets as feature extractors for image data on the problem of captioning photos.
+They develop two attention mechanisms, one they call “soft attention,” which resembles attention as described above with a weighted context vector, and the second “hard attention” where the crisp decisions are made about elements in the context vector for each word.
+They also propose double attention where attention is focused on specific parts of the image.
+There have been some applications of the mechanism where the approach was simplified so that the hidden state from the last output time step (s(t-1)) is dropped from the scoring of annotations (Step 3. above).
+Two examples are:
+- Hierarchical Attention Networks for Document Classification, 2016.
+- Attention-Based Bidirectional Long Short-Term Memory Networks for Relation Classification, 2016
+This has the effect of not providing the model with an idea of the previously decoded output, which is intended to aid in alignment.
+This is noted in the equations listed in the papers, and it is not clear if the mission was an intentional change to the model or merely an omission from the equations. No discussion of dropping the term was seen in either paper.
+Minh-Thang Luong, et al. in their 2015 paper “Effective Approaches to Attention-based Neural Machine Translation” explicitly restructure the use of the previous decoder hidden state in the scoring of annotations. Also, see the presentation of the paper and associated Matlab code.
+They developed a framework to contrast the different ways to score annotations. Their framework calls out and explicitly excludes the previous hidden state in the scoring of annotations.
+Instead, they take the previous attentional context vector and pass it as an input to the decoder. The intention is to allow the decoder to be aware of past alignment decisions.
+… we propose an input-feeding approach in which attentional vectors ht are concatenated with inputs at the next time steps […]. The effects of having such connections are two-fold: (a) we hope to make the model fully aware of previous alignment choices and (b) we create a very deep network spanning both horizontally and vertically
+— Effective Approaches to Attention-based Neural Machine Translation, 2015.
+Below is a picture of this approach taken from the paper. Note the dotted lines explictly showing the use of the decoders attended hidden state output (ht) providing input to the decoder on the next timestep.
+Feeding Hidden State as Input to DecoderTaken from “Effective Approaches to Attention-based Neural Machine Translation”, 2015.
+They also develop “global” vs “local” attention, where local attention is a modification of the approach that learns a fixed-sized window to impose over the attentional vector for each output time step. It is seen as a simpler approach to the “hard attention” presented by Xu, et al.
+The global attention has a drawback that it has to attend to all words on the source side for each target word, which is expensive and can potentially render it impractical to translate longer sequences, e.g., paragraphs or documents. To address this deficiency, we propose a local attentional mechanism that chooses to focus only on a small subset of the source positions per target word.
+— Effective Approaches to Attention-based Neural Machine Translation, 2015.
+Analysis in the paper of global and local attention with different annotation scoring functions suggests that local attention provides better results on the translation task.
+# Further Reading
+This section provides more resources on the topic if you are looking go deeper.
+- Learning Phrase Representations using RNN Encoder–Decoder for Statistical Machine Translation, 2014.
+- Sequence to Sequence Learning with Neural Networks, 2014.
+- Neural Machine Translation by Jointly Learning to Align and Translate, 2015.
+- Show, Attend and Tell: Neural Image Caption Generation with Visual Attention, 2015.
+- Hierarchical Attention Networks for Document Classification, 2016.
+- Attention-Based Bidirectional Long Short-Term Memory Networks for Relation Classification, 2016
+- Effective Approaches to Attention-based Neural Machine Translation, 2015.
+- Attention in Long Short-Term Memory Recurrent Neural Networks
+- Lecture 10: Neural Machine Translation and Models with Attention, Stanford, 2017
+- Lecture 8 – Generating Language with Attention, Oxford.
+# Summary
+In this tutorial, you discovered the attention mechanism for Encoder-Decoder model.
+Specifically, you learned:
+- About the Encoder-Decoder model and attention mechanism for machine translation.
+- How to implement the attention mechanism step-by-step.
+- Applications and extensions to the attention mechanism.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Develop Deep Learning models for Text Data Today!
+...with just a few lines of python code
+Discover how in my new Ebook:
+Deep Learning for Natural Language Processing
+It provides self-study tutorials on topics like:
+Bag-of-Words, Word Embedding, Language Models, Caption Generation, Text Translation and much more...
+Skip the Academics. Just Results.
+See What's Inside
+
+'''
+x1, x2, x3
+y1
+h1 = Encoder(x1, x2, x3)
+h1, h2, h3 = Encoder(x1, x2, x3)
+e11 = a(0, h1)
+e12 = a(0, h2)
+e13 = a(0, h3)
+e21 = a(s1, h1)
+e22 = a(s1, h2)
+e23 = a(s1, h3)
+a11 = exp(e11) / (exp(e11) + exp(e12) + exp(e13))
+a12 = exp(e12) / (exp(e11) + exp(e12) + exp(e13))
+a13 = exp(e13) / (exp(e11) + exp(e12) + exp(e13))
+a21 = exp(e21) / (exp(e21) + exp(e22) + exp(e23))
+a22 = exp(e22) / (exp(e21) + exp(e22) + exp(e23))
+a23 = exp(e23) / (exp(e21) + exp(e22) + exp(e23))
+c1 = (a11 * h1) + (a12 * h2) + (a13 * h3)
+c1 = a11 * h1 + a12 * h2 + a13 * h3
+c2 = a21 * h1 + a22 * h2 + a23 * h3
+s1 = Decoder(c1)
+'''

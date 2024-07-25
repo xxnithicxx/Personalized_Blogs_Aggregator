@@ -1,0 +1,224 @@
+A Gentle Introduction to Logistic Regression With Maximum Likelihood Estimation
+https://machinelearningmastery.com/logistic-regression-with-maximum-likelihood-estimation/
+2019-10-27
+Logistic regression is a model for binary classification predictive modeling.
+The parameters of a logistic regression model can be estimated by the probabilistic framework called maximum likelihood estimation. Under this framework, a probability distribution for the target variable (class label) must be assumed and then a likelihood function defined that calculates the probability of observing the outcome given the input data and the model. This function can then be optimized to find the set of parameters that results in the largest sum likelihood over the training dataset.
+The maximum likelihood approach to fitting a logistic regression model both aids in better understanding the form of the logistic regression model and provides a template that can be used for fitting classification models more generally. This is particularly true as the negative of the log-likelihood function used in the procedure can be shown to be equivalent to cross-entropy loss function.
+In this post, you will discover logistic regression with maximum likelihood estimation.
+After reading this post, you will know:
+- Logistic regression is a linear model for binary classification predictive modeling.
+- The linear part of the model predicts the log-odds of an example belonging to class 1, which is converted to a probability via the logistic function.
+- The parameters of the model can be estimated by maximizing a likelihood function that predicts the mean of a Bernoulli distribution for each example.
+Kick-start your project with my new book Probability for Machine Learning, including step-by-step tutorials and the Python source code files for all examples.
+Let’s get started.
+A Gentle Introduction to Logistic Regression With Maximum Likelihood EstimationPhoto by Samuel John, some rights reserved.
+# Overview
+This tutorial is divided into four parts; they are:
+- Logistic Regression
+- Logistic Regression and Log-Odds
+- Maximum Likelihood Estimation
+- Logistic Regression as Maximum Likelihood
+# Logistic Regression
+Logistic regression is a classical linear method for binary classification.
+Classification predictive modeling problems are those that require the prediction of a class label (e.g. ‘red‘, ‘green‘, ‘blue‘) for a given set of input variables. Binary classification refers to those classification problems that have two class labels, e.g. true/false or 0/1.
+Logistic regression has a lot in common with linear regression, although linear regression is a technique for predicting a numerical value, not for classification problems. Both techniques model the target variable with a line (or hyperplane, depending on the number of dimensions of input. Linear regression fits the line to the data, which can be used to predict a new quantity, whereas logistic regression fits a line to best separate the two classes.
+The input data is denoted as X with n examples and the output is denoted y with one output for each input. The prediction of the model for a given input is denoted as yhat.
+- yhat = model(X)
+The model is defined in terms of parameters called coefficients (beta), where there is one coefficient per input and an additional coefficient that provides the intercept or bias.
+For example, a problem with inputs X with m variables x1, x2, …, xm will have coefficients beta1, beta2, …, betam, and beta0. A given input is predicted as the weighted sum of the inputs for the example and the coefficients.
+- yhat = beta0 + beta1 * x1 + beta2 * x2 + … + betam * xm
+The model can also be described using linear algebra, with a vector for the coefficients (Beta) and a matrix for the input data (X) and a vector for the output (y).
+- y = X * Beta
+So far, this is identical to linear regression and is insufficient as the output will be a real value instead of a class label.
+Instead, the model squashes the output of this weighted sum using a nonlinear function to ensure the outputs are a value between 0 and 1.
+The logistic function (also called the sigmoid) is used, which is defined as:
+- f(x) = 1 / (1 + exp(-x))
+Where x is the input value to the function. In the case of logistic regression, x is replaced with the weighted sum.
+For example:
+- yhat = 1 / (1 + exp(-(X * Beta)))
+The output is interpreted as a probability from a Binomial probability distribution function for the class labeled 1, if the two classes in the problem are labeled 0 and 1.
+Notice that the output, being a number between 0 and 1, can be interpreted as a probability of belonging to the class labeled 1.
+— Page 726, Artificial Intelligence: A Modern Approach, 3rd edition, 2009.
+The examples in the training dataset are drawn from a broader population and as such, this sample is known to be incomplete. Additionally, there is expected to be measurement error or statistical noise in the observations.
+The parameters of the model (beta) must be estimated from the sample of observations drawn from the domain.
+There are many ways to estimate the parameters. There are two frameworks that are the most common; they are:
+- Least Squares Optimization (iteratively reweighted least squares).
+- Maximum Likelihood Estimation.
+Both are optimization procedures that involve searching for different model parameters.
+Maximum Likelihood Estimation is a frequentist probabilistic framework that seeks a set of parameters for the model that maximizes a likelihood function. We will take a closer look at this second approach in the subsequent sections.
+# Logistic Regression and Log-Odds
+Before we dive into how the parameters of the model are estimated from data, we need to understand what logistic regression is calculating exactly.
+This might be the most confusing part of logistic regression, so we will go over it slowly.
+The linear part of the model (the weighted sum of the inputs) calculates the log-odds of a successful event, specifically, the log-odds that a sample belongs to class 1.
+- log-odds = beta0 + beta1 * x1 + beta2 * x2 + … + betam * xm
+In effect, the model estimates the log-odds for class 1 for the input variables at each level (all observed values).
+What are odds and log-odds?
+Odds may be familiar from the field of gambling. Odds are often stated as wins to losses (wins : losses), e.g. a one to ten chance or ratio of winning is stated as 1 : 10.
+Given the probability of success (p) predicted by the logistic regression model, we can convert it to odds of success as the probability of success divided by the probability of not success:
+- odds of success = p / (1 – p)
+The logarithm of the odds is calculated, specifically log base-e or the natural logarithm. This quantity is referred to as the log-odds and may be referred to as the logit (logistic unit), a unit of measure.
+- log-odds = log(p / (1 – p)
+Recall that this is what the linear part of the logistic regression is calculating:
+- log-odds = beta0 + beta1 * x1 + beta2 * x2 + … + betam * xm
+The log-odds of success can be converted back into an odds of success by calculating the exponential of the log-odds.
+- odds = exp(log-odds)
+Or
+- odds = exp(beta0 + beta1 * x1 + beta2 * x2 + … + betam * xm)
+The odds of success can be converted back into a probability of success as follows:
+- p = odds / (odds + 1)
+And this is close to the form of our logistic regression model, except we want to convert log-odds to odds as part of the calculation.
+We can do this and simplify the calculation as follows:
+- p = 1 / (1 + exp(-log-odds))
+This shows how we go from log-odds to odds, to a probability of class 1 with the logistic regression model, and that this final functional form matches the logistic function, ensuring that the probability is between 0 and 1.
+We can make these calculations of converting between probability, odds and log-odds concrete with some small examples in Python.
+First, let’s define the probability of success at 80%, or 0.8, and convert it to odds then back to a probability again.
+The complete example is listed below.
+Running the example shows that 0.8 is converted to the odds of success 4, and back to the correct probability again.
+Let’s extend this example and convert the odds to log-odds and then convert the log-odds back into the original probability. This final conversion is effectively the form of the logistic regression model, or the logistic function.
+The complete example is listed below.
+Running the example, we can see that our odds are converted into the log odds of about 1.4 and then correctly converted back into the 0.8 probability of success.
+Now that we have a handle on the probability calculated by logistic regression, let’s look at maximum likelihood estimation.
+# Maximum Likelihood Estimation
+Maximum Likelihood Estimation, or MLE for short, is a probabilistic framework for estimating the parameters of a model.
+In Maximum Likelihood Estimation, we wish to maximize the conditional probability of observing the data (X) given a specific probability distribution and its parameters (theta), stated formally as:
+- P(X ; theta)
+Where X is, in fact, the joint probability distribution of all observations from the problem domain from 1 to n.
+- P(x1, x2, x3, …, xn ; theta)
+This resulting conditional probability is referred to as the likelihood of observing the data given the model parameters and written using the notation L() to denote the likelihood function. For example:
+- L(X ; theta)
+The joint probability distribution can be restated as the multiplication of the conditional probability for observing each example given the distribution parameters. Multiplying many small probabilities together can be unstable; as such, it is common to restate this problem as the sum of the log conditional probability.
+- sum i to n log(P(xi ; theta))
+Given the frequent use of log in the likelihood function, it is referred to as a log-likelihood function. It is common in optimization problems to prefer to minimize the cost function rather than to maximize it. Therefore, the negative of the log-likelihood function is used, referred to generally as a Negative Log-Likelihood (NLL) function.
+- minimize -sum i to n log(P(xi ; theta))
+The Maximum Likelihood Estimation framework can be used as a basis for estimating the parameters of many different machine learning models for regression and classification predictive modeling. This includes the logistic regression model.
+# Logistic Regression as Maximum Likelihood
+We can frame the problem of fitting a machine learning model as the problem of probability density estimation.
+Specifically, the choice of model and model parameters is referred to as a modeling hypothesis h, and the problem involves finding h that best explains the data X. We can, therefore, find the modeling hypothesis that maximizes the likelihood function.
+- maximize sum i to n log(P(xi ; h))
+Supervised learning can be framed as a conditional probability problem of predicting the probability of the output given the input:
+- P(y | X)
+As such, we can define conditional maximum likelihood estimation for supervised machine learning as follows:
+- maximize sum i to n log(P(yi|xi ; h))
+Now we can replace h with our logistic regression model.
+In order to use maximum likelihood, we need to assume a probability distribution. In the case of logistic regression, a Binomial probability distribution is assumed for the data sample, where each example is one outcome of a Bernoulli trial. The Bernoulli distribution has a single parameter: the probability of a successful outcome (p).
+- P(y=1) = p
+- P(y=0) = 1 – p
+The probability distribution that is most often used when there are two classes is the binomial distribution.5 This distribution has a single parameter, p, that is the probability of an event or a specific class.
+— Page 283, Applied Predictive Modeling, 2013.
+The expected value (mean) of the Bernoulli distribution can be calculated as follows:
+- mean = P(y=1) * 1 + P(y=0) * 0
+Or, given p:
+- mean = p * 1 + (1 – p) * 0
+This calculation may seem redundant, but it provides the basis for the likelihood function for a specific input, where the probability is given by the model (yhat) and the actual label is given from the dataset.
+- likelihood = yhat * y + (1 – yhat) * (1 – y)
+This function will always return a large probability when the model is close to the matching class value, and a small value when it is far away, for both y=0 and y=1 cases.
+We can demonstrate this with a small worked example for both outcomes and small and large probabilities predicted for each.
+The complete example is listed below.
+Running the example prints the class labels (y) and predicted probabilities (yhat) for cases with close and far probabilities for each case.
+We can see that the likelihood function is consistent in returning a probability for how well the model achieves the desired outcome.
+We can update the likelihood function using the log to transform it into a log-likelihood function:
+- log-likelihood = log(yhat) * y + log(1 – yhat) * (1 – y)
+Finally, we can sum the likelihood function across all examples in the dataset to maximize the likelihood:
+- maximize sum i to n log(yhat_i) * y_i + log(1 – yhat_i) * (1 – y_i)
+It is common practice to minimize a cost function for optimization problems; therefore, we can invert the function so that we minimize the negative log-likelihood:
+- minimize sum i to n -(log(yhat_i) * y_i + log(1 – yhat_i) * (1 – y_i))
+Calculating the negative of the log-likelihood function for the Bernoulli distribution is equivalent to calculating the cross-entropy function for the Bernoulli distribution, where p() represents the probability of class 0 or class 1, and q() represents the estimation of the probability distribution, in this case by our logistic regression model.
+- cross entropy = -(log(q(class0)) * p(class0) + log(q(class1)) * p(class1))
+Unlike linear regression, there is not an analytical solution to solving this optimization problem. As such, an iterative optimization algorithm must be used.
+Unlike linear regression, we can no longer write down the MLE in closed form. Instead, we need to use an optimization algorithm to compute it. For this, we need to derive the gradient and Hessian.
+— Page 246, Machine Learning: A Probabilistic Perspective, 2012.
+The function does provide some information to aid in the optimization (specifically a Hessian matrix can be calculated), meaning that efficient search procedures that exploit this information can be used, such as the BFGS algorithm (and variants).
+# Further Reading
+This section provides more resources on the topic if you are looking to go deeper.
+- A Gentle Introduction to Maximum Likelihood Estimation for Machine Learning
+- How To Implement Logistic Regression From Scratch in Python
+- Logistic Regression Tutorial for Machine Learning
+- Logistic Regression for Machine Learning
+- Section 4.4.1 Fitting Logistic Regression Models, The Elements of Statistical Learning, 2016.
+- Section 4.3.2 Logistic regression, Pattern Recognition and Machine Learning, 2006.
+- Chapter 8 Logistic regression, Machine Learning: A Probabilistic Perspective, 2012.
+- Chapter 4 Algorithms: the basic methods, Data Mining: Practical Machine Learning Tools and Techniques, 4th edition, 2016.
+- Section 18.6.4 Linear classification with logistic regression, Artificial Intelligence: A Modern Approach, 3rd edition, 2009.
+- Section 12.2 Logistic Regression, Applied Predictive Modeling, 2013.
+- Section 4.3 Logistic Regression, An Introduction to Statistical Learning with Applications in R, 2017.
+- Maximum likelihood estimation, Wikipedia.
+- Likelihood function, Wikipedia.
+- Logistic regression, Wikipedia.
+- Logistic function, Wikipedia.
+- Odds, Wikipedia.
+# Summary
+In this post, you discovered logistic regression with maximum likelihood estimation.
+Specifically, you learned:
+- Logistic regression is a linear model for binary classification predictive modeling.
+- The linear part of the model predicts the log-odds of an example belonging to class 1, which is converted to a probability via the logistic function.
+- The parameters of the model can be estimated by maximizing a likelihood function that predicts the mean of a Bernoulli distribution for each example.
+Do you have any questions?
+Ask your questions in the comments below and I will do my best to answer.
+# Get a Handle on Probability for Machine Learning!
+
+
+Discover how in my new Ebook:
+Probability for Machine Learning
+It provides self-study tutorials and end-to-end projects on:
+Bayes Theorem, Bayesian Optimization, Distributions, Maximum Likelihood, Cross-Entropy, Calibrating Models
+and much more...
+
+
+See What's Inside
+
+'''
+# example of converting between probability and odds
+from math import log
+from math import exp
+# define our probability of success
+prob = 0.8
+print('Probability %.1f' % prob)
+# convert probability to odds
+odds = prob / (1 - prob)
+print('Odds %.1f' % odds)
+# convert back to probability
+prob = odds / (odds + 1)
+print('Probability %.1f' % prob)
+Probability 0.8
+Odds 4.0
+Probability 0.8
+# example of converting between probability and log-odds
+from math import log
+from math import exp
+# define our probability of success
+prob = 0.8
+print('Probability %.1f' % prob)
+# convert probability to odds
+odds = prob / (1 - prob)
+print('Odds %.1f' % odds)
+# convert odds to log-odds
+logodds = log(odds)
+print('Log-Odds %.1f' % logodds)
+# convert log-odds to a probability
+prob = 1 / (1 + exp(-logodds))
+print('Probability %.1f' % prob)
+Probability 0.8
+Odds 4.0
+Log-Odds 1.4
+Probability 0.8
+# test of Bernoulli likelihood function
+
+# likelihood function for Bernoulli distribution
+def likelihood(y, yhat):
+	return yhat * y + (1 - yhat) * (1 - y)
+
+# test for y=1
+y, yhat = 1, 0.9
+print('y=%.1f, yhat=%.1f, likelihood: %.3f' % (y, yhat, likelihood(y, yhat)))
+y, yhat = 1, 0.1
+print('y=%.1f, yhat=%.1f, likelihood: %.3f' % (y, yhat, likelihood(y, yhat)))
+# test for y=0
+y, yhat = 0, 0.1
+print('y=%.1f, yhat=%.1f, likelihood: %.3f' % (y, yhat, likelihood(y, yhat)))
+y, yhat = 0, 0.9
+print('y=%.1f, yhat=%.1f, likelihood: %.3f' % (y, yhat, likelihood(y, yhat)))
+y=1.0, yhat=0.9, likelihood: 0.900
+y=1.0, yhat=0.1, likelihood: 0.100
+y=0.0, yhat=0.1, likelihood: 0.900
+y=0.0, yhat=0.9, likelihood: 0.100
+'''
